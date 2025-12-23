@@ -1,6 +1,5 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../app/generated/prisma" 
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -8,7 +7,154 @@ datasource db {
 }
 
 model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
+  id               String      @id @default(cuid())
+  clerkId          String      @unique
+  email            String      @unique
+  name             String?
+
+  // Chess-specific profile
+  estimatedRating  Int         @default(1200)
+  preferredSetSize Int         @default(150)
+  targetCycles     Int         @default(5)
+
+  // Metadata
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  // Relations
+  puzzleSets       PuzzleSet[]
+
+  @@index([clerkId])
+}
+
+model Puzzle {
+  id               String   @id
+  fen              String
+  moves            String
+  rating           Int
+  ratingDeviation  Int
+  popularity       Int
+  nbPlays          Int
+  themes           String[]
+  gameUrl          String?
+  openingTags      String[]
+
+  // Computed fields
+  moveCount        Int
+  difficulty       String
+  hasMate          Boolean
+
+  // Metadata
+  createdAt        DateTime @default(now())
+
+  // Relations
+  puzzlesInSets    PuzzleInSet[]
+
+  @@index([rating])
+  @@index([popularity])
+  @@index([themes])
+  @@index([difficulty])
+  @@index([rating, popularity])
+}
+
+model PuzzleSet {
+  id           String      @id @default(cuid())
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Set characteristics
+  name         String      @default("Training Set")
+  targetRating Int
+  minRating    Int
+  maxRating    Int
+  size         Int
+
+  // Set generation metadata
+  createdAt    DateTime    @default(now())
+  generatedAt  DateTime    @default(now())
+
+  // Training configuration
+  targetCycles Int         @default(5)
+  isActive     Boolean     @default(true)
+  completedAt  DateTime?
+
+  // Relations
+  puzzles      PuzzleInSet[]
+  cycles       Cycle[]
+
+  @@index([userId, isActive])
+  @@index([createdAt])
+}
+
+model PuzzleInSet {
+  id              String    @id @default(cuid())
+  puzzleSetId     String
+  puzzleSet       PuzzleSet @relation(fields: [puzzleSetId], references: [id], onDelete: Cascade)
+
+  puzzleId        String
+  puzzle          Puzzle    @relation(fields: [puzzleId], references: [id], onDelete: Cascade)
+
+  // Position in the set (for consistent ordering across cycles)
+  position        Int
+
+  // Aggregate stats across all cycles
+  totalAttempts   Int       @default(0)
+  correctAttempts Int       @default(0)
+  averageTime     Float?
+
+  // Relations
+  attempts        Attempt[]
+
+  @@unique([puzzleSetId, puzzleId])
+  @@unique([puzzleSetId, position])
+  @@index([puzzleSetId])
+}
+
+model Cycle {
+  id              String    @id @default(cuid())
+  puzzleSetId     String
+  puzzleSet       PuzzleSet @relation(fields: [puzzleSetId], references: [id], onDelete: Cascade)
+
+  cycleNumber     Int
+
+  // Cycle timing
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+  totalTime       Int?
+
+  // Cycle statistics
+  totalPuzzles    Int
+  solvedCorrect   Int       @default(0)
+  solvedIncorrect Int       @default(0)
+  skipped         Int       @default(0)
+
+  // Relations
+  attempts        Attempt[]
+
+  @@unique([puzzleSetId, cycleNumber])
+  @@index([puzzleSetId])
+  @@index([startedAt])
+}
+
+model Attempt {
+  id            String      @id @default(cuid())
+
+  cycleId       String
+  cycle         Cycle       @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+
+  puzzleInSetId String
+  puzzleInSet   PuzzleInSet @relation(fields: [puzzleInSetId], references: [id], onDelete: Cascade)
+
+  // Attempt details
+  attemptedAt   DateTime    @default(now())
+  timeSpent     Int
+
+  // Result
+  isCorrect     Boolean
+  wasSkipped    Boolean     @default(false)
+  movesPlayed   String[]
+
+  @@index([cycleId])
+  @@index([puzzleInSetId])
+  @@index([attemptedAt])
 }

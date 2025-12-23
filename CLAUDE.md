@@ -116,11 +116,10 @@ npm run lint
 ## Database & Prisma
 
 ### Prisma Client Location
-The Prisma client is generated to a custom location: `app/generated/prisma` (not the default `node_modules/@prisma/client`).
+The Prisma client is installed normally via `@prisma/client` package (default location in `node_modules/@prisma/client`).
 
 ### Configuration
-- Schema: `prisma/schema.prisma` (output configured to `../app/generated/prisma`)
-- Config: `prisma.config.ts` (uses the new Prisma config format with dotenv)
+- Schema: `prisma/schema.prisma`
 - Connection: PostgreSQL via `DATABASE_URL` environment variable
 - Adapter: Uses `@prisma/adapter-pg` with `pg` Pool for PostgreSQL connection pooling
 
@@ -134,6 +133,38 @@ The `lib/prisma.ts` file provides a singleton instance that:
 - Uses the PostgreSQL adapter with connection pooling
 - Prevents multiple instances in development (hot reload safe)
 - Is properly configured for production environments
+
+### Data Model
+The application uses the following schema:
+
+- **User** - User accounts (linked to Clerk authentication)
+  - Chess profile: estimatedRating, preferredSetSize, targetCycles
+  - Relations: puzzleSets[]
+
+- **Puzzle** - Chess tactical puzzles from Lichess database
+  - Core data: id, fen, moves, rating, ratingDeviation, popularity, nbPlays
+  - Metadata: themes[], openingTags[], moveCount, difficulty, hasMate
+  - Relations: puzzlesInSets[]
+
+- **PuzzleSet** - A user's custom training set of puzzles
+  - Configuration: name, targetRating, minRating, maxRating, size, targetCycles
+  - Status: isActive, completedAt
+  - Relations: user, puzzles[], cycles[]
+
+- **PuzzleInSet** - Junction table linking puzzles to sets
+  - Ordering: position (for consistent ordering across cycles)
+  - Aggregate stats: totalAttempts, correctAttempts, averageTime
+  - Relations: puzzleSet, puzzle, attempts[]
+
+- **Cycle** - A single repetition through a puzzle set
+  - Tracking: cycleNumber, startedAt, completedAt, totalTime
+  - Statistics: totalPuzzles, solvedCorrect, solvedIncorrect, skipped
+  - Relations: puzzleSet, attempts[]
+
+- **Attempt** - A single puzzle attempt within a cycle
+  - Performance: attemptedAt, timeSpent, isCorrect, wasSkipped
+  - Details: movesPlayed[]
+  - Relations: cycle, puzzleInSet
 
 ### Common Prisma Commands
 ```bash
@@ -156,15 +187,26 @@ npx prisma migrate reset
 ## Project Structure
 
 - `app/` - Next.js App Router pages and layouts
-  - `layout.tsx` - Root layout with ClerkProvider wrapping all pages
+  - `layout.tsx` - Root layout with ClerkProvider and QueryProvider wrapping all pages
   - `globals.css` - Global styles and Tailwind configuration
+  - `providers/` - React context providers
+    - `query-provider.tsx` - TanStack Query provider configuration
+  - `(app)/` - Route group for authenticated app pages
+    - `layout.tsx` - App layout with sidebar
+    - `dashboard/` - Main dashboard page
+  - `sign-in/` - Clerk sign-in page
+  - `sign-up/` - Clerk sign-up page
 - `lib/` - Shared utilities
   - `utils.ts` - Contains `cn()` utility for className merging
   - `prisma.ts` - Prisma client singleton instance (use this for all database queries)
-- `app/generated/prisma/` - Generated Prisma client (gitignored)
 - `components/` - React components
-  - `ui/` - shadcn/ui component library
+  - `ui/` - shadcn/ui component library (button, card, input, separator, sheet, dropdown-menu, avatar, tooltip, skeleton, sidebar, breadcrumb)
+  - `app-sidebar.tsx` - Application sidebar component
 - `prisma/` - Database schema and migrations
+  - `schema.prisma` - Database schema definition
+- `scripts/` - Utility scripts
+  - `import-puzzles.ts` - Script to import Lichess puzzle database
+  - `lichess_db_puzzle.csv` - Lichess puzzle dataset (not committed to git)
 - `public/` - Static assets
 
 ## Path Aliases
@@ -197,6 +239,13 @@ The application uses **TanStack Query (React Query)** for server state managemen
 - Use `useQuery` for data fetching, `useMutation` for create/update/delete operations
 - Keep query keys consistent and structured (e.g., `['puzzles', userId]`, `['progress', setId]`)
 
+## Validation
+
+The application uses **Zod v4** for runtime data validation:
+- Use Zod schemas for API request/response validation
+- Integrate with TanStack Query for type-safe data fetching
+- Validate user input on both client and server sides
+
 ## Styling
 
 ### shadcn/ui Configuration
@@ -207,9 +256,27 @@ The application uses **TanStack Query (React Query)** for server state managemen
 - Main CSS file: `app/globals.css`
 
 ### Tailwind
-- Uses Tailwind CSS v4
+- Uses Tailwind CSS v4 (via @tailwindcss/postcss)
 - Custom fonts: Geist Sans and Geist Mono (via next/font)
 - CSS utility function: `cn()` from `lib/utils.ts` for merging class names
+
+## Scripts & Utilities
+
+### Puzzle Import Script
+The `scripts/import-puzzles.ts` script imports chess puzzles from the Lichess database:
+```bash
+# Run the puzzle import script
+npx tsx scripts/import-puzzles.ts
+```
+
+**Import criteria:**
+- Minimum popularity: 85 (very high quality only)
+- Minimum plays: 500 (well-validated)
+- Maximum rating deviation: 85 (statistically reliable)
+- Rating range: 800-2600
+- Move count: 2-8 moves (Woodpecker sweet spot)
+
+The script processes the CSV file in batches of 10,000 puzzles and provides progress updates and statistics.
 
 ## Environment Variables
 

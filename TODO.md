@@ -1,0 +1,3 @@
+- [X] Improve onboarding to be floating modal
+- [ ] Improve training UI etc
+- [ ] Implement progress dashboard with graphs etc.

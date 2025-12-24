@@ -9,6 +9,7 @@ import {
 } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
 import { QueryProvider } from "./providers/query-provider";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -39,6 +40,7 @@ export default function RootLayout({
         >
           <QueryProvider>
             {children}
+            <Toaster />
           </QueryProvider>
         </body>
       </html>

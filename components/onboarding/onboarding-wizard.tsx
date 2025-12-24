@@ -67,8 +67,8 @@ export function OnboardingWizard({ onComplete, isSubmitting }: OnboardingWizardP
   }
 
   return (
-    <div className="min-h-[80vh] flex flex-col items-center justify-center px-4">
-      <div className="w-full max-w-2xl">
+    <div className="w-full">
+      <div className="w-full">
         <Progress value={progress} className="h-1 mb-8" />
 
         <AnimatePresence mode="wait">

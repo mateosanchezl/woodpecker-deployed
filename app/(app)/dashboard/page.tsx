@@ -5,11 +5,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { OnboardingWizard } from '@/components/onboarding/onboarding-wizard'
 import { CreatePuzzleSetForm } from '@/components/onboarding/create-puzzle-set-form'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Progress } from '@/components/ui/progress'
 import { Play, Plus, Target, TrendingUp, Clock, CheckCircle2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface UserData {
   user: {
@@ -80,6 +82,10 @@ export default function DashboardPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user'] })
+      toast.success('Onboarding completed!')
+    },
+    onError: () => {
+      toast.error('Failed to complete onboarding')
     },
   })
 
@@ -106,8 +112,12 @@ export default function DashboardPage() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['puzzle-sets'] })
       queryClient.invalidateQueries({ queryKey: ['user'] })
+      toast.success('Puzzle set created successfully!')
       // Navigate to training with the new puzzle set
       router.push(`/training?setId=${data.puzzleSet.id}`)
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to create puzzle set')
     },
   })
 
@@ -126,41 +136,43 @@ export default function DashboardPage() {
   }, [createPuzzleSetMutation])
 
   // Loading state
-  if (userLoading) {
+  if (userLoading || !userData) {
     return <DashboardSkeleton />
   }
 
-  // Show onboarding wizard for new users
-  if (!userData?.user.hasCompletedOnboarding) {
-    return (
-      <OnboardingWizard
-        onComplete={handleOnboardingComplete}
-        isSubmitting={completeOnboardingMutation.isPending}
-      />
-    )
-  }
+  const showOnboarding = !userData.user.hasCompletedOnboarding
+  const showCreateSet = !showOnboarding && userData.user.puzzleSetCount === 0
 
-  // Show puzzle set creation for users who completed onboarding but have no sets
-  if (userData.user.puzzleSetCount === 0) {
-    return (
-      <div className="max-w-2xl mx-auto py-8">
-        <CreatePuzzleSetForm
-          userRating={userData.user.estimatedRating}
-          onSubmit={handleCreatePuzzleSet}
-          isSubmitting={createPuzzleSetMutation.isPending}
-        />
-        {createPuzzleSetMutation.isError && (
-          <p className="text-sm text-red-600 mt-4 text-center">
-            {createPuzzleSetMutation.error.message}
-          </p>
-        )}
-      </div>
-    )
-  }
-
-  // Main dashboard with puzzle sets
   return (
-    <div className="space-y-8">
+    <>
+      <Dialog open={showOnboarding} onOpenChange={() => {}}>
+        <DialogContent 
+          className="[&>button]:hidden max-w-2xl" 
+          onInteractOutside={(e) => e.preventDefault()} 
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <OnboardingWizard
+            onComplete={handleOnboardingComplete}
+            isSubmitting={completeOnboardingMutation.isPending}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {showCreateSet ? (
+        <div className="max-w-2xl mx-auto py-8">
+          <CreatePuzzleSetForm
+            userRating={userData.user.estimatedRating}
+            onSubmit={handleCreatePuzzleSet}
+            isSubmitting={createPuzzleSetMutation.isPending}
+          />
+          {createPuzzleSetMutation.isError && (
+            <p className="text-sm text-red-600 mt-4 text-center">
+              {createPuzzleSetMutation.error.message}
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -225,6 +237,8 @@ export default function DashboardPage() {
         )}
       </div>
     </div>
+      )}
+    </>
   )
 }
 

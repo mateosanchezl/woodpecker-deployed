@@ -7,6 +7,7 @@ import { CreatePuzzleSetForm } from '@/components/onboarding/create-puzzle-set-f
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ArrowLeft } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface UserData {
   user: {
@@ -51,7 +52,11 @@ export default function NewPuzzleSetPage() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['puzzle-sets'] })
       queryClient.invalidateQueries({ queryKey: ['user'] })
+      toast.success('Puzzle set created successfully!')
       router.push(`/training?setId=${data.puzzleSet.id}`)
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to create puzzle set')
     },
   })
 

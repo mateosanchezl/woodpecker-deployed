@@ -267,6 +267,9 @@ The application uses **Zod v4** for runtime data validation:
 - Custom fonts: Geist Sans and Geist Mono (via next/font)
 - CSS utility function: `cn()` from `lib/utils.ts` for merging class names
 
+### Sonner
+- Add a sonner (toast) for appropriate operations where the user needs to get feedback from network requests etc.
+
 ## Scripts & Utilities
 
 ### Puzzle Import Script

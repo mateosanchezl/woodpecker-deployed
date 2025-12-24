@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState, useEffect, useRef } from 'react'
+import { toast } from 'sonner'
 import type {
   NextPuzzleResponse,
   AttemptResponse,
@@ -202,13 +203,14 @@ export function useTrainingSession(
       // Refetch to get the real data and next prefetch
       queryClient.invalidateQueries({ queryKey: ['next-puzzle', puzzleSetId, cycleId] })
     },
-    onError: (_error, _variables, context) => {
+    onError: (error, _variables, context) => {
       // Rollback on error
       if (context?.previousData) {
         queryClient.setQueryData(['next-puzzle', puzzleSetId, cycleId], context.previousData)
       }
       // Clear transitioning on error
       setIsTransitioning(false)
+      toast.error('Failed to record attempt. Please try again.')
     },
   })
 
@@ -291,6 +293,10 @@ export function useCreateCycle(puzzleSetId: string) {
     onSuccess: () => {
       // Invalidate puzzle set data to refresh cycle list
       queryClient.invalidateQueries({ queryKey: ['puzzle-set', puzzleSetId] })
+      toast.success('New cycle started!')
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to create cycle')
     },
   })
 }

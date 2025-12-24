@@ -23,13 +23,20 @@ export async function GET() {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Get all puzzle sets with their latest cycle
+    // Get all puzzle sets with their latest cycle and last activity
     const puzzleSets = await prisma.puzzleSet.findMany({
       where: { userId: user.id },
       include: {
         cycles: {
           orderBy: { cycleNumber: 'desc' },
           take: 1,
+          include: {
+            attempts: {
+              orderBy: { attemptedAt: 'desc' },
+              take: 1,
+              select: { attemptedAt: true },
+            },
+          },
         },
         _count: {
           select: { puzzles: true },
@@ -38,29 +45,44 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
     })
 
-    return NextResponse.json({
-      sets: puzzleSets.map(set => {
-        const latestCycle = set.cycles[0]
-        const isCurrentCycleComplete = latestCycle?.completedAt !== null
+    // Sort by last activity (most recent first)
+    const setsWithActivity = puzzleSets.map(set => {
+      const latestCycle = set.cycles[0]
+      const isCurrentCycleComplete = latestCycle?.completedAt !== null
+      const lastAttempt = latestCycle?.attempts?.[0]?.attemptedAt
+      const lastTrainedAt = lastAttempt || latestCycle?.startedAt || null
 
-        return {
-          id: set.id,
-          name: set.name,
-          size: set._count.puzzles,
-          targetCycles: set.targetCycles,
-          targetRating: set.targetRating,
-          minRating: set.minRating,
-          maxRating: set.maxRating,
-          isActive: set.isActive,
-          createdAt: set.createdAt.toISOString(),
-          // Current cycle info
-          currentCycle: latestCycle?.cycleNumber || null,
-          currentCycleId: latestCycle && !isCurrentCycleComplete ? latestCycle.id : null,
-          completedCycles: isCurrentCycleComplete
-            ? latestCycle?.cycleNumber ?? 0
-            : (latestCycle?.cycleNumber ?? 1) - 1,
-        }
-      }),
+      return {
+        id: set.id,
+        name: set.name,
+        size: set._count.puzzles,
+        targetCycles: set.targetCycles,
+        targetRating: set.targetRating,
+        minRating: set.minRating,
+        maxRating: set.maxRating,
+        isActive: set.isActive,
+        createdAt: set.createdAt.toISOString(),
+        // Current cycle info
+        currentCycle: latestCycle?.cycleNumber || null,
+        currentCycleId: latestCycle && !isCurrentCycleComplete ? latestCycle.id : null,
+        completedCycles: isCurrentCycleComplete
+          ? latestCycle?.cycleNumber ?? 0
+          : (latestCycle?.cycleNumber ?? 1) - 1,
+        // Last activity timestamp
+        lastTrainedAt: lastTrainedAt?.toISOString() || null,
+      }
+    })
+
+    // Sort by lastTrainedAt (most recent first), nulls last
+    setsWithActivity.sort((a, b) => {
+      if (!a.lastTrainedAt && !b.lastTrainedAt) return 0
+      if (!a.lastTrainedAt) return 1
+      if (!b.lastTrainedAt) return -1
+      return new Date(b.lastTrainedAt).getTime() - new Date(a.lastTrainedAt).getTime()
+    })
+
+    return NextResponse.json({
+      sets: setsWithActivity,
     })
   } catch (error) {
     console.error('Error fetching puzzle sets:', error)

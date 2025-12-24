@@ -218,6 +218,15 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
       return false
     }
 
+    // First check if this is a legal move - illegal moves should be ignored, not counted as wrong
+    const legalMoves = chessRef.current.moves({ square: from, verbose: true })
+    const isLegalMove = legalMoves.some(m =>
+      m.to === to && (m.promotion === promotion || (!m.promotion && !promotion))
+    )
+    if (!isLegalMove) {
+      return false // Silently reject illegal moves
+    }
+
     const isCorrect = isCorrectMove(from, to, promotion, expectedMoveUci)
 
     if (!isCorrect) {

@@ -187,7 +187,9 @@ export function PuzzleBoard({ fen, moves, onComplete, onSkip, disabled, timer }:
   )
 
   // Effective player turn (disabled during transitions)
-  const canInteract = isPlayerTurn && !disabled
+  // Allow dragging during loading/opponent_turn so the board is responsive when ready
+  // The makePlayerMove function already guards against moves during wrong states
+  const canInteract = !disabled && status !== 'incorrect' && status !== 'complete'
 
   // Chessboard options
   const chessboardOptions: ChessboardOptions = useMemo(() => ({

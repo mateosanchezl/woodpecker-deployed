@@ -55,47 +55,61 @@ The Woodpecker Method is most effective for players who:
 
 This web app is a SaaS that aims to provide this training service to users for effective chess improvement.
 
-## Aesthetic & Vibe
+Aesthetic & Vibe
 
-The app should feel **focused, calm, and demanding in a good way** — closer to a training room than a game.
+The app should feel inviting, energizing, and satisfying to use — closer to a friendly training space than a strict exam room.
 
-### Core Feel
-- Minimalist and quiet  
-- Serious, deliberate, and distraction-free  
-- Optimized for deep concentration and repetition  
+Core Feel
 
-The user should feel like they are doing *work*, not killing time.
+Welcoming and encouraging
 
-### Visual Language
-- Neutral, muted color palette (grays, off-whites, soft blacks)
-- One restrained accent color for focus and success states
-- High contrast only where it improves clarity or speed
+Light, playful, and motivating
 
-No visual noise. No gradients for decoration. Every element earns its place.
+Easy to enter, rewarding to stay in
 
-### Typography
-- Clean, modern sans-serif
-- Clear hierarchy, generous spacing
-- Numbers and timers should feel precise and authoritative
+The user should feel excited to start and pleased to continue, not pressured or judged.
 
-### Motion & Feedback
-- Subtle, fast transitions
-- Immediate, unambiguous feedback on correctness
-- No celebratory animations — progress is shown through data, not fireworks
+Visual Language
 
-### UX Philosophy
-- One primary action per screen
-- Zero friction between puzzles
-- The interface should get out of the way and let the patterns sink in
+Soft, warm color palette with light neutrals
 
-### Emotional Goal
+A small set of bright accent colors for focus, success, and momentum
+
+Contrast used to guide attention, not to intimidate
+
+The interface should feel alive but uncluttered. Visuals support enjoyment and clarity without overwhelming the user.
+
+Typography
+
+Friendly, modern sans-serif
+
+Clear hierarchy with comfortable spacing
+
+Numbers and timers feel crisp and readable, but approachable
+
+Typography should reduce friction and feel easy on the eyes during longer sessions.
+
+Motion & Feedback
+
+Smooth, playful micro-interactions
+
+Clear and positive feedback on correctness
+
+Subtle delight in transitions (gentle motion, soft easing), never distracting
+
+Feedback should reinforce progress and encourage the next action.
+
+Emotional Goal
+
 By the third repetition, the user should feel:
-- Faster
-- Sharper
-- Quietly confident
 
-This is not a chess app for entertainment.
-This is a **training tool**.
+More capable
+
+Engaged and motivated
+
+Confident in a relaxed, upbeat way
+
+Progress feels rewarding, and improvement feels enjoyable rather than demanding.
 
 ## Development Commands
 

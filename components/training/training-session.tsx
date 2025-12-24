@@ -6,8 +6,9 @@ import { PuzzleStatus, PuzzleProgressBar } from './puzzle-status'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { AlertCircle, RefreshCw, CheckCircle2 } from 'lucide-react'
+import { AlertCircle, RefreshCw, CheckCircle2, SkipForward } from 'lucide-react'
 import type { TrainingProgress, PuzzleInSetData } from '@/lib/chess/types'
+import { usePuzzleTimer } from '@/hooks/use-puzzle-timer'
 
 interface TrainingSessionProps {
   // Current puzzle data
@@ -57,6 +58,9 @@ export function TrainingSession({
   cycleStats,
   onStartNextCycle,
 }: TrainingSessionProps) {
+  // Timer hook
+  const timer = usePuzzleTimer()
+
   // Handle keyboard shortcuts at session level
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -123,44 +127,52 @@ export function TrainingSession({
   }
 
   return (
-    <div className="flex flex-col items-center gap-6 w-full max-w-2xl mx-auto">
-      {/* Progress bar (mobile-friendly) */}
-      <div className="w-full px-4 md:hidden">
-        <PuzzleProgressBar progress={progress} />
-      </div>
-
-      {/* Main puzzle board - key forces clean remount on puzzle change to prevent flash */}
-      <PuzzleBoard
-        key={puzzleData.id}
-        fen={puzzleData.puzzle.fen}
-        moves={puzzleData.puzzle.moves}
-        onComplete={handleComplete}
-        onSkip={handleSkip}
-        disabled={isTransitioning}
-      />
-
-      {/* Desktop status card */}
-      <div className="hidden md:block w-full">
-        <PuzzleStatus
-          timeMs={0} // Timer is internal to PuzzleBoard
-          progress={progress}
-          puzzleRating={puzzleData.puzzle.rating}
+    <div className="flex flex-col lg:flex-row items-start justify-center gap-8 w-full max-w-7xl mx-auto p-4">
+      {/* Left Column: Board */}
+      <div className="flex-1 w-full flex justify-center lg:justify-end">
+        <PuzzleBoard
+          key={puzzleData.id}
+          fen={puzzleData.puzzle.fen}
+          moves={puzzleData.puzzle.moves}
+          onComplete={handleComplete}
+          onSkip={handleSkip}
+          disabled={isTransitioning}
+          timer={timer}
         />
       </div>
 
-      {/* Puzzle metadata (themes) */}
-      {puzzleData.puzzle.themes.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 justify-center">
-          {puzzleData.puzzle.themes.slice(0, 5).map(theme => (
-            <span
-              key={theme}
-              className="text-xs px-2 py-0.5 bg-muted rounded-full text-muted-foreground"
-            >
-              {formatTheme(theme)}
-            </span>
-          ))}
-        </div>
-      )}
+      {/* Right Column: Status & Metadata */}
+      <div className="w-full lg:w-80 flex flex-col gap-6 sticky top-4">
+        <PuzzleStatus
+          timeMs={timer.timeMs}
+          progress={progress}
+          puzzleRating={puzzleData.puzzle.rating}
+        />
+        
+        <Button 
+            variant="ghost" 
+            onClick={() => handleSkip(timer.getTime())}
+            disabled={isTransitioning}
+            className="w-full text-muted-foreground hover:text-foreground"
+        >
+            <SkipForward className="mr-2 h-4 w-4" />
+            Skip Puzzle
+        </Button>
+
+        {/* Puzzle metadata (themes) */}
+        {puzzleData.puzzle.themes.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 justify-center lg:justify-start">
+            {puzzleData.puzzle.themes.slice(0, 5).map(theme => (
+              <span
+                key={theme}
+                className="text-xs px-2 py-0.5 bg-muted rounded-full text-muted-foreground"
+              >
+                {formatTheme(theme)}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

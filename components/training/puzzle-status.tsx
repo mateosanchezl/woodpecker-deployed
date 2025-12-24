@@ -19,9 +19,9 @@ export function PuzzleStatus({ timeMs, progress, puzzleRating }: PuzzleStatusPro
   )
 
   return (
-    <Card className="w-full max-w-md">
+    <Card className="w-full max-w-2xl">
       <CardContent className="py-4">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-4 flex-col">
           {/* Timer */}
           <div className="text-center">
             <div className="font-mono text-3xl tabular-nums font-medium">
@@ -30,41 +30,40 @@ export function PuzzleStatus({ timeMs, progress, puzzleRating }: PuzzleStatusPro
             <div className="text-xs text-muted-foreground mt-1">Time</div>
           </div>
 
-          {/* Divider */}
-          <div className="h-12 w-px bg-border" />
-
-          {/* Cycle */}
-          <div className="text-center">
-            <div className="text-2xl font-medium">{progress.cycleNumber}</div>
-            <div className="text-xs text-muted-foreground mt-1">Cycle</div>
-          </div>
-
-          {/* Divider */}
-          <div className="h-12 w-px bg-border" />
-
-          {/* Progress */}
-          <div className="text-center flex-1">
-            <div className="text-lg font-medium">
-              {progress.currentPosition}{' '}
-              <span className="text-muted-foreground text-sm">
-                / {progress.totalPuzzles}
-              </span>
+          <div className='flex flex-row gap-4'>
+            {/* Cycle */}
+            <div className="text-center">
+              <div className="text-2xl font-medium">{progress.cycleNumber}</div>
+              <div className="text-xs text-muted-foreground mt-1">Cycle</div>
             </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {percentComplete}% complete
-            </div>
-          </div>
 
-          {/* Rating (optional) */}
-          {puzzleRating && (
-            <>
-              <div className="h-12 w-px bg-border" />
-              <div className="text-center">
-                <div className="text-lg font-medium">{puzzleRating}</div>
-                <div className="text-xs text-muted-foreground mt-1">Rating</div>
+            {/* Divider */}
+            <div className="h-12 w-px bg-border" />
+
+            {/* Progress */}
+            <div className="text-center flex-1">
+              <div className="font-medium text-2xl">
+                {progress.currentPosition}{' '}
+                <span className="text-muted-foreground ">
+                  / {progress.totalPuzzles}
+                </span>
               </div>
-            </>
-          )}
+              <div className="text-xs text-muted-foreground mt-1">
+                {percentComplete}% complete
+              </div>
+            </div>
+
+            {/* Rating (optional) */}
+            {puzzleRating && (
+              <>
+                <div className="h-12 w-px bg-border" />
+                <div className="text-center">
+                  <div className="text-2xl font-medium">{puzzleRating}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Rating</div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

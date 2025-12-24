@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo } from 'react'
 import { Chessboard } from 'react-chessboard'
 import type { ChessboardOptions, SquareHandlerArgs, PieceDropHandlerArgs } from 'react-chessboard'
 import { useChessPuzzle } from '@/hooks/use-chess-puzzle'
-import { usePuzzleTimer, formatTime } from '@/hooks/use-puzzle-timer'
+import { usePuzzleTimer } from '@/hooks/use-puzzle-timer'
 import type { Square, PuzzleStatus } from '@/lib/chess/types'
 import { ANIMATION_DURATION } from '@/lib/chess/types'
 import { PromotionDialog } from './promotion-dialog'
@@ -16,31 +16,30 @@ interface PuzzleBoardProps {
   onComplete: (isCorrect: boolean, timeSpent: number, movesPlayed: string[]) => void
   onSkip: (timeSpent: number) => void
   disabled?: boolean // Disable interactions during transitions
+  timer: ReturnType<typeof usePuzzleTimer>
 }
 
-// Custom board colors matching the slate design system
+// Custom board colors matching the new "Woodpecker" nature theme
 const customDarkSquareStyle: React.CSSProperties = {
-  backgroundColor: '#475569', // slate-600
+  backgroundColor: 'oklch(0.6 0.1 145)', // Muted moss green
 }
 
 const customLightSquareStyle: React.CSSProperties = {
-  backgroundColor: '#e2e8f0', // slate-200
+  backgroundColor: 'oklch(0.96 0.03 145)', // Very light green/cream
 }
 
 const customBoardStyle: React.CSSProperties = {
-  borderRadius: '4px',
+  borderRadius: '12px',
+  boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
 }
 
 /**
  * Interactive chess puzzle board component.
  * Handles the complete puzzle solving flow with animations and feedback.
  */
-export function PuzzleBoard({ fen, moves, onComplete, onSkip, disabled }: PuzzleBoardProps) {
+export function PuzzleBoard({ fen, moves, onComplete, onSkip, disabled, timer }: PuzzleBoardProps) {
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null)
   const [legalMoves, setLegalMoves] = useState<Square[]>([])
-
-  // Timer hook
-  const timer = usePuzzleTimer()
 
   // Chess puzzle hook
   const {
@@ -213,17 +212,12 @@ export function PuzzleBoard({ fen, moves, onComplete, onSkip, disabled }: Puzzle
 
   return (
     <div
-      className="relative flex flex-col items-center gap-4"
+      className="relative flex flex-col items-center gap-4 w-full"
       onKeyDown={handleKeyDown}
       tabIndex={0}
     >
-      {/* Timer display */}
-      <div className="font-mono text-2xl text-muted-foreground tabular-nums">
-        {formatTime(timer.timeMs)}
-      </div>
-
       {/* Chess board with feedback overlay */}
-      <div className="relative w-full max-w-[480px] aspect-square">
+      <div className="relative w-full max-w-[700px] aspect-square shadow-2xl rounded-xl overflow-hidden">
         <Chessboard options={chessboardOptions} />
 
         {/* Feedback overlay */}
@@ -239,19 +233,9 @@ export function PuzzleBoard({ fen, moves, onComplete, onSkip, disabled }: Puzzle
       </div>
 
       {/* Status indicator */}
-      <div className="text-sm text-muted-foreground">
+      <div className="text-lg font-medium text-muted-foreground">
         <StatusText status={status} />
       </div>
-
-      {/* Skip button */}
-      {isPlayerTurn && (
-        <button
-          onClick={handleSkip}
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          Skip (Esc)
-        </button>
-      )}
     </div>
   )
 }

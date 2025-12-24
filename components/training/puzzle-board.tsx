@@ -15,6 +15,7 @@ interface PuzzleBoardProps {
   moves: string
   onComplete: (isCorrect: boolean, timeSpent: number, movesPlayed: string[]) => void
   onSkip: (timeSpent: number) => void
+  disabled?: boolean // Disable interactions during transitions
 }
 
 // Custom board colors matching the slate design system
@@ -34,7 +35,7 @@ const customBoardStyle: React.CSSProperties = {
  * Interactive chess puzzle board component.
  * Handles the complete puzzle solving flow with animations and feedback.
  */
-export function PuzzleBoard({ fen, moves, onComplete, onSkip }: PuzzleBoardProps) {
+export function PuzzleBoard({ fen, moves, onComplete, onSkip, disabled }: PuzzleBoardProps) {
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null)
   const [legalMoves, setLegalMoves] = useState<Square[]>([])
 
@@ -78,6 +79,11 @@ export function PuzzleBoard({ fen, moves, onComplete, onSkip }: PuzzleBoardProps
         return false
       }
 
+      // Ignore drops on the same square (not a move)
+      if (sourceSquare === targetSquare) {
+        return false
+      }
+
       setSelectedSquare(null)
       setLegalMoves([])
 
@@ -94,6 +100,13 @@ export function PuzzleBoard({ fen, moves, onComplete, onSkip }: PuzzleBoardProps
       }
 
       const sq = square as Square
+
+      // If clicking the same square that's selected, deselect it
+      if (selectedSquare === sq) {
+        setSelectedSquare(null)
+        setLegalMoves([])
+        return
+      }
 
       // If a piece is already selected and this is a legal target
       if (selectedSquare && legalMoves.includes(sq)) {
@@ -174,13 +187,16 @@ export function PuzzleBoard({ fen, moves, onComplete, onSkip }: PuzzleBoardProps
     [promotionState.isOpen, cancelPromotion, selectedSquare, isPlayerTurn, handleSkip]
   )
 
+  // Effective player turn (disabled during transitions)
+  const canInteract = isPlayerTurn && !disabled
+
   // Chessboard options
   const chessboardOptions: ChessboardOptions = useMemo(() => ({
     position,
     boardOrientation: orientation,
     onPieceDrop: handlePieceDrop,
     onSquareClick: handleSquareClick,
-    allowDragging: isPlayerTurn,
+    allowDragging: canInteract,
     animationDurationInMs: ANIMATION_DURATION,
     boardStyle: customBoardStyle,
     darkSquareStyle: customDarkSquareStyle,
@@ -191,7 +207,7 @@ export function PuzzleBoard({ fen, moves, onComplete, onSkip }: PuzzleBoardProps
     orientation,
     handlePieceDrop,
     handleSquareClick,
-    isPlayerTurn,
+    canInteract,
     customSquareStyles,
   ])
 

@@ -122,3 +122,66 @@ export const errorResponseSchema = z.object({
 })
 
 export type ErrorResponse = z.infer<typeof errorResponseSchema>
+
+/**
+ * Schema for creating a puzzle set.
+ */
+export const createPuzzleSetSchema = z.object({
+  name: z
+    .string()
+    .min(1, 'Name is required')
+    .max(100, 'Name must be 100 characters or less'),
+  targetRating: z
+    .number()
+    .int()
+    .min(800, 'Target rating must be at least 800')
+    .max(2600, 'Target rating must be at most 2600'),
+  ratingRange: z
+    .number()
+    .int()
+    .min(50, 'Rating range must be at least 50')
+    .max(400, 'Rating range must be at most 400'),
+  size: z
+    .number()
+    .int()
+    .min(50, 'Set size must be at least 50')
+    .max(500, 'Set size must be at most 500'),
+  targetCycles: z
+    .number()
+    .int()
+    .min(1, 'Must complete at least 1 cycle')
+    .max(10, 'Cannot exceed 10 cycles'),
+})
+
+export type CreatePuzzleSetInput = z.infer<typeof createPuzzleSetSchema>
+
+/**
+ * Response schema for creating a puzzle set.
+ */
+export const createPuzzleSetResponseSchema = z.object({
+  puzzleSet: z.object({
+    id: z.string(),
+    name: z.string(),
+    size: z.number(),
+    targetRating: z.number(),
+    minRating: z.number(),
+    maxRating: z.number(),
+    targetCycles: z.number(),
+    createdAt: z.string(),
+  }),
+})
+
+export type CreatePuzzleSetResponse = z.infer<typeof createPuzzleSetResponseSchema>
+
+/**
+ * Schema for completing onboarding.
+ */
+export const completeOnboardingSchema = z.object({
+  estimatedRating: z
+    .number()
+    .int()
+    .min(800, 'Rating must be at least 800')
+    .max(2600, 'Rating must be at most 2600'),
+})
+
+export type CompleteOnboardingInput = z.infer<typeof completeOnboardingSchema>

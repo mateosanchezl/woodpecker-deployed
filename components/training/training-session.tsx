@@ -16,6 +16,7 @@ interface TrainingSessionProps {
 
   // Loading and error states
   isLoading: boolean
+  isTransitioning?: boolean // True during puzzle transition
   error: Error | null
 
   // Callbacks
@@ -47,6 +48,7 @@ export function TrainingSession({
   puzzleData,
   progress,
   isLoading,
+  isTransitioning,
   error,
   onPuzzleComplete,
   onSkip,
@@ -85,8 +87,8 @@ export function TrainingSession({
     [puzzleData, onSkip]
   )
 
-  // Loading state
-  if (isLoading) {
+  // Loading state (initial load only, not transitions)
+  if (isLoading && !puzzleData) {
     return <TrainingSessionSkeleton />
   }
 
@@ -127,12 +129,14 @@ export function TrainingSession({
         <PuzzleProgressBar progress={progress} />
       </div>
 
-      {/* Main puzzle board */}
+      {/* Main puzzle board - key forces clean remount on puzzle change to prevent flash */}
       <PuzzleBoard
+        key={puzzleData.id}
         fen={puzzleData.puzzle.fen}
         moves={puzzleData.puzzle.moves}
         onComplete={handleComplete}
         onSkip={handleSkip}
+        disabled={isTransitioning}
       />
 
       {/* Desktop status card */}

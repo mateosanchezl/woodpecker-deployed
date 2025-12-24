@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
+import { createPuzzleSetSchema } from '@/lib/validations/training'
 
 /**
  * GET /api/training/puzzle-sets
@@ -56,13 +57,116 @@ export async function GET() {
           currentCycle: latestCycle?.cycleNumber || null,
           currentCycleId: latestCycle && !isCurrentCycleComplete ? latestCycle.id : null,
           completedCycles: isCurrentCycleComplete
-            ? latestCycle.cycleNumber
-            : (latestCycle?.cycleNumber || 1) - 1,
+            ? latestCycle?.cycleNumber ?? 0
+            : (latestCycle?.cycleNumber ?? 1) - 1,
         }
       }),
     })
   } catch (error) {
     console.error('Error fetching puzzle sets:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * POST /api/training/puzzle-sets
+ * Creates a new puzzle set with randomly selected puzzles.
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const { userId } = await auth()
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Parse and validate request body
+    const body = await request.json()
+    const validation = createPuzzleSetSchema.safeParse(body)
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: 'Invalid request body', details: validation.error.message },
+        { status: 400 }
+      )
+    }
+
+    const { name, targetRating, ratingRange, size, targetCycles } = validation.data
+
+    // Get the user's database ID from their Clerk ID
+    const user = await prisma.user.findUnique({
+      where: { clerkId: userId },
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // Calculate rating bounds
+    const minRating = Math.max(800, targetRating - Math.floor(ratingRange / 2))
+    const maxRating = Math.min(2600, targetRating + Math.floor(ratingRange / 2))
+
+    // Select random puzzles within the rating range
+    // Using raw query for efficient random selection from large table
+    const puzzles = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT id FROM "Puzzle"
+      WHERE rating >= ${minRating} AND rating <= ${maxRating}
+      ORDER BY RANDOM()
+      LIMIT ${size}
+    `
+
+    if (puzzles.length < size) {
+      return NextResponse.json(
+        {
+          error: 'Not enough puzzles available',
+          details: `Found ${puzzles.length} puzzles in rating range ${minRating}-${maxRating}, but ${size} requested.`
+        },
+        { status: 400 }
+      )
+    }
+
+    // Create puzzle set with puzzles in a transaction
+    const puzzleSet = await prisma.$transaction(async (tx) => {
+      // Create the puzzle set
+      const set = await tx.puzzleSet.create({
+        data: {
+          userId: user.id,
+          name,
+          targetRating,
+          minRating,
+          maxRating,
+          size,
+          targetCycles,
+        },
+      })
+
+      // Create PuzzleInSet entries with positions
+      await tx.puzzleInSet.createMany({
+        data: puzzles.map((puzzle, index) => ({
+          puzzleSetId: set.id,
+          puzzleId: puzzle.id,
+          position: index + 1,
+        })),
+      })
+
+      return set
+    })
+
+    return NextResponse.json({
+      puzzleSet: {
+        id: puzzleSet.id,
+        name: puzzleSet.name,
+        size: puzzleSet.size,
+        targetRating: puzzleSet.targetRating,
+        minRating: puzzleSet.minRating,
+        maxRating: puzzleSet.maxRating,
+        targetCycles: puzzleSet.targetCycles,
+        createdAt: puzzleSet.createdAt.toISOString(),
+      },
+    })
+  } catch (error) {
+    console.error('Error creating puzzle set:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -228,7 +228,14 @@ The application uses Clerk for authentication:
 - Environment variables required:
   - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
   - `CLERK_SECRET_KEY`
+  - `CLERK_WEBHOOK_SECRET` - Webhook signing secret for user sync
 - Auth components used in header: `SignInButton`, `SignUpButton`, `UserButton`, `SignedIn`, `SignedOut`
+
+### User Sync via Webhooks
+User creation and updates are handled via Clerk webhooks at `/api/webhooks/clerk`:
+- `user.created` - Creates user in database when they sign up
+- `user.updated` - Syncs email/name changes from Clerk
+- `user.deleted` - Removes user and cascades to related data
 
 ## State Management (TanStack Query)
 
@@ -283,4 +290,5 @@ The script processes the CSV file in batches of 10,000 puzzles and provides prog
 Required environment variables (stored in `.env.local`, gitignored):
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` - Clerk public key
 - `CLERK_SECRET_KEY` - Clerk secret key
+- `CLERK_WEBHOOK_SECRET` - Clerk webhook signing secret (from Clerk Dashboard → Webhooks)
 - `DATABASE_URL` - PostgreSQL connection string

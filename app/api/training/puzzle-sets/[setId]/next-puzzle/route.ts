@@ -109,8 +109,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
       })
     }
 
-    // Get the next puzzle (first unsolved)
+    // Get the next puzzle (first unsolved) and prefetch the one after
     const nextPuzzleInSet = unsolvedPuzzles[0]
+    const prefetchPuzzleInSet = unsolvedPuzzles.length > 1 ? unsolvedPuzzles[1] : null
     const completedCount = attemptedPuzzleIds.size
 
     return NextResponse.json({
@@ -135,6 +136,23 @@ export async function GET(request: NextRequest, context: RouteContext) {
         cycleNumber: cycle.cycleNumber,
       },
       isCycleComplete: false,
+      // Prefetched next puzzle for instant transitions
+      prefetchedNext: prefetchPuzzleInSet ? {
+        puzzle: {
+          id: prefetchPuzzleInSet.puzzle.id,
+          fen: prefetchPuzzleInSet.puzzle.fen,
+          moves: prefetchPuzzleInSet.puzzle.moves,
+          rating: prefetchPuzzleInSet.puzzle.rating,
+          themes: prefetchPuzzleInSet.puzzle.themes,
+        },
+        puzzleInSet: {
+          id: prefetchPuzzleInSet.id,
+          position: prefetchPuzzleInSet.position,
+          totalAttempts: prefetchPuzzleInSet.totalAttempts,
+          correctAttempts: prefetchPuzzleInSet.correctAttempts,
+          averageTime: prefetchPuzzleInSet.averageTime,
+        },
+      } : null,
     })
   } catch (error) {
     console.error('Error fetching next puzzle:', error)

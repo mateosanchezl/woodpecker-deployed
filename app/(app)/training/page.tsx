@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, Suspense } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { TrainingSession } from '@/components/training/training-session'
 import {
   useTrainingSession,
@@ -11,7 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Play, Clock, Target, TrendingUp } from 'lucide-react'
+import { Play, Target, TrendingUp } from 'lucide-react'
 import type { PuzzleInSetData, TrainingProgress } from '@/lib/chess/types'
 
 /**
@@ -19,6 +21,17 @@ import type { PuzzleInSetData, TrainingProgress } from '@/lib/chess/types'
  * Shows puzzle sets and allows starting/continuing training cycles.
  */
 export default function TrainingPage() {
+  return (
+    <Suspense fallback={<TrainingPageSkeleton />}>
+      <TrainingPageContent />
+    </Suspense>
+  )
+}
+
+function TrainingPageContent() {
+  const searchParams = useSearchParams()
+  const urlSetId = searchParams.get('setId')
+
   // Fetch user's active puzzle sets
   const { data: puzzleSets, isLoading: loadingSets } = useQuery<{
     sets: Array<{
@@ -42,7 +55,7 @@ export default function TrainingPage() {
     },
   })
 
-  const [selectedSetId, setSelectedSetId] = useState<string | null>(null)
+  const [selectedSetId, setSelectedSetId] = useState<string | null>(urlSetId)
   const [activeCycleId, setActiveCycleId] = useState<string | null>(null)
 
   // Get cycles for selected set
@@ -95,16 +108,31 @@ export default function TrainingPage() {
     await handleStartCycle()
   }, [handleStartCycle])
 
-  // Auto-select first set and continue active cycle
+  // Auto-select set from URL or first set, and continue active cycle
   useEffect(() => {
-    if (puzzleSets?.sets && puzzleSets.sets.length > 0 && !selectedSetId) {
+    if (!puzzleSets?.sets || puzzleSets.sets.length === 0) return
+
+    // If URL has setId, use that
+    if (urlSetId) {
+      const urlSet = puzzleSets.sets.find(s => s.id === urlSetId)
+      if (urlSet) {
+        setSelectedSetId(urlSet.id)
+        if (urlSet.currentCycleId) {
+          setActiveCycleId(urlSet.currentCycleId)
+        }
+        return
+      }
+    }
+
+    // Otherwise use first set
+    if (!selectedSetId) {
       const firstSet = puzzleSets.sets[0]
       setSelectedSetId(firstSet.id)
       if (firstSet.currentCycleId) {
         setActiveCycleId(firstSet.currentCycleId)
       }
     }
-  }, [puzzleSets, selectedSetId])
+  }, [puzzleSets, selectedSetId, urlSetId])
 
   // Loading state
   if (loadingSets) {
@@ -131,6 +159,7 @@ export default function TrainingPage() {
           } : null}
           progress={trainingSession.progress}
           isLoading={trainingSession.isLoading}
+          isTransitioning={trainingSession.isTransitioning}
           error={trainingSession.error}
           onPuzzleComplete={handlePuzzleComplete}
           onSkip={handleSkip}
@@ -286,11 +315,13 @@ function NoPuzzleSetsCard() {
         <CardHeader className="text-center">
           <CardTitle>No Puzzle Sets</CardTitle>
           <CardDescription>
-            You don't have any puzzle sets yet. Create one to start training.
+            You don&apos;t have any puzzle sets yet. Create one to start training.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex justify-center">
-          <Button>Create Puzzle Set</Button>
+          <Button asChild>
+            <Link href="/training/new">Create Puzzle Set</Link>
+          </Button>
         </CardContent>
       </Card>
     </div>

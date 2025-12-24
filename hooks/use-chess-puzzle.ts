@@ -68,6 +68,9 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
   // Chess.js instance ref (mutable, doesn't trigger re-renders)
   const chessRef = useRef<Chess>(new Chess())
 
+  // Track initialization to prevent race conditions
+  const initIdRef = useRef(0)
+
   // State
   const [position, setPosition] = useState(fen)
   const [status, setStatus] = useState<PuzzleStatus>('loading')
@@ -86,8 +89,18 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
 
   // Initialize puzzle
   const initialize = useCallback(async () => {
+    // Increment init ID to track this specific initialization
+    const currentInitId = ++initIdRef.current
+
     try {
-      chessRef.current.load(fen)
+      // Create a fresh Chess instance and load the FEN
+      const chess = new Chess()
+      chess.load(fen)
+      chessRef.current = chess
+
+      // Parse the solution moves for this specific puzzle
+      const moves = parseSolutionMoves(solutionMoves)
+
       setPosition(fen)
       setStatus('loading')
       setCurrentMoveIndex(0)
@@ -98,9 +111,14 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
       // Brief delay before showing opponent's first move
       await sleep(OPPONENT_MOVE_DELAY)
 
+      // Check if this initialization is still current (puzzle hasn't changed)
+      if (initIdRef.current !== currentInitId) {
+        return // Abort - puzzle changed during delay
+      }
+
       // Play opponent's first move
-      if (solutionMovesArray.length > 0) {
-        const firstMove = parseUciMove(solutionMovesArray[0])
+      if (moves.length > 0) {
+        const firstMove = parseUciMove(moves[0])
         setStatus('opponent_turn')
 
         const result = chessRef.current.move({
@@ -117,11 +135,16 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
           // Wait for animation
           await sleep(ANIMATION_DURATION)
 
+          // Check again if still current
+          if (initIdRef.current !== currentInitId) {
+            return // Abort - puzzle changed during animation
+          }
+
           // Ready for player
           setStatus('player_turn')
           onReady?.()
         } else {
-          console.error('Failed to play first move:', solutionMovesArray[0])
+          console.error('Failed to play first move:', moves[0], 'FEN:', fen)
           setStatus('player_turn')
           onReady?.()
         }
@@ -131,9 +154,12 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
       }
     } catch (error) {
       console.error('Failed to initialize puzzle:', error)
-      setStatus('player_turn')
+      // Only set status if this init is still current
+      if (initIdRef.current === currentInitId) {
+        setStatus('player_turn')
+      }
     }
-  }, [fen, solutionMovesArray, onReady])
+  }, [fen, solutionMoves, onReady])
 
   // Play opponent's next move
   const playOpponentMove = useCallback(async (moveIndex: number) => {
@@ -260,6 +286,11 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
     promotion?: string
   ): boolean => {
     if (status !== 'player_turn') {
+      return false
+    }
+
+    // Ignore same-square "moves" (not a real move)
+    if (from === to) {
       return false
     }
 

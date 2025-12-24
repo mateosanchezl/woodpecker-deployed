@@ -18,8 +18,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Play, Target, TrendingUp, MoreVertical, Trash2, Clock } from 'lucide-react'
+import { Play, Target, TrendingUp, MoreVertical, Trash2, Clock, Flame } from 'lucide-react'
 import { toast } from 'sonner'
+import { useStreak } from '@/hooks/use-streak'
+import { getStreakMessage } from '@/lib/streak-milestones'
+import { cn } from '@/lib/utils'
 
 interface PuzzleSetData {
   id: string
@@ -197,6 +200,9 @@ function TrainingPageContent() {
           Select a puzzle set to begin or continue training
         </p>
       </div>
+
+      {/* Streak Encouragement Banner */}
+      <StreakBanner />
 
       {/* Continue Training Section */}
       {lastTrainedSet && (
@@ -497,6 +503,66 @@ function NoPuzzleSetsCard() {
           </Button>
         </CardContent>
       </Card>
+    </div>
+  )
+}
+
+function StreakBanner() {
+  const { data: streak, isLoading } = useStreak()
+
+  if (isLoading || !streak) {
+    return null
+  }
+
+  const message = getStreakMessage(
+    streak.currentStreak,
+    streak.isActiveToday,
+    streak.isAtRisk
+  )
+
+  const hasStreak = streak.currentStreak > 0
+
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-3 px-4 py-3 rounded-lg',
+        hasStreak
+          ? 'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800'
+          : 'bg-muted/50 border border-border',
+        streak.isAtRisk && 'animate-pulse'
+      )}
+    >
+      <div
+        className={cn(
+          'p-2 rounded-full',
+          hasStreak
+            ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white'
+            : 'bg-muted'
+        )}
+      >
+        <Flame className={cn('h-4 w-4', !hasStreak && 'text-muted-foreground')} />
+      </div>
+      <div className="flex-1">
+        <p className={cn(
+          'text-sm font-medium',
+          streak.isAtRisk && 'text-amber-700 dark:text-amber-300'
+        )}>
+          {message}
+        </p>
+      </div>
+      {hasStreak && (
+        <div className="text-right">
+          <span className={cn(
+            'text-lg font-bold tabular-nums',
+            'text-amber-600 dark:text-amber-400'
+          )}>
+            {streak.currentStreak}
+          </span>
+          <span className="text-sm text-muted-foreground ml-1">
+            {streak.currentStreak === 1 ? 'day' : 'days'}
+          </span>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,7 +1,8 @@
 'use client'
 
 import { Card, CardContent } from '@/components/ui/card'
-import { Target, TrendingUp, Clock, Zap } from 'lucide-react'
+import { Target, TrendingUp, Clock, Zap, Flame } from 'lucide-react'
+import { useStreak } from '@/hooks/use-streak'
 
 interface ProgressSummaryProps {
   totalAttempts: number
@@ -73,6 +74,8 @@ export function ProgressSummary({
   averageTimePerPuzzle,
   bestCycleTime,
 }: ProgressSummaryProps) {
+  const { data: streak } = useStreak()
+
   const accuracyColor =
     overallAccuracy >= 80
       ? 'text-green-600'
@@ -81,7 +84,16 @@ export function ProgressSummary({
         : 'text-red-600'
 
   return (
-    <div className="grid gap-4 md:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-5">
+      <StatsCard
+        title="Current Streak"
+        value={streak?.currentStreak ?? 0}
+        subtitle={streak?.longestStreak ? `best: ${streak.longestStreak} days` : undefined}
+        icon={Flame}
+        valueColor={streak?.currentStreak && streak.currentStreak >= 3 ? 'text-amber-600' : undefined}
+        iconBgColor="bg-orange-100"
+        iconColor="text-orange-600"
+      />
       <StatsCard
         title="Puzzles Solved"
         value={totalAttempts}

@@ -166,8 +166,8 @@ function ProgressContentSkeleton() {
   return (
     <div className="space-y-8">
       {/* Summary Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        {[1, 2, 3, 4].map((i) => (
+      <div className="grid gap-4 md:grid-cols-5">
+        {[1, 2, 3, 4, 5].map((i) => (
           <Card key={i}>
             <CardContent className="pt-6">
               <Skeleton className="h-4 w-20 mb-2" />

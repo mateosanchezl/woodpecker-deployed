@@ -20,6 +20,12 @@ model User {
   // Onboarding
   hasCompletedOnboarding Boolean @default(false)
 
+  // Streak tracking
+  currentStreak    Int       @default(0)
+  longestStreak    Int       @default(0)
+  lastTrainedDate  DateTime? // UTC date of last training activity
+  streakUpdatedAt  DateTime? // When streak was last calculated
+
   // Metadata
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt

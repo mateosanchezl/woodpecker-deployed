@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { OnboardingWizard } from '@/components/onboarding/onboarding-wizard'
 import { CreatePuzzleSetForm } from '@/components/onboarding/create-puzzle-set-form'
+import { StreakCard } from '@/components/dashboard/streak-card'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -190,6 +191,9 @@ export default function DashboardPage() {
           New Set
         </Button>
       </div>
+
+      {/* Streak Card - Hero */}
+      <StreakCard />
 
       {/* Stats Overview */}
       <div className="grid gap-4 md:grid-cols-3">

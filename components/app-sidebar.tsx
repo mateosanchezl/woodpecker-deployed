@@ -77,7 +77,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroupContent>
             <SidebarMenu>
               {data.navMain.map((item) => (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={item.title} className="h-10">
                   <SidebarMenuButton asChild isActive={pathname === item.url}>
                     <Link href={item.url}>
                       <item.icon />

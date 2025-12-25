@@ -109,12 +109,23 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const { estimatedRating, showOnLeaderboard } = settingsValidation.data
+    const { estimatedRating, preferredSetSize, targetCycles, showOnLeaderboard } = settingsValidation.data
 
     // Build update data only with provided fields
-    const updateData: { estimatedRating?: number; showOnLeaderboard?: boolean } = {}
+    const updateData: {
+      estimatedRating?: number
+      preferredSetSize?: number
+      targetCycles?: number
+      showOnLeaderboard?: boolean
+    } = {}
     if (estimatedRating !== undefined) {
       updateData.estimatedRating = estimatedRating
+    }
+    if (preferredSetSize !== undefined) {
+      updateData.preferredSetSize = preferredSetSize
+    }
+    if (targetCycles !== undefined) {
+      updateData.targetCycles = targetCycles
     }
     if (showOnLeaderboard !== undefined) {
       updateData.showOnLeaderboard = showOnLeaderboard
@@ -129,6 +140,8 @@ export async function PATCH(request: NextRequest) {
       user: {
         id: user.id,
         estimatedRating: user.estimatedRating,
+        preferredSetSize: user.preferredSetSize,
+        targetCycles: user.targetCycles,
         hasCompletedOnboarding: user.hasCompletedOnboarding,
         showOnLeaderboard: user.showOnLeaderboard,
       },

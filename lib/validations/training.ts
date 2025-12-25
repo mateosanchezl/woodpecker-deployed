@@ -196,6 +196,18 @@ export const updateUserSettingsSchema = z.object({
     .min(800, 'Rating must be at least 800')
     .max(2600, 'Rating must be at most 2600')
     .optional(),
+  preferredSetSize: z
+    .number()
+    .int()
+    .min(50, 'Set size must be at least 50')
+    .max(500, 'Set size must be at most 500')
+    .optional(),
+  targetCycles: z
+    .number()
+    .int()
+    .min(1, 'Must complete at least 1 cycle')
+    .max(10, 'Cannot exceed 10 cycles')
+    .optional(),
   showOnLeaderboard: z.boolean().optional(),
 })
 

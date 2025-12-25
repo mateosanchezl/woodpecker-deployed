@@ -153,8 +153,8 @@ export function PuzzleBoard({ fen, moves, onComplete, onSkip, disabled, timer }:
     legalMoves.forEach(sq => {
       styles[sq] = {
         ...styles[sq],
-        background: styles[sq]?.backgroundColor
-          ? `radial-gradient(circle, rgba(0, 0, 0, 0.2) 25%, transparent 25%), ${styles[sq].backgroundColor}`
+        backgroundImage: styles[sq]?.backgroundColor
+          ? `radial-gradient(circle, rgba(0, 0, 0, 0.2) 25%, transparent 25%)`
           : 'radial-gradient(circle, rgba(0, 0, 0, 0.2) 25%, transparent 25%)',
         backgroundSize: '100% 100%',
       }

@@ -32,6 +32,12 @@ model User {
   weeklyCorrectAttempts  Int       @default(0)
   weeklyCorrectStartDate DateTime? // Start of current weekly period (Monday UTC)
 
+  // XP & Levelling
+  totalXp            Int       @default(0)
+  currentLevel       Int       @default(1)
+  weeklyXp           Int       @default(0)
+  weeklyXpStartDate  DateTime? // Start of current weekly XP period (Monday UTC)
+
   // Metadata
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
@@ -43,6 +49,8 @@ model User {
   @@index([clerkId])
   @@index([showOnLeaderboard, totalCorrectAttempts(sort: Desc)])
   @@index([showOnLeaderboard, weeklyCorrectAttempts(sort: Desc)])
+  @@index([showOnLeaderboard, totalXp(sort: Desc)])
+  @@index([showOnLeaderboard, weeklyXp(sort: Desc)])
 }
 
 model Puzzle {

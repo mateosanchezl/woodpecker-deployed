@@ -13,15 +13,15 @@ import { ThemeProvider } from "./providers/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
-// const geistSans = Geist({
-//   variable: "--font-geist-sans",
-//   subsets: ["latin"],
-// });
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
 
-// const geistMono = Geist_Mono({
-//   variable: "--font-geist-mono",
-//   subsets: ["latin"],
-// });
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 const lora = Lora({
   variable: "--font-serif",
@@ -43,7 +43,7 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
         <body
-          className={`${lora.variable} antialiased`}
+          className={`${geistSans.variable} ${geistMono.variable} ${lora.variable} antialiased`}
         >
           <ThemeProvider
             attribute="class"

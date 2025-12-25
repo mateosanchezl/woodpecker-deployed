@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { OnboardingWizard } from '@/components/onboarding/onboarding-wizard'
 import { CreatePuzzleSetForm } from '@/components/onboarding/create-puzzle-set-form'
 import { StreakCard } from '@/components/dashboard/streak-card'
+import { XpCard } from '@/components/dashboard/xp-card'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -192,8 +193,11 @@ export default function DashboardPage() {
         </Button>
       </div>
 
-      {/* Streak Card - Hero */}
-      <StreakCard />
+      {/* XP and Streak Cards */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <XpCard />
+        <StreakCard />
+      </div>
 
       {/* Stats Overview */}
       <div className="grid gap-4 md:grid-cols-3">

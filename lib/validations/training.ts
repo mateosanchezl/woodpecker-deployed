@@ -104,6 +104,22 @@ export const attemptResponseSchema = z.object({
       isNewRecord: z.boolean(),
     })
     .optional(),
+  xp: z
+    .object({
+      gained: z.number(),
+      breakdown: z.array(
+        z.object({
+          source: z.string(),
+          amount: z.number(),
+          label: z.string(),
+        })
+      ),
+      newTotal: z.number(),
+      previousLevel: z.number(),
+      newLevel: z.number(),
+      leveledUp: z.boolean(),
+    })
+    .optional(),
   unlockedAchievements: z
     .array(
       z.object({

@@ -23,6 +23,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { StreakBadge } from "@/components/sidebar/streak-badge"
+import { SidebarLevelBadge } from "@/components/sidebar/level-badge"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -74,7 +75,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </div>
             <span>Peck</span>
           </div>
-          <StreakBadge />
+          <div className="flex items-center gap-2">
+            <SidebarLevelBadge />
+            <StreakBadge />
+          </div>
         </div>
       </SidebarHeader>
       <SidebarContent>

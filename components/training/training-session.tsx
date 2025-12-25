@@ -6,9 +6,11 @@ import { PuzzleStatus, PuzzleProgressBar } from './puzzle-status'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { AlertCircle, RefreshCw, CheckCircle2, SkipForward } from 'lucide-react'
+import { AlertCircle, RefreshCw, CheckCircle2, SkipForward, Sparkles } from 'lucide-react'
 import type { TrainingProgress, PuzzleInSetData } from '@/lib/chess/types'
 import { usePuzzleTimer } from '@/hooks/use-puzzle-timer'
+import { useXp } from '@/hooks/use-xp'
+import { XpBar } from '@/components/xp/xp-bar'
 
 interface TrainingSessionProps {
   // Current puzzle data
@@ -244,6 +246,7 @@ function CycleCompleteCard({
   cycleNumber: number
   onStartNextCycle?: () => void
 }) {
+  const { data: xpData } = useXp()
   const total = stats.solvedCorrect + stats.solvedIncorrect + stats.skipped
   const accuracy = total > 0 ? Math.round((stats.solvedCorrect / total) * 100) : 0
 
@@ -291,6 +294,30 @@ function CycleCompleteCard({
               {formatTotalTime(stats.totalTime)}
             </div>
             <div className="text-xs text-muted-foreground">Total time</div>
+          </div>
+        )}
+
+        {/* XP Progress */}
+        {xpData && (
+          <div className="space-y-3 pt-2 border-t">
+            <div className="flex items-center justify-center gap-2">
+              <Sparkles className="h-5 w-5 text-amber-500" />
+              <span className="text-lg font-semibold">
+                Level {xpData.currentLevel}
+              </span>
+              <span className="text-muted-foreground">
+                {xpData.levelTitle.icon} {xpData.levelTitle.title}
+              </span>
+            </div>
+            <XpBar
+              currentXp={xpData.totalXp}
+              xpInCurrentLevel={xpData.levelProgress.xpInCurrentLevel}
+              xpNeededForNextLevel={xpData.levelProgress.xpNeededForNextLevel}
+              progressPercent={xpData.levelProgress.progressPercent}
+              currentLevel={xpData.currentLevel}
+              showLabels={true}
+              size="md"
+            />
           </div>
         )}
 

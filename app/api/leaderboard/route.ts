@@ -37,6 +37,10 @@ export async function GET(request: NextRequest) {
         totalCorrectAttempts: true,
         weeklyCorrectAttempts: true,
         weeklyCorrectStartDate: true,
+        totalXp: true,
+        currentLevel: true,
+        weeklyXp: true,
+        weeklyXpStartDate: true,
       },
     })
 
@@ -47,22 +51,22 @@ export async function GET(request: NextRequest) {
     const currentWeekStart = getISOWeekStart(new Date())
     const isWeekly = period === 'weekly'
 
-    // Build the where clause based on period
+    // Build the where clause based on period (ranked by XP)
     const whereClause = isWeekly
       ? {
           showOnLeaderboard: true,
-          weeklyCorrectAttempts: { gt: 0 },
-          weeklyCorrectStartDate: { gte: currentWeekStart },
+          weeklyXp: { gt: 0 },
+          weeklyXpStartDate: { gte: currentWeekStart },
         }
       : {
           showOnLeaderboard: true,
-          totalCorrectAttempts: { gt: 0 },
+          totalXp: { gt: 0 },
         }
 
     // Get total count for pagination
     const total = await prisma.user.count({ where: whereClause })
 
-    // Get leaderboard entries
+    // Get leaderboard entries (ranked by XP)
     const users = await prisma.user.findMany({
       where: whereClause,
       select: {
@@ -71,10 +75,11 @@ export async function GET(request: NextRequest) {
         estimatedRating: true,
         totalCorrectAttempts: true,
         weeklyCorrectAttempts: true,
+        totalXp: true,
+        currentLevel: true,
+        weeklyXp: true,
       },
-      orderBy: isWeekly
-        ? { weeklyCorrectAttempts: 'desc' }
-        : { totalCorrectAttempts: 'desc' },
+      orderBy: isWeekly ? { weeklyXp: 'desc' } : { totalXp: 'desc' },
       take: limit,
       skip: offset,
     })
@@ -84,6 +89,8 @@ export async function GET(request: NextRequest) {
       rank: offset + index + 1,
       userId: user.id,
       name: user.name,
+      xp: isWeekly ? user.weeklyXp : user.totalXp,
+      level: user.currentLevel,
       puzzlesSolved: isWeekly ? user.weeklyCorrectAttempts : user.totalCorrectAttempts,
       estimatedRating: user.estimatedRating,
       isCurrentUser: user.id === currentUser.id,
@@ -92,21 +99,29 @@ export async function GET(request: NextRequest) {
     // Calculate current user's rank if they're not in the current page
     let currentUserData: LeaderboardResponse['currentUser'] = null
 
-    // Get current user's score for this period
-    const currentUserScore = isWeekly
+    // Get current user's XP for this period
+    const currentUserXp = isWeekly
+      ? currentUser.weeklyXpStartDate &&
+        currentUser.weeklyXpStartDate >= currentWeekStart
+        ? currentUser.weeklyXp
+        : 0
+      : currentUser.totalXp
+
+    // Get current user's puzzles solved for this period
+    const currentUserPuzzles = isWeekly
       ? currentUser.weeklyCorrectStartDate &&
         currentUser.weeklyCorrectStartDate >= currentWeekStart
         ? currentUser.weeklyCorrectAttempts
         : 0
       : currentUser.totalCorrectAttempts
 
-    if (currentUserScore > 0) {
-      // Count users with higher score to get rank
+    if (currentUserXp > 0) {
+      // Count users with higher XP to get rank
       const usersAhead = await prisma.user.count({
         where: {
           ...whereClause,
-          [isWeekly ? 'weeklyCorrectAttempts' : 'totalCorrectAttempts']: {
-            gt: currentUserScore,
+          [isWeekly ? 'weeklyXp' : 'totalXp']: {
+            gt: currentUserXp,
           },
         },
       })
@@ -119,7 +134,9 @@ export async function GET(request: NextRequest) {
           rank,
           userId: currentUser.id,
           name: currentUser.name,
-          puzzlesSolved: currentUserScore,
+          xp: currentUserXp,
+          level: currentUser.currentLevel,
+          puzzlesSolved: currentUserPuzzles,
           estimatedRating: currentUser.estimatedRating,
           isCurrentUser: true,
         },

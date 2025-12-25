@@ -202,7 +202,13 @@ export function useTrainingSession(
     onSuccess: (data) => {
       // Refetch to get the real data and next prefetch
       queryClient.invalidateQueries({ queryKey: ['next-puzzle', puzzleSetId, cycleId] })
-      
+
+      // Invalidate XP/user cache at end of cycle only (not during puzzles for performance)
+      if (data.isLastPuzzle) {
+        queryClient.invalidateQueries({ queryKey: ['xp'] })
+        queryClient.invalidateQueries({ queryKey: ['user'] })
+      }
+
       // Show achievement unlock toasts
       if (data.unlockedAchievements && data.unlockedAchievements.length > 0) {
         // Dynamically import to avoid circular dependencies

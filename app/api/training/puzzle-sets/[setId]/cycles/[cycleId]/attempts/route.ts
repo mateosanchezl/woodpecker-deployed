@@ -10,6 +10,13 @@ import {
   checkAchievementsAfterStreakUpdate,
   type UnlockedAchievement,
 } from '@/lib/achievements'
+import {
+  calculatePuzzleAttemptXp,
+  calculateCycleCompleteXp,
+  combineXpGains,
+  getLevelFromXp,
+  type XpGainResult,
+} from '@/lib/xp'
 
 interface RouteContext {
   params: Promise<{ setId: string; cycleId: string }>
@@ -87,7 +94,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
       where: { id: puzzleInSetId },
       include: {
         puzzle: {
-          select: { themes: true },
+          select: { themes: true, rating: true },
+        },
+        attempts: {
+          orderBy: { attemptedAt: 'desc' },
+          take: 1,
+          select: { isCorrect: true, timeSpent: true },
         },
       },
     })
@@ -208,6 +220,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
         totalCorrectAttempts?: { increment: number }
         weeklyCorrectAttempts?: number | { increment: number }
         weeklyCorrectStartDate?: Date
+        totalXp?: number
+        currentLevel?: number
+        weeklyXp?: number | { increment: number }
+        weeklyXpStartDate?: Date
       } = {}
 
       // Only update streak if it changed (i.e., first attempt of the day)
@@ -235,6 +251,62 @@ export async function POST(request: NextRequest, context: RouteContext) {
         userUpdateData.weeklyCorrectStartDate = currentWeekStart
       }
 
+      // Calculate XP for this puzzle attempt
+      const previousAttempt = puzzleInSet.attempts[0]
+      const puzzleXpResult = calculatePuzzleAttemptXp({
+        isCorrect,
+        timeSpentMs: timeSpent,
+        puzzleRating: puzzleInSet.puzzle.rating,
+        currentStreak: streakResult.streakIncremented
+          ? streakResult.newStreak
+          : user.currentStreak,
+        isFirstAttempt: puzzleInSet.totalAttempts === 0,
+        previousAttempt: previousAttempt
+          ? {
+              isCorrect: previousAttempt.isCorrect,
+              timeSpentMs: previousAttempt.timeSpent,
+            }
+          : undefined,
+        currentTotalXp: user.totalXp,
+      })
+
+      // Calculate cycle completion XP if this is the last puzzle
+      let cycleXpResult: XpGainResult | null = null
+      if (isLastPuzzle) {
+        const updatedCorrect = isCorrect
+          ? updatedCycle.solvedCorrect
+          : updatedCycle.solvedCorrect
+        cycleXpResult = calculateCycleCompleteXp({
+          solvedCorrect: updatedCorrect,
+          totalPuzzles: updatedCycle.totalPuzzles,
+          currentTotalXp: puzzleXpResult.newTotalXp,
+        })
+      }
+
+      // Combine XP gains
+      const xpGains = cycleXpResult
+        ? combineXpGains([puzzleXpResult, cycleXpResult])
+        : puzzleXpResult
+
+      // Update XP if any was earned
+      if (xpGains.totalXp > 0) {
+        userUpdateData.totalXp = xpGains.newTotalXp
+        userUpdateData.currentLevel = getLevelFromXp(xpGains.newTotalXp)
+
+        // Update weekly XP
+        const currentWeekStart = getISOWeekStart(new Date())
+        const needsWeeklyXpReset =
+          !user.weeklyXpStartDate ||
+          !isSameISOWeek(user.weeklyXpStartDate, new Date())
+
+        if (needsWeeklyXpReset) {
+          userUpdateData.weeklyXp = xpGains.totalXp
+        } else {
+          userUpdateData.weeklyXp = { increment: xpGains.totalXp }
+        }
+        userUpdateData.weeklyXpStartDate = currentWeekStart
+      }
+
       // Update user if there are any changes
       if (Object.keys(userUpdateData).length > 0) {
         await tx.user.update({
@@ -248,6 +320,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         updatedCycle,
         isLastPuzzle,
         streakResult,
+        xpGains,
       }
     })
 
@@ -313,6 +386,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
         incremented: result.streakResult.streakIncremented,
         broken: result.streakResult.streakBroken,
         isNewRecord: result.streakResult.isNewRecord,
+      },
+      xp: {
+        gained: result.xpGains.totalXp,
+        breakdown: result.xpGains.breakdown,
+        newTotal: result.xpGains.newTotalXp,
+        previousLevel: result.xpGains.previousLevel,
+        newLevel: result.xpGains.newLevel,
+        leveledUp: result.xpGains.leveledUp,
       },
       unlockedAchievements: allUnlockedAchievements.map((a) => ({
         id: a.id,

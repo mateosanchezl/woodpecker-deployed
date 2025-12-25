@@ -1,1 +1,4 @@
-- [ ] Fix cycle time to only count time spent in the actual training session and stop timer when defocused 
+- [ ] Implement user profile implementation plan
+- [x] Update landing page with all features
+- [ ] Get things ready for prod
+- [ ] Add more achievements

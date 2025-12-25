@@ -128,6 +128,10 @@
     @apply border-border outline-ring/50;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-background text-foreground;
     background-image: radial-gradient(circle at top left, var(--secondary) 0%, transparent 40%),

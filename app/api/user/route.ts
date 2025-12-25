@@ -47,6 +47,10 @@ export async function GET() {
         showOnLeaderboard: user.showOnLeaderboard,
         puzzleSetCount: user._count.puzzleSets,
         createdAt: user.createdAt.toISOString(),
+        // XP & Levelling
+        totalXp: user.totalXp,
+        currentLevel: user.currentLevel,
+        weeklyXp: user.weeklyXp,
       },
     })
   } catch (error) {

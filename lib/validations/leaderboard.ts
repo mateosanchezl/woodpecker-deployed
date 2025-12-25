@@ -10,6 +10,8 @@ export const leaderboardEntrySchema = z.object({
   rank: z.number(),
   userId: z.string(),
   name: z.string().nullable(),
+  xp: z.number(),
+  level: z.number(),
   puzzlesSolved: z.number(),
   estimatedRating: z.number(),
   isCurrentUser: z.boolean(),

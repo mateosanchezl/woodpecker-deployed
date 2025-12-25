@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Settings,
   Trophy,
+  Users,
 } from "lucide-react"
 
 import {
@@ -40,6 +41,11 @@ const data = {
       title: "Progress",
       url: "/progress",
       icon: Trophy,
+    },
+    {
+      title: "Leaderboard",
+      url: "/leaderboard",
+      icon: Users,
     },
     {
       title: "Settings",

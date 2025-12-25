@@ -26,6 +26,12 @@ model User {
   lastTrainedDate  DateTime? // UTC date of last training activity
   streakUpdatedAt  DateTime? // When streak was last calculated
 
+  // Leaderboard
+  showOnLeaderboard      Boolean   @default(true)
+  totalCorrectAttempts   Int       @default(0)
+  weeklyCorrectAttempts  Int       @default(0)
+  weeklyCorrectStartDate DateTime? // Start of current weekly period (Monday UTC)
+
   // Metadata
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
@@ -34,6 +40,8 @@ model User {
   puzzleSets       PuzzleSet[]
 
   @@index([clerkId])
+  @@index([showOnLeaderboard, totalCorrectAttempts(sort: Desc)])
+  @@index([showOnLeaderboard, weeklyCorrectAttempts(sort: Desc)])
 }
 
 model Puzzle {

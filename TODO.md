@@ -1,3 +1,1 @@
-- [X] Improve onboarding to be floating modal
-- [X] Improve training UI etc
-- [ ] Implement progress dashboard with graphs etc.
+- [ ] Fix cycle time to only count time spent in the actual training session and stop timer when defocused 

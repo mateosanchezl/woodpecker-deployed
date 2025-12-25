@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { attemptSchema } from '@/lib/validations/training'
 import { calculateStreakUpdate, getTodayUTC } from '@/lib/streak'
+import { getISOWeekStart, isSameISOWeek } from '@/lib/leaderboard'
 
 interface RouteContext {
   params: Promise<{ setId: string; cycleId: string }>
@@ -187,16 +188,47 @@ export async function POST(request: NextRequest, context: RouteContext) {
         user.longestStreak
       )
 
-      // Only update if the streak changed (i.e., first attempt of the day)
+      // Build user update data
+      const userUpdateData: {
+        currentStreak?: number
+        longestStreak?: number
+        lastTrainedDate?: Date
+        streakUpdatedAt?: Date
+        totalCorrectAttempts?: { increment: number }
+        weeklyCorrectAttempts?: number | { increment: number }
+        weeklyCorrectStartDate?: Date
+      } = {}
+
+      // Only update streak if it changed (i.e., first attempt of the day)
       if (streakResult.streakIncremented) {
+        userUpdateData.currentStreak = streakResult.newStreak
+        userUpdateData.longestStreak = streakResult.newLongestStreak
+        userUpdateData.lastTrainedDate = getTodayUTC()
+        userUpdateData.streakUpdatedAt = new Date()
+      }
+
+      // Update leaderboard stats if correct attempt
+      if (isCorrect) {
+        userUpdateData.totalCorrectAttempts = { increment: 1 }
+
+        const currentWeekStart = getISOWeekStart(new Date())
+        const needsWeeklyReset =
+          !user.weeklyCorrectStartDate ||
+          !isSameISOWeek(user.weeklyCorrectStartDate, new Date())
+
+        if (needsWeeklyReset) {
+          userUpdateData.weeklyCorrectAttempts = 1
+        } else {
+          userUpdateData.weeklyCorrectAttempts = { increment: 1 }
+        }
+        userUpdateData.weeklyCorrectStartDate = currentWeekStart
+      }
+
+      // Update user if there are any changes
+      if (Object.keys(userUpdateData).length > 0) {
         await tx.user.update({
           where: { id: user.id },
-          data: {
-            currentStreak: streakResult.newStreak,
-            longestStreak: streakResult.newLongestStreak,
-            lastTrainedDate: getTodayUTC(),
-            streakUpdatedAt: new Date(),
-          },
+          data: userUpdateData,
         })
       }
 

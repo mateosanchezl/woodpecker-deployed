@@ -185,3 +185,18 @@ export const completeOnboardingSchema = z.object({
 })
 
 export type CompleteOnboardingInput = z.infer<typeof completeOnboardingSchema>
+
+/**
+ * Schema for updating user settings.
+ */
+export const updateUserSettingsSchema = z.object({
+  estimatedRating: z
+    .number()
+    .int()
+    .min(800, 'Rating must be at least 800')
+    .max(2600, 'Rating must be at most 2600')
+    .optional(),
+  showOnLeaderboard: z.boolean().optional(),
+})
+
+export type UpdateUserSettingsInput = z.infer<typeof updateUserSettingsSchema>

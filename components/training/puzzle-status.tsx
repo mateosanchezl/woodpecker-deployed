@@ -1,6 +1,9 @@
 'use client'
 
+import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Eye, EyeOff } from 'lucide-react'
 import { formatTime } from '@/hooks/use-puzzle-timer'
 import type { TrainingProgress } from '@/lib/chess/types'
 
@@ -14,6 +17,8 @@ interface PuzzleStatusProps {
  * Status display showing timer, cycle number, and progress.
  */
 export function PuzzleStatus({ timeMs, progress, puzzleRating }: PuzzleStatusProps) {
+  const [isTimerVisible, setIsTimerVisible] = useState(true)
+
   const percentComplete = Math.round(
     (progress.completedInCycle / progress.totalPuzzles) * 100
   )
@@ -22,12 +27,32 @@ export function PuzzleStatus({ timeMs, progress, puzzleRating }: PuzzleStatusPro
     <Card className="w-full max-w-2xl">
       <CardContent className="py-4">
         <div className="flex items-center justify-between gap-4 flex-col">
-          {/* Timer */}
-          <div className="text-center">
-            <div className="font-mono text-3xl tabular-nums font-medium">
-              {formatTime(timeMs)}
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">Time</div>
+          {/* Timer with toggle */}
+          <div className="text-center relative w-full">
+            {isTimerVisible ? (
+              <>
+                <div className="font-mono text-3xl tabular-nums font-medium">
+                  {formatTime(timeMs)}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">Time</div>
+              </>
+            ) : (
+              <div className="text-3xl font-medium text-muted-foreground">—</div>
+            )}
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsTimerVisible(!isTimerVisible)}
+              className="absolute top-0 right-0 h-8 w-8"
+              title={isTimerVisible ? "Hide timer" : "Show timer"}
+            >
+              {isTimerVisible ? (
+                <Eye className="h-4 w-4" />
+              ) : (
+                <EyeOff className="h-4 w-4" />
+              )}
+            </Button>
           </div>
 
           <div className='flex flex-row gap-4'>

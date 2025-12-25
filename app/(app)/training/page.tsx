@@ -21,7 +21,9 @@ import {
 import { Play, Target, TrendingUp, MoreVertical, Trash2, Clock, Flame } from 'lucide-react'
 import { toast } from 'sonner'
 import { useStreak } from '@/hooks/use-streak'
+import { useNavigationGuard } from '@/hooks/use-navigation-guard'
 import { getStreakMessage } from '@/lib/streak-milestones'
+import { LeaveTrainingModal } from '@/components/training/leave-training-modal'
 import { cn } from '@/lib/utils'
 
 interface PuzzleSetData {
@@ -149,6 +151,12 @@ function TrainingPageContent() {
     }
   }, [deleteMutation])
 
+  // Navigation guard - active when training is in progress and cycle not complete
+  const isTrainingActive = !!(activeCycleId && selectedSetId && !trainingSession.isCycleComplete)
+  const { showModal, confirmLeave, cancelLeave } = useNavigationGuard({
+    enabled: isTrainingActive,
+  })
+
   // Loading state
   if (loadingSets) {
     return <TrainingPageSkeleton />
@@ -182,6 +190,11 @@ function TrainingPageContent() {
           isCycleComplete={trainingSession.isCycleComplete}
           cycleStats={trainingSession.cycleStats || undefined}
           onStartNextCycle={handleStartNextCycle}
+        />
+        <LeaveTrainingModal
+          open={showModal}
+          onConfirmLeave={confirmLeave}
+          onCancel={cancelLeave}
         />
       </div>
     )

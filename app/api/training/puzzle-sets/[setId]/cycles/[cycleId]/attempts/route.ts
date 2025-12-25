@@ -4,6 +4,12 @@ import { prisma } from '@/lib/prisma'
 import { attemptSchema } from '@/lib/validations/training'
 import { calculateStreakUpdate, getTodayUTC } from '@/lib/streak'
 import { getISOWeekStart, isSameISOWeek } from '@/lib/leaderboard'
+import {
+  checkAchievementsAfterAttempt,
+  checkAchievementsAfterCycleComplete,
+  checkAchievementsAfterStreakUpdate,
+  type UnlockedAchievement,
+} from '@/lib/achievements'
 
 interface RouteContext {
   params: Promise<{ setId: string; cycleId: string }>
@@ -79,6 +85,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
     // Verify the puzzleInSet exists and belongs to this set
     const puzzleInSet = await prisma.puzzleInSet.findUnique({
       where: { id: puzzleInSetId },
+      include: {
+        puzzle: {
+          select: { themes: true },
+        },
+      },
     })
 
     if (!puzzleInSet) {
@@ -240,6 +251,48 @@ export async function POST(request: NextRequest, context: RouteContext) {
       }
     })
 
+    // Check achievements (outside transaction for performance)
+    const allUnlockedAchievements: UnlockedAchievement[] = []
+    const attemptedAt = new Date()
+
+    // Check attempt-related achievements
+    const attemptAchievements = await checkAchievementsAfterAttempt(user.id, {
+      isCorrect,
+      timeSpentMs: timeSpent,
+      attemptedAt,
+      puzzleThemes: puzzleInSet.puzzle.themes,
+    })
+    allUnlockedAchievements.push(...attemptAchievements.newlyUnlocked)
+
+    // Check cycle completion achievements
+    if (result.isLastPuzzle) {
+      const cycleAccuracy =
+        (result.updatedCycle.solvedCorrect / result.updatedCycle.totalPuzzles) * 100
+      const cycleAchievements = await checkAchievementsAfterCycleComplete(
+        user.id,
+        {
+          puzzleSetId: setId,
+          cycleNumber: cycle.cycleNumber,
+          accuracy: cycleAccuracy,
+          totalPuzzles: result.updatedCycle.totalPuzzles,
+          correctPuzzles: result.updatedCycle.solvedCorrect,
+        }
+      )
+      allUnlockedAchievements.push(...cycleAchievements.newlyUnlocked)
+    }
+
+    // Check streak achievements if streak was updated
+    if (result.streakResult.streakIncremented) {
+      const streakAchievements = await checkAchievementsAfterStreakUpdate(
+        user.id,
+        {
+          currentStreak: result.streakResult.newStreak,
+          longestStreak: result.streakResult.newLongestStreak,
+        }
+      )
+      allUnlockedAchievements.push(...streakAchievements.newlyUnlocked)
+    }
+
     return NextResponse.json({
       attempt: {
         id: result.attempt.id,
@@ -261,6 +314,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
         broken: result.streakResult.streakBroken,
         isNewRecord: result.streakResult.isNewRecord,
       },
+      unlockedAchievements: allUnlockedAchievements.map((a) => ({
+        id: a.id,
+        name: a.name,
+        description: a.description,
+        icon: a.icon,
+        unlockedAt: a.unlockedAt.toISOString(),
+      })),
     })
   } catch (error) {
     console.error('Error recording attempt:', error)

@@ -95,6 +95,26 @@ export const attemptResponseSchema = z.object({
     totalTime: z.number().nullable(),
   }),
   isLastPuzzle: z.boolean(),
+  streak: z
+    .object({
+      current: z.number(),
+      longest: z.number(),
+      incremented: z.boolean(),
+      broken: z.boolean(),
+      isNewRecord: z.boolean(),
+    })
+    .optional(),
+  unlockedAchievements: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        description: z.string(),
+        icon: z.string(),
+        unlockedAt: z.string(),
+      })
+    )
+    .optional(),
 })
 
 export type AttemptResponse = z.infer<typeof attemptResponseSchema>

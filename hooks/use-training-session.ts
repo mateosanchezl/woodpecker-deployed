@@ -199,9 +199,21 @@ export function useTrainingSession(
 
       return { previousData }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       // Refetch to get the real data and next prefetch
       queryClient.invalidateQueries({ queryKey: ['next-puzzle', puzzleSetId, cycleId] })
+      
+      // Show achievement unlock toasts
+      if (data.unlockedAchievements && data.unlockedAchievements.length > 0) {
+        // Dynamically import to avoid circular dependencies
+        import('@/components/achievements/achievement-unlock-toast').then(
+          ({ showAchievementUnlockToasts }) => {
+            showAchievementUnlockToasts(data.unlockedAchievements!)
+          }
+        )
+        // Invalidate achievements cache so the achievements page updates
+        queryClient.invalidateQueries({ queryKey: ['achievements'] })
+      }
     },
     onError: (error, _variables, context) => {
       // Rollback on error

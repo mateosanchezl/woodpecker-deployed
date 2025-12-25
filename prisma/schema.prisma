@@ -38,6 +38,7 @@ model User {
 
   // Relations
   puzzleSets       PuzzleSet[]
+  achievements     UserAchievement[]
 
   @@index([clerkId])
   @@index([showOnLeaderboard, totalCorrectAttempts(sort: Desc)])
@@ -174,4 +175,30 @@ model Attempt {
   @@index([cycleId])
   @@index([puzzleInSetId])
   @@index([attemptedAt])
+}
+
+model Achievement {
+  id          String   @id // e.g., "first-blood", "century"
+  name        String // "First Blood"
+  description String // "Complete your first puzzle"
+  category    String // "puzzles", "streaks", "speed", "cycles", "time", "themes"
+  icon        String // emoji
+  sortOrder   Int    @default(0)
+
+  // Relations
+  users UserAchievement[]
+
+  createdAt DateTime @default(now())
+}
+
+model UserAchievement {
+  userId        String
+  achievementId String
+  unlockedAt    DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@id([userId, achievementId])
+  @@index([userId])
 }

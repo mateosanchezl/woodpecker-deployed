@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import {
+  Award,
   BookOpen,
   LayoutDashboard,
   Settings,
@@ -41,6 +42,11 @@ const data = {
       title: "Progress",
       url: "/progress",
       icon: Trophy,
+    },
+    {
+      title: "Achievements",
+      url: "/achievements",
+      icon: Award,
     },
     {
       title: "Leaderboard",

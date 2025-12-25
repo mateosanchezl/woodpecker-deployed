@@ -40,7 +40,7 @@ export default function AppLayout({
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4">
               <ThemeToggle />
               <UserButton />
             </div>

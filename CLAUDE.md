@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Woodpecker is a Next.js 16 application using:
+Peck is a Next.js 16 application using:
 - **Framework**: Next.js 16 (App Router)
 - **Authentication**: Clerk
 - **Database**: PostgreSQL via Prisma ORM

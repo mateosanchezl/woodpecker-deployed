@@ -19,7 +19,7 @@ interface PuzzleBoardProps {
   timer: ReturnType<typeof usePuzzleTimer>
 }
 
-// Custom board colors matching the new "Woodpecker" nature theme
+// Custom board colors matching the new "Peck" nature theme
 const customDarkSquareStyle: React.CSSProperties = {
   backgroundColor: 'oklch(0.6 0.1 145)', // Muted moss green
 }

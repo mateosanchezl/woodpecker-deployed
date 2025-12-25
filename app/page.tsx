@@ -11,9 +11,9 @@ export default function LandingPage() {
         <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 font-bold text-xl tracking-tight">
             <div className="h-8 w-8 bg-zinc-900 dark:bg-zinc-50 rounded-lg flex items-center justify-center text-white dark:text-zinc-900">
-              W
+              P
             </div>
-            <span>Woodpecker</span>
+            <span>Peck</span>
           </div>
           <nav className="flex items-center gap-4">
             <SignedOut>
@@ -99,7 +99,7 @@ export default function LandingPage() {
       <footer className="border-t border-zinc-200 dark:border-zinc-800 py-12">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-6">
           <p className="text-sm text-zinc-500">
-            © {new Date().getFullYear()} Woodpecker. All rights reserved.
+            © {new Date().getFullYear()} Peck. All rights reserved.
           </p>
           <div className="flex gap-6">
             <Link href="#" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100">

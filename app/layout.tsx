@@ -9,6 +9,7 @@ import {
 } from "@clerk/nextjs";
 import { Geist, Geist_Mono, Lora } from "next/font/google";
 import { QueryProvider } from "./providers/query-provider";
+import { ThemeProvider } from "./providers/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -28,7 +29,8 @@ const lora = Lora({
 });
 
 export const metadata: Metadata = {
-  title: "Woodpecker - Chess Tactical Training",
+  metadataBase: new URL("https://peckchess.com"),
+  title: "Peck - Chess Tactical Training",
   description: "Master chess tactics through intensive repetition using the Woodpecker Method",
 };
 
@@ -39,14 +41,21 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en">
+      <html lang="en" suppressHydrationWarning>
         <body
           className={`${lora.variable} antialiased`}
         >
-          <QueryProvider>
-            {children}
-            <Toaster />
-          </QueryProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <QueryProvider>
+              {children}
+              <Toaster />
+            </QueryProvider>
+          </ThemeProvider>
         </body>
       </html>
     </ClerkProvider>

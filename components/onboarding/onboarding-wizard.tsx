@@ -17,7 +17,7 @@ interface OnboardingWizardProps {
 const STEPS = [
   {
     id: 'welcome',
-    title: 'Welcome to Woodpecker',
+    title: 'Welcome to Peck',
   },
   {
     id: 'method',
@@ -124,7 +124,7 @@ function WelcomeStep() {
   return (
     <div className="text-center space-y-6">
       <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-zinc-900 dark:bg-zinc-50 mb-4">
-        <span className="text-3xl font-bold text-white dark:text-zinc-900">W</span>
+        <span className="text-3xl font-bold text-white dark:text-zinc-900">P</span>
       </div>
 
       <h1 className="text-3xl font-bold tracking-tight">
@@ -137,7 +137,7 @@ function WelcomeStep() {
       </p>
 
       <p className="text-muted-foreground">
-        Woodpecker uses a method trusted by grandmasters to build real tactical intuition.
+        Peck uses a method trusted by grandmasters to build real tactical intuition.
       </p>
     </div>
   )
@@ -182,7 +182,7 @@ function MethodStep() {
                 <Repeat className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h3 className="font-semibold mb-1">Woodpecker approach</h3>
+                <h3 className="font-semibold mb-1">Peck approach</h3>
                 <p className="text-sm text-muted-foreground">
                   Solve the same puzzles repeatedly. Each cycle faster.
                   Patterns become automatic.
@@ -224,7 +224,7 @@ function HowItWorksStep() {
     <div className="space-y-8">
       <div className="text-center space-y-4">
         <h2 className="text-2xl font-bold tracking-tight">
-          How Woodpecker works
+          How Peck works
         </h2>
         <p className="text-muted-foreground">
           A systematic approach to building pattern recognition.

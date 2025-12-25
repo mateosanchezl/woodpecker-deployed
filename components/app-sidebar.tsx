@@ -64,9 +64,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <div className="flex items-center justify-between px-4 py-2">
           <div className="flex items-center gap-2 font-bold text-xl tracking-tight">
             <div className="h-8 w-8 bg-zinc-900 dark:bg-zinc-50 rounded-lg flex items-center justify-center text-white dark:text-zinc-900">
-              W
+              P
             </div>
-            <span>Woodpecker</span>
+            <span>Peck</span>
           </div>
           <StreakBadge />
         </div>

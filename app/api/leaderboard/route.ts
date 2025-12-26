@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Transform to entries with rank
-    const entries: LeaderboardEntry[] = users.map((user, index) => ({
+    const entries: LeaderboardEntry[] = users.map((user: typeof users[number], index: number) => ({
       rank: offset + index + 1,
       userId: user.id,
       name: user.name,

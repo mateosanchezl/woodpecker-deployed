@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Slider } from '@/components/ui/slider'
 import { Label } from '@/components/ui/label'
-import { ArrowRight, ArrowLeft, Zap, Brain, Target, Repeat } from 'lucide-react'
+import { ArrowRight, ArrowLeft, Zap, Brain, Target, Repeat, Trophy, Sparkles, TrendingUp } from 'lucide-react'
 
 interface OnboardingWizardProps {
   onComplete: (data: { estimatedRating: number }) => void
@@ -26,6 +26,10 @@ const STEPS = [
   {
     id: 'how-it-works',
     title: 'How It Works',
+  },
+  {
+    id: 'features',
+    title: 'Features',
   },
   {
     id: 'rating',
@@ -82,7 +86,8 @@ export function OnboardingWizard({ onComplete, isSubmitting }: OnboardingWizardP
             {currentStep === 0 && <WelcomeStep />}
             {currentStep === 1 && <MethodStep />}
             {currentStep === 2 && <HowItWorksStep />}
-            {currentStep === 3 && (
+            {currentStep === 3 && <FeaturesStep />}
+            {currentStep === 4 && (
               <RatingStep
                 rating={estimatedRating}
                 onRatingChange={setEstimatedRating}
@@ -246,6 +251,59 @@ function HowItWorksStep() {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  )
+}
+
+function FeaturesStep() {
+  return (
+    <div className="space-y-8">
+      <div className="text-center space-y-4">
+        <h2 className="text-2xl font-bold tracking-tight">
+          More than just puzzles.
+        </h2>
+        <p className="text-muted-foreground max-w-lg mx-auto">
+          Peck is designed to keep you motivated and tracking your progress every step of the way.
+        </p>
+      </div>
+
+      <div className="grid gap-4">
+        <Card>
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="p-2 rounded-lg bg-yellow-500/10 text-yellow-500">
+              <Trophy className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="font-semibold">Leaderboards</h3>
+              <p className="text-sm text-muted-foreground">Compete with friends and the global community.</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500">
+              <Sparkles className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="font-semibold">Achievements & XP</h3>
+              <p className="text-sm text-muted-foreground">Earn badges and level up as you improve.</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
+              <TrendingUp className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="font-semibold">Detailed Analytics</h3>
+              <p className="text-sm text-muted-foreground">Track your accuracy and speed over time.</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

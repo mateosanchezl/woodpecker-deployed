@@ -272,10 +272,9 @@ export default function LandingPage() {
         {/* Stats Strip */}
         <section className="border-y border-border bg-muted/30">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-border/50">
+            <div className="grid grid-cols-2 md:grid-cols-3 divide-x divide-border/50">
               {[
-                { label: "Active Users", value: "2,000+", icon: Users },
-                { label: "Puzzles Solved", value: "1.5M+", icon: Target },
+                { label: "Puzzles Available", value: "1.5M+", icon: Target },
                 { label: "Avg. Rating Gain", value: "+150", icon: TrendingUp },
                 { label: "Completion Rate", value: "94%", icon: Trophy },
               ].map((stat, i) => (
@@ -302,83 +301,113 @@ export default function LandingPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 auto-rows-[minmax(250px,auto)]">
-              {/* Step 1: Large Card */}
+              {/* Step 1: Large Card - The Method */}
               <div className="md:col-span-2 rounded-3xl border border-border bg-card p-8 relative overflow-hidden group hover:shadow-lg transition-all duration-300">
                 <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <Target className="w-48 h-48" />
+                  <Repeat className="w-48 h-48" />
                 </div>
                 <div className="relative z-10 h-full flex flex-col justify-between">
                   <div>
                     <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 text-primary mb-6">
                       <span className="font-bold text-xl">1</span>
                     </div>
-                    <h3 className="text-2xl font-bold mb-4">Curated Puzzle Sets</h3>
+                    <h3 className="text-2xl font-bold mb-4">The Woodpecker Method</h3>
                     <p className="text-muted-foreground text-lg max-w-md">
-                      Don't waste time on bad puzzles. We curate high-quality tactical patterns from millions of Lichess games, tailored exactly to your rating level.
+                      Solve a set of puzzles. Then do it again, faster. And again. Until the patterns are burned into your subconscious and you recognize them instantly.
                     </p>
                   </div>
-                  <div className="mt-8 flex gap-2">
-                    {["Fork", "Pin", "Skewer", "Discovery"].map((tag) => (
-                      <span key={tag} className="px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-xs font-medium">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Step 2: Tall Card */}
-              <div className="md:row-span-2 rounded-3xl border border-border bg-card p-8 relative overflow-hidden group hover:shadow-lg transition-all duration-300 bg-gradient-to-b from-card to-secondary/20">
-                <div className="absolute bottom-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <Repeat className="w-64 h-64" />
-                </div>
-                <div className="relative z-10 h-full flex flex-col">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 text-primary mb-6">
-                    <span className="font-bold text-xl">2</span>
-                  </div>
-                  <h3 className="text-2xl font-bold mb-4">The Cycle System</h3>
-                  <p className="text-muted-foreground text-lg mb-8">
-                    Solve a set of 100+ puzzles. Then do it again. And again.
-                  </p>
-                  <div className="space-y-4 mt-auto">
+                  <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
                     {[
-                      { cycle: 1, time: "60 min", opacity: "opacity-40" },
-                      { cycle: 2, time: "35 min", opacity: "opacity-60" },
-                      { cycle: 3, time: "15 min", opacity: "opacity-80" },
-                      { cycle: 4, time: "8 min", opacity: "opacity-100 font-bold text-primary" },
+                      { cycle: 1, time: "60m", label: "Solve" },
+                      { cycle: 2, time: "30m", label: "Repeat" },
+                      { cycle: 3, time: "15m", label: "Reinforce" },
+                      { cycle: 4, time: "7m", label: "Master" },
                     ].map((item, i) => (
-                      <div key={i} className={cn("flex items-center justify-between p-3 rounded-lg bg-background border border-border/50", item.opacity)}>
-                        <span>Cycle {item.cycle}</span>
-                        <span className="font-mono">{item.time}</span>
+                      <div key={i} className="bg-background/50 rounded-lg p-3 border border-border/50 text-center">
+                        <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{item.label}</div>
+                        <div className="font-bold text-primary">{item.time}</div>
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
 
-              {/* Step 3: Standard Card */}
+              {/* Step 2: Tall Card - Gamification */}
+              <div className="md:row-span-2 rounded-3xl border border-border bg-card p-8 relative overflow-hidden group hover:shadow-lg transition-all duration-300 bg-gradient-to-b from-card to-secondary/20">
+                <div className="absolute bottom-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <Trophy className="w-64 h-64" />
+                </div>
+                <div className="relative z-10 h-full flex flex-col">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 text-primary mb-6">
+                    <span className="font-bold text-xl">2</span>
+                  </div>
+                  <h3 className="text-2xl font-bold mb-4">Stay Motivated</h3>
+                  <p className="text-muted-foreground text-lg mb-8">
+                    Training is hard. We make it addictive with a complete progression system.
+                  </p>
+                  <div className="space-y-6 mt-auto">
+                    <div className="bg-background/80 backdrop-blur-sm p-4 rounded-xl border border-border/50 shadow-sm">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-yellow-500/10 rounded-lg text-yellow-500">
+                          <Trophy className="h-4 w-4" />
+                        </div>
+                        <div className="font-semibold">Leaderboards</div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Compete globally or with friends for the top spot.</p>
+                    </div>
+
+                    <div className="bg-background/80 backdrop-blur-sm p-4 rounded-xl border border-border/50 shadow-sm">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-orange-500/10 rounded-lg text-orange-500">
+                          <Zap className="h-4 w-4" />
+                        </div>
+                        <div className="font-semibold">Daily Streaks</div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Build a habit. Don't break the chain.</p>
+                    </div>
+
+                    <div className="bg-background/80 backdrop-blur-sm p-4 rounded-xl border border-border/50 shadow-sm">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-purple-500/10 rounded-lg text-purple-500">
+                          <Sparkles className="h-4 w-4" />
+                        </div>
+                        <div className="font-semibold">Achievements</div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Unlock badges for speed, accuracy, and consistency.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 3: Standard Card - Analytics */}
               <div className="rounded-3xl border border-border bg-card p-8 relative overflow-hidden group hover:shadow-lg transition-all duration-300">
                 <div className="relative z-10">
                   <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 text-primary mb-6">
                     <span className="font-bold text-xl">3</span>
                   </div>
-                  <h3 className="text-2xl font-bold mb-4">Track Progress</h3>
+                  <h3 className="text-2xl font-bold mb-4">Smart Analytics</h3>
                   <p className="text-muted-foreground">
-                    Visualize your speed and accuracy improvements with detailed charts. Watch your "Woodpecker Index" soar.
+                    Visualize your improvement with detailed charts. Track your accuracy, speed, and "Woodpecker Index" over time.
                   </p>
+                </div>
+                <div className="absolute bottom-4 right-4 opacity-20">
+                  <TrendingUp className="w-24 h-24" />
                 </div>
               </div>
 
-              {/* Step 4: Standard Card */}
+              {/* Step 4: Standard Card - Content */}
               <div className="rounded-3xl border border-border bg-card p-8 relative overflow-hidden group hover:shadow-lg transition-all duration-300">
                 <div className="relative z-10">
                   <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 text-primary mb-6">
                     <span className="font-bold text-xl">4</span>
                   </div>
-                  <h3 className="text-2xl font-bold mb-4">Gamified Growth</h3>
+                  <h3 className="text-2xl font-bold mb-4">Curated Puzzles</h3>
                   <p className="text-muted-foreground">
-                    Earn XP, unlock achievements, and maintain your daily streak. Training shouldn't feel like a chore.
+                    Millions of puzzles from Lichess, filtered for quality and tactical motifs. No more bad puzzles.
                   </p>
+                </div>
+                <div className="absolute bottom-4 right-4 opacity-20">
+                  <Target className="w-24 h-24" />
                 </div>
               </div>
             </div>
@@ -397,12 +426,12 @@ export default function LandingPage() {
               <div className="relative z-10 max-w-2xl mx-auto">
                 <h2 className="text-3xl sm:text-5xl font-bold mb-6">Ready to transform your chess?</h2>
                 <p className="text-primary-foreground/80 text-lg mb-10">
-                  Join thousands of players who have switched from random solving to deliberate practice.
+                  Join players who have switched from random solving to deliberate practice.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Link href="/sign-up">
                     <Button size="lg" variant="secondary" className="w-full sm:w-auto h-14 px-8 text-lg font-semibold shadow-xl">
-                      Start Training for Free
+                      Start Training
                     </Button>
                   </Link>
                   <Link href="/sign-in">
@@ -412,7 +441,7 @@ export default function LandingPage() {
                   </Link>
                 </div>
                 <p className="mt-6 text-sm text-primary-foreground/60">
-                  No credit card required • Free tier available forever
+                  No credit card required
                 </p>
               </div>
             </div>

@@ -71,8 +71,22 @@ export async function GET(
 
     // Calculate cycle stats
     const cycles: CycleStats[] = puzzleSet.cycles
-      .filter(cycle => cycle.completedAt !== null)
-      .map(cycle => {
+      .filter((cycle: { 
+        cycleNumber: number
+        totalTime: number | null
+        solvedCorrect: number
+        solvedIncorrect: number
+        skipped: number
+        completedAt: Date | null
+      }) => cycle.completedAt !== null)
+      .map((cycle: {
+        cycleNumber: number
+        totalTime: number | null
+        solvedCorrect: number
+        solvedIncorrect: number
+        skipped: number
+        completedAt: Date | null
+      }) => {
         const total = cycle.solvedCorrect + cycle.solvedIncorrect + cycle.skipped
         const accuracy = total > 0 ? (cycle.solvedCorrect / total) * 100 : 0
 

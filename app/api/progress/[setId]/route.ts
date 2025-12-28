@@ -2,35 +2,29 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import type { ProgressResponse, CycleStats, ThemePerformance, ProblemPuzzle } from '@/lib/validations/progress'
-import type { Prisma } from '@prisma/client'
 
 interface RouteContext {
   params: Promise<{ setId: string }>
 }
 
-type PuzzleSetWithRelations = Prisma.PuzzleSetGetPayload<{
-  include: {
-    cycles: true
-    puzzles: {
-      include: {
-        puzzle: {
-          select: {
-            id: true
-            fen: true
-            rating: true
-            themes: true
-          }
-        }
-        attempts: {
-          select: {
-            isCorrect: true
-            timeSpent: true
-          }
-        }
-      }
-    }
+// Local types to avoid Prisma namespace dependency
+interface AttemptData {
+  isCorrect: boolean
+  timeSpent: number
+}
+
+interface PuzzleInSetData {
+  totalAttempts: number
+  correctAttempts: number
+  position: number
+  puzzle: {
+    id: string
+    fen: string
+    rating: number
+    themes: string[]
   }
-}>
+  attempts: AttemptData[]
+}
 
 /**
  * GET /api/progress/[setId]
@@ -129,11 +123,11 @@ export async function GET(
     // Calculate summary stats
     const completedCycles = cycles.length
     const totalAttempts = puzzleSet.puzzles.reduce(
-      (sum: number, p: PuzzleSetWithRelations['puzzles'][number]) => sum + p.totalAttempts,
+      (sum: number, p: PuzzleInSetData) => sum + p.totalAttempts,
       0
     )
     const totalCorrect = puzzleSet.puzzles.reduce(
-      (sum: number, p: PuzzleSetWithRelations['puzzles'][number]) => sum + p.correctAttempts,
+      (sum: number, p: PuzzleInSetData) => sum + p.correctAttempts,
       0
     )
     const overallAccuracy = totalAttempts > 0

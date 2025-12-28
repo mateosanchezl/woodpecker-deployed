@@ -104,11 +104,11 @@ export async function GET(
     // Calculate summary stats
     const completedCycles = cycles.length
     const totalAttempts = puzzleSet.puzzles.reduce(
-      (sum, p) => sum + p.totalAttempts,
+      (sum: number, p) => sum + p.totalAttempts,
       0
     )
     const totalCorrect = puzzleSet.puzzles.reduce(
-      (sum, p) => sum + p.correctAttempts,
+      (sum: number, p) => sum + p.correctAttempts,
       0
     )
     const overallAccuracy = totalAttempts > 0
@@ -116,7 +116,7 @@ export async function GET(
       : 0
 
     const totalTimeSpent = cycles.reduce(
-      (sum, c) => sum + (c.totalTime ?? 0),
+      (sum: number, c) => sum + (c.totalTime ?? 0),
       0
     )
     const averageTimePerPuzzle = totalAttempts > 0
@@ -161,7 +161,7 @@ export async function GET(
       .filter(p => p.totalAttempts > 0 && p.correctAttempts < p.totalAttempts)
       .map(p => {
         const successRate = Math.round((p.correctAttempts / p.totalAttempts) * 1000) / 10
-        const totalTime = p.attempts.reduce((sum, a) => sum + a.timeSpent, 0)
+        const totalTime = p.attempts.reduce((sum: number, a) => sum + a.timeSpent, 0)
         const avgTime = p.attempts.length > 0 ? Math.round(totalTime / p.attempts.length) : 0
 
         return {

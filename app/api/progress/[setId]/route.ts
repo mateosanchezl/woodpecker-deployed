@@ -2,10 +2,35 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import type { ProgressResponse, CycleStats, ThemePerformance, ProblemPuzzle } from '@/lib/validations/progress'
+import type { Prisma } from '@prisma/client'
 
 interface RouteContext {
   params: Promise<{ setId: string }>
 }
+
+type PuzzleSetWithRelations = Prisma.PuzzleSetGetPayload<{
+  include: {
+    cycles: true
+    puzzles: {
+      include: {
+        puzzle: {
+          select: {
+            id: true
+            fen: true
+            rating: true
+            themes: true
+          }
+        }
+        attempts: {
+          select: {
+            isCorrect: true
+            timeSpent: true
+          }
+        }
+      }
+    }
+  }
+}>
 
 /**
  * GET /api/progress/[setId]
@@ -104,11 +129,11 @@ export async function GET(
     // Calculate summary stats
     const completedCycles = cycles.length
     const totalAttempts = puzzleSet.puzzles.reduce(
-      (sum: number, p) => sum + p.totalAttempts,
+      (sum: number, p: PuzzleSetWithRelations['puzzles'][number]) => sum + p.totalAttempts,
       0
     )
     const totalCorrect = puzzleSet.puzzles.reduce(
-      (sum: number, p) => sum + p.correctAttempts,
+      (sum: number, p: PuzzleSetWithRelations['puzzles'][number]) => sum + p.correctAttempts,
       0
     )
     const overallAccuracy = totalAttempts > 0
@@ -116,7 +141,7 @@ export async function GET(
       : 0
 
     const totalTimeSpent = cycles.reduce(
-      (sum: number, c) => sum + (c.totalTime ?? 0),
+      (sum: number, c: CycleStats) => sum + (c.totalTime ?? 0),
       0
     )
     const averageTimePerPuzzle = totalAttempts > 0
@@ -161,7 +186,7 @@ export async function GET(
       .filter(p => p.totalAttempts > 0 && p.correctAttempts < p.totalAttempts)
       .map(p => {
         const successRate = Math.round((p.correctAttempts / p.totalAttempts) * 1000) / 10
-        const totalTime = p.attempts.reduce((sum: number, a) => sum + a.timeSpent, 0)
+        const totalTime = p.attempts.reduce((sum: number, a: { isCorrect: boolean; timeSpent: number }) => sum + a.timeSpent, 0)
         const avgTime = p.attempts.length > 0 ? Math.round(totalTime / p.attempts.length) : 0
 
         return {

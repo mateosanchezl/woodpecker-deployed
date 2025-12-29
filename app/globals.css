@@ -132,13 +132,13 @@
     scroll-behavior: smooth;
   }
 
-  body {
+  /* body {
     @apply bg-background text-foreground;
     background-image: radial-gradient(circle at top left, var(--secondary) 0%, transparent 40%),
       radial-gradient(circle at bottom right, var(--primary) 0%, transparent 40%);
     background-attachment: fixed;
     background-size: cover;
-  }
+  } */
 
   h1,
   h2,

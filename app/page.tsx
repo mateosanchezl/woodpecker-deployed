@@ -39,20 +39,15 @@ const staggerContainer = {
 export default function LandingPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground overflow-x-hidden selection:bg-primary/20">
-      {/* Noise Texture Overlay */}
-      <div className="fixed inset-0 z-50 pointer-events-none opacity-[0.03] mix-blend-overlay"
-        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}
-      />
-
       {/* Header */}
       <header className="fixed top-0 z-40 w-full border-b border-border/40 bg-background/60 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 font-bold text-xl tracking-tight">
-            <Image 
-              src="/darklogo.png" 
-              alt="Peck Logo" 
-              width={32} 
-              height={32} 
+            <Image
+              src="/darklogo.png"
+              alt="Peck Logo"
+              width={32}
+              height={32}
               className="h-8 w-8"
             />
             <span className="font-serif tracking-tight">Peck</span>
@@ -82,8 +77,8 @@ export default function LandingPage() {
         <section className="relative py-16 sm:py-24 lg:py-32 overflow-hidden">
           {/* Abstract Background Shapes */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl -z-10 pointer-events-none">
-            <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
-            <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s' }} />
+            <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl" style={{ animationDuration: '4s' }} />
+            <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/20 rounded-full blur-3xl" style={{ animationDuration: '6s' }} />
           </div>
 
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -457,11 +452,11 @@ export default function LandingPage() {
         <footer className="py-12 border-t border-border bg-background">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-2 font-bold text-xl">
-              <Image 
-                src="/darklogo.png" 
-                alt="Peck Logo" 
-                width={32} 
-                height={32} 
+              <Image
+                src="/darklogo.png"
+                alt="Peck Logo"
+                width={32}
+                height={32}
                 className="h-8 w-8"
               />
               <span>Peck</span>

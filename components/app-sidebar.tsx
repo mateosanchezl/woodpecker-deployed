@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Image from "next/image"
 import {
   Award,
   BookOpen,
@@ -25,7 +26,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { StreakBadge } from "@/components/sidebar/streak-badge"
-import { SidebarLevelBadge } from "@/components/sidebar/level-badge"
+import { UserLevelDisplay } from "@/components/sidebar/user-level-display"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -72,16 +73,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <div className="flex items-center justify-between px-4 py-2">
           <div className="flex items-center gap-2 font-bold text-xl tracking-tight">
-            <div className="h-8 w-8 bg-zinc-900 dark:bg-zinc-50 rounded-lg flex items-center justify-center text-white dark:text-zinc-900">
-              P
-            </div>
-            <span>Peck</span>
+            <Image
+              src="/darklogo.png"
+              alt="Peck Logo"
+              width={32}
+              height={32}
+              className="h-8 w-8"
+            />
           </div>
-          <div className="flex items-center gap-2">
-            <SidebarLevelBadge />
-            <StreakBadge />
-          </div>
+          <StreakBadge />
         </div>
+        <UserLevelDisplay />
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { SignedIn, SignedOut } from "@clerk/nextjs";
 import {
@@ -47,9 +48,13 @@ export default function LandingPage() {
       <header className="fixed top-0 z-40 w-full border-b border-border/40 bg-background/60 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 font-bold text-xl tracking-tight">
-            <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold shadow-lg shadow-primary/20">
-              P
-            </div>
+            <Image 
+              src="/darklogo.png" 
+              alt="Peck Logo" 
+              width={32} 
+              height={32} 
+              className="h-8 w-8"
+            />
             <span className="font-serif tracking-tight">Peck</span>
           </div>
           <nav className="flex items-center gap-4">
@@ -452,9 +457,13 @@ export default function LandingPage() {
         <footer className="py-12 border-t border-border bg-background">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-2 font-bold text-xl">
-              <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold">
-                P
-              </div>
+              <Image 
+                src="/darklogo.png" 
+                alt="Peck Logo" 
+                width={32} 
+                height={32} 
+                className="h-8 w-8"
+              />
               <span>Peck</span>
             </div>
             <div className="text-sm text-muted-foreground">

@@ -5,6 +5,7 @@ import {
   Award,
   BookOpen,
   LayoutDashboard,
+  MessageSquare,
   Settings,
   Trophy,
   Users,
@@ -13,6 +14,7 @@ import {
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -85,21 +87,40 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarGroup>
           <SidebarGroupLabel>Platform</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {data.navMain.map((item) => (
-                <SidebarMenuItem key={item.title} className="h-10">
-                  <SidebarMenuButton asChild isActive={pathname === item.url}>
-                    <Link href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+            <SidebarMenu className="flex justify-between">
+              <div>
+                {data.navMain.map((item) => (
+                  <SidebarMenuItem key={item.title} className="h-10">
+                    <SidebarMenuButton asChild isActive={pathname === item.url}>
+                      <Link href={item.url}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </div>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <a href="mailto:dwyc.co@gmail.com">
+                <MessageSquare />
+                <span>Have Feedback?</span>
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+        <div className="flex items-center justify-center p-4 text-xs font-medium text-muted-foreground/70 hover:text-muted-foreground transition-colors">
+          <span>Built with</span>
+          <span className="mx-1 text-red-500">❤️</span>
+          <span>by Mateo</span>
+        </div>
+      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   )

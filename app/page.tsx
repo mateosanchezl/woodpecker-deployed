@@ -461,9 +461,9 @@ export default function LandingPage() {
               © {new Date().getFullYear()} Peck. All rights reserved.
             </div>
             <div className="flex gap-6">
-              <Link href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy</Link>
-              <Link href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms</Link>
-              <Link href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Contact</Link>
+              <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy</Link>
+              <Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms</Link>
+              <a href="mailto:dwyc.co@gmail.com" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Contact</a>
             </div>
           </div>
         </footer>

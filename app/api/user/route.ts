@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
+import { ensureUserExists } from '@/lib/ensure-user'
 import {
   completeOnboardingSchema,
   updateUserSettingsSchema,
@@ -9,13 +10,18 @@ import {
 /**
  * GET /api/user
  * Returns the current user's profile.
- * User creation is handled by Clerk webhooks.
+ * User creation is handled by Clerk webhooks (production) or auto-created (development).
  */
 export async function GET() {
   try {
     const { userId: clerkId } = await auth()
     if (!clerkId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // In development, ensure user exists (creates if missing when webhooks aren't set up)
+    if (process.env.NODE_ENV === 'development') {
+      await ensureUserExists(clerkId)
     }
 
     const user = await prisma.user.findUnique({
@@ -28,7 +34,6 @@ export async function GET() {
     })
 
     if (!user) {
-      // User should be created by webhook - if not found, webhook may be delayed
       return NextResponse.json(
         { error: 'User not found. Please try again in a moment.' },
         { status: 404 }
@@ -72,6 +77,11 @@ export async function PATCH(request: NextRequest) {
     const { userId: clerkId } = await auth()
     if (!clerkId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // In development, ensure user exists (creates if missing when webhooks aren't set up)
+    if (process.env.NODE_ENV === 'development') {
+      await ensureUserExists(clerkId)
     }
 
     const body = await request.json()

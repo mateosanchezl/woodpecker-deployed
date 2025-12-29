@@ -147,10 +147,10 @@ export default function DashboardPage() {
 
   return (
     <>
-      <Dialog open={showOnboarding} onOpenChange={() => {}}>
-        <DialogContent 
-          className="[&>button]:hidden max-w-2xl" 
-          onInteractOutside={(e) => e.preventDefault()} 
+      <Dialog open={showOnboarding} onOpenChange={() => { }}>
+        <DialogContent
+          className="[&>button]:hidden max-w-2xl"
+          onInteractOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
           <OnboardingWizard
@@ -161,7 +161,7 @@ export default function DashboardPage() {
       </Dialog>
 
       {showCreateSet ? (
-        <div className="max-w-2xl mx-auto py-8">
+        <div className="max-w-4xl mx-auto py-8 w-full">
           <CreatePuzzleSetForm
             userRating={userData.user.estimatedRating}
             onSubmit={handleCreatePuzzleSet}
@@ -175,76 +175,76 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
-            {userData.user.name ? `Welcome back, ${userData.user.name.split(' ')[0]}` : 'Welcome back'}
-          </p>
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+              <p className="text-muted-foreground mt-1">
+                {userData.user.name ? `Welcome back, ${userData.user.name.split(' ')[0]}` : 'Welcome back'}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => router.push('/training/new')}
+            >
+              <Plus className="h-4 w-4" />
+              New Set
+            </Button>
+          </div>
+
+          {/* XP and Streak Cards */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <XpCard />
+            <StreakCard />
+          </div>
+
+          {/* Stats Overview */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <StatsCard
+              title="Total Sets"
+              value={puzzleSetsData?.sets.length || 0}
+              icon={Target}
+            />
+            <StatsCard
+              title="Active Training"
+              value={puzzleSetsData?.sets.filter(s => s.isActive).length || 0}
+              icon={TrendingUp}
+            />
+            <StatsCard
+              title="Your Rating"
+              value={userData.user.estimatedRating}
+              icon={CheckCircle2}
+            />
+          </div>
+
+          {/* Puzzle Sets */}
+          <div>
+            <h2 className="text-lg font-semibold mb-4">Your Puzzle Sets</h2>
+            {setsLoading ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {[1, 2].map(i => (
+                  <Card key={i}>
+                    <CardHeader>
+                      <Skeleton className="h-5 w-32" />
+                      <Skeleton className="h-4 w-48 mt-1" />
+                    </CardHeader>
+                    <CardContent>
+                      <Skeleton className="h-2 w-full mb-4" />
+                      <Skeleton className="h-10 w-full" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {puzzleSetsData?.sets.map(set => (
+                  <PuzzleSetCard key={set.id} set={set} />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-        <Button
-          variant="outline"
-          className="gap-2"
-          onClick={() => router.push('/training/new')}
-        >
-          <Plus className="h-4 w-4" />
-          New Set
-        </Button>
-      </div>
-
-      {/* XP and Streak Cards */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <XpCard />
-        <StreakCard />
-      </div>
-
-      {/* Stats Overview */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <StatsCard
-          title="Total Sets"
-          value={puzzleSetsData?.sets.length || 0}
-          icon={Target}
-        />
-        <StatsCard
-          title="Active Training"
-          value={puzzleSetsData?.sets.filter(s => s.isActive).length || 0}
-          icon={TrendingUp}
-        />
-        <StatsCard
-          title="Your Rating"
-          value={userData.user.estimatedRating}
-          icon={CheckCircle2}
-        />
-      </div>
-
-      {/* Puzzle Sets */}
-      <div>
-        <h2 className="text-lg font-semibold mb-4">Your Puzzle Sets</h2>
-        {setsLoading ? (
-          <div className="grid gap-4 md:grid-cols-2">
-            {[1, 2].map(i => (
-              <Card key={i}>
-                <CardHeader>
-                  <Skeleton className="h-5 w-32" />
-                  <Skeleton className="h-4 w-48 mt-1" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-2 w-full mb-4" />
-                  <Skeleton className="h-10 w-full" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {puzzleSetsData?.sets.map(set => (
-              <PuzzleSetCard key={set.id} set={set} />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
       )}
     </>
   )

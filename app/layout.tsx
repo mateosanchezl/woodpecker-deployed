@@ -18,6 +18,8 @@ import {
   generateWebApplicationSchema,
 } from "@/lib/seo";
 import "./globals.css";
+import { Analytics } from '@vercel/analytics/next';
+
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -116,6 +118,7 @@ export default function RootLayout({
               <Toaster />
             </QueryProvider>
           </ThemeProvider>
+          <Analytics />
         </body>
       </html>
     </ClerkProvider>

@@ -1,9 +1,7 @@
 import { type Metadata } from "next";
+import { generatePageMetadata, PAGE_METADATA } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Privacy Policy - Peck",
-  description: "Privacy Policy and GDPR information for Peck chess training",
-};
+export const metadata: Metadata = generatePageMetadata(PAGE_METADATA.privacy);
 
 export default function PrivacyPage() {
   return (

@@ -7,6 +7,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/webhooks/clerk',
   '/privacy',
   '/terms',
+  '/woodpecker-method'
 ])
 
 export default clerkMiddleware(async (auth, request) => {

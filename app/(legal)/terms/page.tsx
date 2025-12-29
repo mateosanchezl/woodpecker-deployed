@@ -1,9 +1,7 @@
 import { type Metadata } from "next";
+import { generatePageMetadata, PAGE_METADATA } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Terms and Conditions - Peck",
-  description: "Terms and Conditions for using Peck chess training service",
-};
+export const metadata: Metadata = generatePageMetadata(PAGE_METADATA.terms);
 
 export default function TermsPage() {
   return (

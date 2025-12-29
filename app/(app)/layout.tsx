@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { AppSidebar } from "@/components/app-sidebar"
 import {
   SidebarInset,
@@ -15,6 +16,17 @@ import {
 } from "@/components/ui/breadcrumb"
 import { UserButton } from "@clerk/nextjs"
 import { ThemeToggle } from "@/components/theme-toggle"
+
+/**
+ * Metadata for protected app pages
+ * These pages are behind authentication and should not be indexed
+ */
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+}
 
 export default function AppLayout({
   children,

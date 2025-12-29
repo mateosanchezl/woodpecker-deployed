@@ -8,6 +8,8 @@ import type {
   AttemptResponse,
   CreateCycleResponse,
 } from '@/lib/validations/training'
+import type { XpData } from '@/hooks/use-xp'
+import { getLevelProgress, getLevelTitle } from '@/lib/xp'
 
 interface UseTrainingSessionOptions {
   puzzleSetId: string
@@ -200,10 +202,21 @@ export function useTrainingSession(
       return { previousData }
     },
     onSuccess: (data) => {
+      // Optimistically update XP cache for instant sidebar refresh
+      if (data.xp) {
+        queryClient.setQueryData<XpData>(['xp'], (oldData) => ({
+          totalXp: data.xp!.newTotal,
+          currentLevel: data.xp!.newLevel,
+          weeklyXp: oldData?.weeklyXp ?? 0,
+          levelProgress: getLevelProgress(data.xp!.newTotal),
+          levelTitle: getLevelTitle(data.xp!.newLevel),
+        }))
+      }
+
       // Refetch to get the real data and next prefetch
       queryClient.invalidateQueries({ queryKey: ['next-puzzle', puzzleSetId, cycleId] })
 
-      // Invalidate XP/user cache at end of cycle only (not during puzzles for performance)
+      // Full invalidation at end of cycle to ensure accuracy
       if (data.isLastPuzzle) {
         queryClient.invalidateQueries({ queryKey: ['xp'] })
         queryClient.invalidateQueries({ queryKey: ['user'] })

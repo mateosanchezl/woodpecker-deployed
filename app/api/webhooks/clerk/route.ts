@@ -2,6 +2,10 @@ import { Webhook } from 'svix'
 import { headers } from 'next/headers'
 import { WebhookEvent } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
+import { Resend } from 'resend';
+import { NewUserNotification } from '@/components/email/new-user-notification';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 /**
  * POST /api/webhooks/clerk
@@ -109,6 +113,21 @@ async function handleUserCreated(data: WebhookEvent['data']) {
       name,
     },
   })
+
+  // Send notification email to admin
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (adminEmail) {
+    await resend.emails.send({
+      from: 'Peck <onboarding@resend.dev>',
+      to: [adminEmail],
+      subject: `New user signup: ${primaryEmail.email_address}`,
+      react: NewUserNotification({
+        userEmail: primaryEmail.email_address,
+        userName: name,
+        createdAt: new Date().toLocaleString(),
+      }),
+    });
+  }
 
   console.log(`User created: ${clerkId}`)
 }

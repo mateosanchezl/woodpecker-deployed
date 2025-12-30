@@ -133,6 +133,10 @@ export default function LandingPage() {
                 <motion.div variants={fadeInUp} className="mt-12 flex items-center justify-center lg:justify-start gap-8 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-primary" />
+                    <span>100% Free</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
                     <span>Scientific Spaced Repetition</span>
                   </div>
                   <div className="flex items-center gap-2">

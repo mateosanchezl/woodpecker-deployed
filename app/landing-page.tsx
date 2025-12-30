@@ -36,11 +36,13 @@ const staggerContainer = {
   },
 };
 
+import { FeaturesSection } from "@/components/landing/features-section";
+
 export default function LandingPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground overflow-x-hidden selection:bg-primary/20">
       {/* Header */}
-      <header className="fixed top-0 z-40 w-full border-b border-border/40 bg-background/60 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+      <header className="fixed top-0 z-40 w-full border-b border-border/40 bg-background/95">
         <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 font-bold text-xl tracking-tight">
             <Image
@@ -53,8 +55,8 @@ export default function LandingPage() {
             <span className="font-serif tracking-tight">Peck</span>
           </div>
           <nav className="flex items-center gap-4">
-            <Link 
-              href="/woodpecker-method" 
+            <Link
+              href="/woodpecker-method"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:inline-block"
             >
               What is Woodpecker Method?
@@ -81,10 +83,10 @@ export default function LandingPage() {
       <main className="flex-1">
         {/* Hero Section */}
         <section className="relative py-16 sm:py-24 lg:py-32 overflow-hidden">
-          {/* Abstract Background Shapes */}
+          {/* Abstract Background Shapes - using opacity gradient instead of blur for performance */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl -z-10 pointer-events-none">
-            <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl" style={{ animationDuration: '4s' }} />
-            <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/20 rounded-full blur-3xl" style={{ animationDuration: '6s' }} />
+            <div className="absolute top-20 left-10 w-72 h-72 bg-gradient-radial from-primary/10 to-transparent rounded-full" style={{ animationDuration: '4s' }} />
+            <div className="absolute bottom-20 right-10 w-96 h-96 bg-gradient-radial from-accent/20 to-transparent rounded-full" style={{ animationDuration: '6s' }} />
           </div>
 
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -147,14 +149,14 @@ export default function LandingPage() {
                 animate={{ opacity: 1, scale: 1, rotate: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
               >
-                <div className="relative rounded-3xl overflow-hidden border border-border shadow-2xl bg-card/50 backdrop-blur-sm p-8 flex flex-col justify-center">
+                <div className="relative rounded-3xl overflow-hidden border border-border shadow-2xl bg-card p-8 flex flex-col justify-center">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
 
                   {/* Chessboard Layer */}
                   <div className="relative z-20 mb-6">
                     <div className="relative w-full max-w-[360px] mx-auto">
-                      {/* Board glow effect */}
-                      <div className="absolute -inset-3 bg-gradient-to-br from-primary/20 via-transparent to-primary/10 rounded-2xl blur-xl opacity-60" />
+                      {/* Board glow effect - using gradient instead of blur for performance */}
+                      <div className="absolute -inset-3 bg-gradient-radial from-primary/15 to-transparent rounded-2xl opacity-60" />
 
                       <div className="relative aspect-square w-full rounded-xl overflow-hidden shadow-2xl ring-1 ring-border/50">
                         <Chessboard
@@ -183,7 +185,7 @@ export default function LandingPage() {
                   </div>
 
                   {/* Abstract Representation of Cycles */}
-                  <div className="relative z-10 space-y-6 bg-card/80 backdrop-blur-md rounded-xl p-6 border border-border/50 shadow-sm">
+                  <div className="relative z-10 space-y-6 bg-card rounded-xl p-6 border border-border/50 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
@@ -294,140 +296,17 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* How It Works - Bento Grid Style */}
-        <section id="how-it-works" className="py-24 sm:py-32">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-3xl mx-auto mb-20">
-              <h2 className="text-3xl sm:text-5xl font-bold tracking-tight mb-6">
-                The Path to <span className="text-primary">Intuition</span>
-              </h2>
-              <p className="text-lg text-muted-foreground">
-                Most players solve a puzzle once and forget it. The Woodpecker Method forces your brain to recognize patterns instantly through aggressive repetition.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 auto-rows-[minmax(250px,auto)]">
-              {/* Step 1: Large Card - The Method */}
-              <div className="md:col-span-2 rounded-3xl border border-border bg-card p-8 relative overflow-hidden group hover:shadow-lg transition-all duration-300">
-                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <Repeat className="w-48 h-48" />
-                </div>
-                <div className="relative z-10 h-full flex flex-col justify-between">
-                  <div>
-                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 text-primary mb-6">
-                      <span className="font-bold text-xl">1</span>
-                    </div>
-                    <h3 className="text-2xl font-bold mb-4">The Woodpecker Method</h3>
-                    <p className="text-muted-foreground text-lg max-w-md">
-                      Solve a set of puzzles. Then do it again, faster. And again. Until the patterns are burned into your subconscious and you recognize them instantly.
-                    </p>
-                  </div>
-                  <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    {[
-                      { cycle: 1, time: "60m", label: "Solve" },
-                      { cycle: 2, time: "30m", label: "Repeat" },
-                      { cycle: 3, time: "15m", label: "Reinforce" },
-                      { cycle: 4, time: "7m", label: "Master" },
-                    ].map((item, i) => (
-                      <div key={i} className="bg-background/50 rounded-lg p-3 border border-border/50 text-center">
-                        <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{item.label}</div>
-                        <div className="font-bold text-primary">{item.time}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Step 2: Tall Card - Gamification */}
-              <div className="md:row-span-2 rounded-3xl border border-border bg-card p-8 relative overflow-hidden group hover:shadow-lg transition-all duration-300 bg-gradient-to-b from-card to-secondary/20">
-                <div className="absolute bottom-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <Trophy className="w-64 h-64" />
-                </div>
-                <div className="relative z-10 h-full flex flex-col">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 text-primary mb-6">
-                    <span className="font-bold text-xl">2</span>
-                  </div>
-                  <h3 className="text-2xl font-bold mb-4">Stay Motivated</h3>
-                  <p className="text-muted-foreground text-lg mb-8">
-                    Training is hard. We make it addictive with a complete progression system.
-                  </p>
-                  <div className="space-y-6 mt-auto">
-                    <div className="bg-background/80 backdrop-blur-sm p-4 rounded-xl border border-border/50 shadow-sm">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-yellow-500/10 rounded-lg text-yellow-500">
-                          <Trophy className="h-4 w-4" />
-                        </div>
-                        <div className="font-semibold">Leaderboards</div>
-                      </div>
-                      <p className="text-xs text-muted-foreground">Compete globally or with friends for the top spot.</p>
-                    </div>
-
-                    <div className="bg-background/80 backdrop-blur-sm p-4 rounded-xl border border-border/50 shadow-sm">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-orange-500/10 rounded-lg text-orange-500">
-                          <Zap className="h-4 w-4" />
-                        </div>
-                        <div className="font-semibold">Daily Streaks</div>
-                      </div>
-                      <p className="text-xs text-muted-foreground">Build a habit. Don't break the chain.</p>
-                    </div>
-
-                    <div className="bg-background/80 backdrop-blur-sm p-4 rounded-xl border border-border/50 shadow-sm">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-purple-500/10 rounded-lg text-purple-500">
-                          <Sparkles className="h-4 w-4" />
-                        </div>
-                        <div className="font-semibold">Achievements</div>
-                      </div>
-                      <p className="text-xs text-muted-foreground">Unlock badges for speed, accuracy, and consistency.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Step 3: Standard Card - Analytics */}
-              <div className="rounded-3xl border border-border bg-card p-8 relative overflow-hidden group hover:shadow-lg transition-all duration-300">
-                <div className="relative z-10">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 text-primary mb-6">
-                    <span className="font-bold text-xl">3</span>
-                  </div>
-                  <h3 className="text-2xl font-bold mb-4">Smart Analytics</h3>
-                  <p className="text-muted-foreground">
-                    Visualize your improvement with detailed charts. Track your accuracy, speed, and "Woodpecker Index" over time.
-                  </p>
-                </div>
-                <div className="absolute bottom-4 right-4 opacity-20">
-                  <TrendingUp className="w-24 h-24" />
-                </div>
-              </div>
-
-              {/* Step 4: Standard Card - Content */}
-              <div className="rounded-3xl border border-border bg-card p-8 relative overflow-hidden group hover:shadow-lg transition-all duration-300">
-                <div className="relative z-10">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 text-primary mb-6">
-                    <span className="font-bold text-xl">4</span>
-                  </div>
-                  <h3 className="text-2xl font-bold mb-4">Curated Puzzles</h3>
-                  <p className="text-muted-foreground">
-                    Millions of puzzles from Lichess, filtered for quality and tactical motifs. No more bad puzzles.
-                  </p>
-                </div>
-                <div className="absolute bottom-4 right-4 opacity-20">
-                  <Target className="w-24 h-24" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        {/* Features Section */}
+        <FeaturesSection />
 
         {/* CTA Section */}
         <section className="py-24 relative overflow-hidden">
           <div className="absolute inset-0 bg-primary/5 -z-10" />
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="rounded-3xl bg-primary text-primary-foreground p-8 sm:p-16 text-center relative overflow-hidden">
-              {/* Decorative circles */}
-              <div className="absolute top-0 left-0 w-64 h-64 bg-white/10 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl" />
-              <div className="absolute bottom-0 right-0 w-64 h-64 bg-black/10 rounded-full translate-x-1/2 translate-y-1/2 blur-3xl" />
+              {/* Decorative circles - using gradient instead of blur for performance */}
+              <div className="absolute top-0 left-0 w-64 h-64 bg-gradient-radial from-white/10 to-transparent rounded-full -translate-x-1/2 -translate-y-1/2" />
+              <div className="absolute bottom-0 right-0 w-64 h-64 bg-gradient-radial from-black/10 to-transparent rounded-full translate-x-1/2 translate-y-1/2" />
 
               <div className="relative z-10 max-w-2xl mx-auto">
                 <h2 className="text-3xl sm:text-5xl font-bold mb-6">Ready to transform your chess?</h2>

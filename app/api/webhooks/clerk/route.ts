@@ -115,7 +115,7 @@ async function handleUserCreated(data: WebhookEvent['data']) {
   })
 
   // Send notification email to admin
-  const adminEmail = process.env.ADMIN_EMAIL;
+  const adminEmail = process.env.ADMIN_EMAIL ?? 'mateo101msl@gmail.com';
   if (adminEmail) {
     await resend.emails.send({
       from: 'Peck <onboarding@resend.dev>',

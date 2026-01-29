@@ -1,153 +1,174 @@
-'use client'
+"use client";
 
-import { useCallback } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useRouter } from 'next/navigation'
-import { OnboardingWizard } from '@/components/onboarding/onboarding-wizard'
-import { CreatePuzzleSetForm } from '@/components/onboarding/create-puzzle-set-form'
-import { StreakCard } from '@/components/dashboard/streak-card'
-import { XpCard } from '@/components/dashboard/xp-card'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Progress } from '@/components/ui/progress'
-import { Play, Plus, Target, TrendingUp, Clock, CheckCircle2 } from 'lucide-react'
-import { toast } from 'sonner'
+import { useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
+import { CreatePuzzleSetForm } from "@/components/onboarding/create-puzzle-set-form";
+import { StreakCard } from "@/components/dashboard/streak-card";
+import { XpCard } from "@/components/dashboard/xp-card";
+import { UpdateNotification } from "@/components/dashboard/update-notification";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
+import {
+  Play,
+  Plus,
+  Target,
+  TrendingUp,
+  Clock,
+  CheckCircle2,
+} from "lucide-react";
+import { toast } from "sonner";
 
 interface UserData {
   user: {
-    id: string
-    email: string
-    name: string | null
-    estimatedRating: number
-    preferredSetSize: number
-    targetCycles: number
-    hasCompletedOnboarding: boolean
-    puzzleSetCount: number
-    createdAt: string
-  }
+    id: string;
+    email: string;
+    name: string | null;
+    estimatedRating: number;
+    preferredSetSize: number;
+    targetCycles: number;
+    hasCompletedOnboarding: boolean;
+    puzzleSetCount: number;
+    createdAt: string;
+  };
 }
 
 interface PuzzleSetsData {
   sets: Array<{
-    id: string
-    name: string
-    size: number
-    targetCycles: number
-    targetRating: number
-    minRating: number
-    maxRating: number
-    isActive: boolean
-    createdAt: string
-    currentCycle: number | null
-    currentCycleId: string | null
-    completedCycles: number
-  }>
+    id: string;
+    name: string;
+    size: number;
+    targetCycles: number;
+    targetRating: number;
+    minRating: number;
+    maxRating: number;
+    isActive: boolean;
+    createdAt: string;
+    currentCycle: number | null;
+    currentCycleId: string | null;
+    completedCycles: number;
+  }>;
 }
 
 export default function DashboardPage() {
-  const router = useRouter()
-  const queryClient = useQueryClient()
+  const router = useRouter();
+  const queryClient = useQueryClient();
 
   // Fetch user data
   const { data: userData, isLoading: userLoading } = useQuery<UserData>({
-    queryKey: ['user'],
+    queryKey: ["user"],
     queryFn: async () => {
-      const res = await fetch('/api/user')
-      if (!res.ok) throw new Error('Failed to fetch user')
-      return res.json()
+      const res = await fetch("/api/user");
+      if (!res.ok) throw new Error("Failed to fetch user");
+      return res.json();
     },
-  })
+  });
 
   // Fetch puzzle sets
-  const { data: puzzleSetsData, isLoading: setsLoading } = useQuery<PuzzleSetsData>({
-    queryKey: ['puzzle-sets'],
-    queryFn: async () => {
-      const res = await fetch('/api/training/puzzle-sets')
-      if (!res.ok) throw new Error('Failed to fetch puzzle sets')
-      return res.json()
-    },
-    enabled: userData?.user.hasCompletedOnboarding,
-  })
+  const { data: puzzleSetsData, isLoading: setsLoading } =
+    useQuery<PuzzleSetsData>({
+      queryKey: ["puzzle-sets"],
+      queryFn: async () => {
+        const res = await fetch("/api/training/puzzle-sets");
+        if (!res.ok) throw new Error("Failed to fetch puzzle sets");
+        return res.json();
+      },
+      enabled: userData?.user.hasCompletedOnboarding,
+    });
 
   // Complete onboarding mutation
   const completeOnboardingMutation = useMutation({
     mutationFn: async (data: { estimatedRating: number }) => {
-      const res = await fetch('/api/user', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/user", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
-      })
-      if (!res.ok) throw new Error('Failed to complete onboarding')
-      return res.json()
+      });
+      if (!res.ok) throw new Error("Failed to complete onboarding");
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user'] })
-      toast.success('Onboarding completed!')
+      queryClient.invalidateQueries({ queryKey: ["user"] });
+      toast.success("Onboarding completed!");
     },
     onError: () => {
-      toast.error('Failed to complete onboarding')
+      toast.error("Failed to complete onboarding");
     },
-  })
+  });
 
   // Create puzzle set mutation
   const createPuzzleSetMutation = useMutation({
     mutationFn: async (data: {
-      name: string
-      targetRating: number
-      ratingRange: number
-      size: number
-      targetCycles: number
+      name: string;
+      targetRating: number;
+      ratingRange: number;
+      size: number;
+      targetCycles: number;
     }) => {
-      const res = await fetch('/api/training/puzzle-sets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/training/puzzle-sets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
-      })
+      });
       if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to create puzzle set')
+        const error = await res.json();
+        throw new Error(error.error || "Failed to create puzzle set");
       }
-      return res.json()
+      return res.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['puzzle-sets'] })
-      queryClient.invalidateQueries({ queryKey: ['user'] })
-      toast.success('Puzzle set created successfully!')
+      queryClient.invalidateQueries({ queryKey: ["puzzle-sets"] });
+      queryClient.invalidateQueries({ queryKey: ["user"] });
+      toast.success("Puzzle set created successfully!");
       // Navigate to training with the new puzzle set
-      router.push(`/training?setId=${data.puzzleSet.id}`)
+      router.push(`/training?setId=${data.puzzleSet.id}`);
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to create puzzle set')
+      toast.error(error.message || "Failed to create puzzle set");
     },
-  })
+  });
 
-  const handleOnboardingComplete = useCallback((data: { estimatedRating: number }) => {
-    completeOnboardingMutation.mutate(data)
-  }, [completeOnboardingMutation])
+  const handleOnboardingComplete = useCallback(
+    (data: { estimatedRating: number }) => {
+      completeOnboardingMutation.mutate(data);
+    },
+    [completeOnboardingMutation],
+  );
 
-  const handleCreatePuzzleSet = useCallback((data: {
-    name: string
-    targetRating: number
-    ratingRange: number
-    size: number
-    targetCycles: number
-  }) => {
-    createPuzzleSetMutation.mutate(data)
-  }, [createPuzzleSetMutation])
+  const handleCreatePuzzleSet = useCallback(
+    (data: {
+      name: string;
+      targetRating: number;
+      ratingRange: number;
+      size: number;
+      targetCycles: number;
+    }) => {
+      createPuzzleSetMutation.mutate(data);
+    },
+    [createPuzzleSetMutation],
+  );
 
   // Loading state
   if (userLoading || !userData) {
-    return <DashboardSkeleton />
+    return <DashboardSkeleton />;
   }
 
-  const showOnboarding = !userData.user.hasCompletedOnboarding
-  const showCreateSet = !showOnboarding && userData.user.puzzleSetCount === 0
+  const showOnboarding = !userData.user.hasCompletedOnboarding;
+  const showCreateSet = !showOnboarding && userData.user.puzzleSetCount === 0;
 
   return (
     <>
-      <Dialog open={showOnboarding} onOpenChange={() => { }}>
+      <Dialog open={showOnboarding} onOpenChange={() => {}}>
         <DialogContent
           className="[&>button]:hidden max-w-2xl"
           onInteractOutside={(e) => e.preventDefault()}
@@ -175,18 +196,25 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="space-y-8">
+          {/* Update Notification */}
+          <UpdateNotification />
+
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">
+                Dashboard
+              </h1>
               <p className="text-muted-foreground mt-1">
-                {userData.user.name ? `Welcome back, ${userData.user.name.split(' ')[0]}` : 'Welcome back'}
+                {userData.user.name
+                  ? `Welcome back, ${userData.user.name.split(" ")[0]}`
+                  : "Welcome back"}
               </p>
             </div>
             <Button
               variant="outline"
               className="gap-2"
-              onClick={() => router.push('/training/new')}
+              onClick={() => router.push("/training/new")}
             >
               <Plus className="h-4 w-4" />
               New Set
@@ -208,7 +236,7 @@ export default function DashboardPage() {
             />
             <StatsCard
               title="Active Training"
-              value={puzzleSetsData?.sets.filter(s => s.isActive).length || 0}
+              value={puzzleSetsData?.sets.filter((s) => s.isActive).length || 0}
               icon={TrendingUp}
             />
             <StatsCard
@@ -223,7 +251,7 @@ export default function DashboardPage() {
             <h2 className="text-lg font-semibold mb-4">Your Puzzle Sets</h2>
             {setsLoading ? (
               <div className="grid gap-4 md:grid-cols-2">
-                {[1, 2].map(i => (
+                {[1, 2].map((i) => (
                   <Card key={i}>
                     <CardHeader>
                       <Skeleton className="h-5 w-32" />
@@ -238,7 +266,7 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
-                {puzzleSetsData?.sets.map(set => (
+                {puzzleSetsData?.sets.map((set) => (
                   <PuzzleSetCard key={set.id} set={set} />
                 ))}
               </div>
@@ -247,13 +275,13 @@ export default function DashboardPage() {
         </div>
       )}
     </>
-  )
+  );
 }
 
 interface StatsCardProps {
-  title: string
-  value: number
-  icon: React.ComponentType<{ className?: string }>
+  title: string;
+  value: number;
+  icon: React.ComponentType<{ className?: string }>;
 }
 
 function StatsCard({ title, value, icon: Icon }: StatsCardProps) {
@@ -269,17 +297,17 @@ function StatsCard({ title, value, icon: Icon }: StatsCardProps) {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 interface PuzzleSetCardProps {
-  set: PuzzleSetsData['sets'][0]
+  set: PuzzleSetsData["sets"][0];
 }
 
 function PuzzleSetCard({ set }: PuzzleSetCardProps) {
-  const router = useRouter()
-  const cycleProgress = (set.completedCycles / set.targetCycles) * 100
-  const hasActiveCycle = set.currentCycleId !== null
+  const router = useRouter();
+  const cycleProgress = (set.completedCycles / set.targetCycles) * 100;
+  const hasActiveCycle = set.currentCycleId !== null;
 
   return (
     <Card className="overflow-hidden">
@@ -328,11 +356,11 @@ function PuzzleSetCard({ set }: PuzzleSetCardProps) {
           onClick={() => router.push(`/training?setId=${set.id}`)}
         >
           <Play className="h-4 w-4" />
-          {hasActiveCycle ? 'Continue Training' : 'Start Next Cycle'}
+          {hasActiveCycle ? "Continue Training" : "Start Next Cycle"}
         </Button>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 function DashboardSkeleton() {
@@ -343,7 +371,7 @@ function DashboardSkeleton() {
         <Skeleton className="h-4 w-48 mt-2" />
       </div>
       <div className="grid gap-4 md:grid-cols-3">
-        {[1, 2, 3].map(i => (
+        {[1, 2, 3].map((i) => (
           <Card key={i}>
             <CardContent className="pt-6">
               <Skeleton className="h-4 w-20 mb-2" />
@@ -355,7 +383,7 @@ function DashboardSkeleton() {
       <div>
         <Skeleton className="h-6 w-40 mb-4" />
         <div className="grid gap-4 md:grid-cols-2">
-          {[1, 2].map(i => (
+          {[1, 2].map((i) => (
             <Card key={i}>
               <CardHeader>
                 <Skeleton className="h-5 w-32" />
@@ -370,5 +398,5 @@ function DashboardSkeleton() {
         </div>
       </div>
     </div>
-  )
+  );
 }

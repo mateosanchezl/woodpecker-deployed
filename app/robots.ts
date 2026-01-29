@@ -3,7 +3,7 @@ import { SITE_CONFIG } from "@/lib/seo";
 
 /**
  * Robots.txt configuration for search engine crawlers
- * 
+ *
  * This file controls how search engines crawl and index the site.
  * Next.js automatically generates /robots.txt from this file.
  */
@@ -14,25 +14,43 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: "*",
         allow: "/",
         disallow: [
-          "/api/",           // API routes should not be indexed
-          "/sign-in",        // Auth pages (low value for SEO)
-          "/sign-up",        // Auth pages (low value for SEO)
-          "/_next/",         // Next.js internal routes
-          "/dashboard",      // Protected app pages (require auth)
-          "/training",       // Protected app pages (require auth)
-          "/progress",       // Protected app pages (require auth)
-          "/leaderboard",    // Protected app pages (require auth)
-          "/achievements",   // Protected app pages (require auth)
-          "/settings",       // Protected app pages (require auth)
+          "/api/", // API routes should not be indexed
+          "/sign-in", // Auth pages (low value for SEO)
+          "/sign-up", // Auth pages (low value for SEO)
+          "/_next/", // Next.js internal routes
+          "/dashboard", // Protected app pages (require auth)
+          "/training", // Protected app pages (require auth)
+          "/progress", // Protected app pages (require auth)
+          "/leaderboard", // Protected app pages (require auth)
+          "/achievements", // Protected app pages (require auth)
+          "/settings", // Protected app pages (require auth)
         ],
       },
       {
         userAgent: "Googlebot",
         allow: "/",
-        disallow: [
-          "/api/",
-          "/_next/",
-        ],
+        disallow: ["/api/", "/_next/"],
+      },
+      // AI/LLM crawlers - allow access to learn about our free service
+      {
+        userAgent: "GPTBot",
+        allow: ["/", "/llms.txt", "/woodpecker-method"],
+      },
+      {
+        userAgent: "ChatGPT-User",
+        allow: ["/", "/llms.txt", "/woodpecker-method"],
+      },
+      {
+        userAgent: "Claude-Web",
+        allow: ["/", "/llms.txt", "/woodpecker-method"],
+      },
+      {
+        userAgent: "Anthropic-AI",
+        allow: ["/", "/llms.txt", "/woodpecker-method"],
+      },
+      {
+        userAgent: "PerplexityBot",
+        allow: ["/", "/llms.txt", "/woodpecker-method"],
       },
     ],
     sitemap: `${SITE_CONFIG.url}/sitemap.xml`,

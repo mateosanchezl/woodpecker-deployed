@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 /**
  * SEO Constants and Utilities for Peck Chess Training
- * 
+ *
  * Optimized for ranking #1 for "woodpecker method chess" keywords
  */
 
@@ -15,22 +15,19 @@ export const TARGET_KEYWORDS = {
     "woodpecker method",
     "woodpecker method chess",
     "woodpecker chess training",
+    "free woodpecker method",
   ],
   secondary: [
     "woodpecker method app",
     "woodpecker method online",
     "woodpecker method puzzles",
-    "woodpecker chess puzzles",
-    "woodpecker training method",
+    "chess puzzle trainer",
+    "free chess tactics trainer",
   ],
   longtail: [
     "woodpecker method chess training app",
-    "woodpecker method chess improvement",
-    "how to use woodpecker method",
-    "woodpecker method puzzle trainer",
     "best woodpecker method app",
-    "free woodpecker method training",
-    "woodpecker method for chess tactics",
+    "free chess training app",
     "chess puzzle repetition training",
     "spaced repetition chess puzzles",
   ],
@@ -38,7 +35,6 @@ export const TARGET_KEYWORDS = {
     "chess tactics trainer",
     "chess puzzle training",
     "tactical pattern recognition",
-    "chess improvement method",
     "lichess puzzles training",
   ],
 } as const;
@@ -49,9 +45,10 @@ export const TARGET_KEYWORDS = {
 
 export const SITE_CONFIG = {
   name: "Peck",
-  tagline: "Woodpecker Method Chess Training",
+  tagline: "Free Woodpecker Method Chess Training",
   // Primary keyword in description
-  description: "The #1 Woodpecker Method chess training app. Master chess tactics through intensive puzzle repetition. Build pattern recognition and calculation speed with the scientifically-proven Woodpecker Method.",
+  description:
+    "Free Woodpecker Method chess training app. Master chess tactics through intensive puzzle repetition. Build pattern recognition and calculation speed with the scientifically-proven Woodpecker Method.",
   url: "https://peckchess.com",
   locale: "en_US",
   twitterHandle: "@peckchess",
@@ -65,7 +62,7 @@ export const SITE_CONFIG = {
 export const DEFAULT_METADATA: Metadata = {
   metadataBase: new URL(SITE_CONFIG.url),
   title: {
-    default: `${SITE_CONFIG.name} - Woodpecker Method Chess Training App`,
+    default: `${SITE_CONFIG.name} - Free Woodpecker Method Chess Training`,
     template: `%s | ${SITE_CONFIG.name} - Woodpecker Method`,
   },
   description: SITE_CONFIG.description,
@@ -83,8 +80,9 @@ export const DEFAULT_METADATA: Metadata = {
     locale: SITE_CONFIG.locale,
     url: SITE_CONFIG.url,
     siteName: `${SITE_CONFIG.name} - Woodpecker Method Chess Training`,
-    title: `${SITE_CONFIG.name} - #1 Woodpecker Method Chess Training App`,
-    description: "Master chess tactics with the Woodpecker Method. The best free app for chess puzzle repetition training. Build pattern recognition and improve your tactical vision.",
+    title: `${SITE_CONFIG.name} - Free Woodpecker Method Chess Training`,
+    description:
+      "Master chess tactics with the Woodpecker Method for free. The best app for chess puzzle repetition training. Build pattern recognition and improve your tactical vision.",
     images: [
       {
         url: "/og-image.png",
@@ -97,8 +95,9 @@ export const DEFAULT_METADATA: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SITE_CONFIG.name} - Woodpecker Method Chess Training`,
-    description: "Master chess tactics with the Woodpecker Method. Free chess puzzle repetition training app.",
+    title: `${SITE_CONFIG.name} - Free Woodpecker Method Chess Training`,
+    description:
+      "Master chess tactics with the Woodpecker Method for free. Chess puzzle repetition training app.",
     creator: SITE_CONFIG.twitterHandle,
     images: ["/og-image.png"],
   },
@@ -119,21 +118,21 @@ export const DEFAULT_METADATA: Metadata = {
     // Primary
     "woodpecker method",
     "woodpecker method chess",
+    "free woodpecker method",
     "woodpecker chess training",
     // Secondary
     "woodpecker method app",
-    "woodpecker method online",
+    "free chess tactics trainer",
     "woodpecker method puzzles",
-    "woodpecker chess puzzles",
+    "chess puzzle trainer",
     // Long-tail
     "woodpecker method chess training app",
+    "free chess training app",
     "best woodpecker method app",
-    "free woodpecker method training",
+    "chess puzzle repetition training",
     // Related
     "chess tactics trainer",
-    "chess puzzle training",
     "tactical pattern recognition",
-    "chess improvement",
     "spaced repetition chess",
     "lichess puzzles",
   ],
@@ -172,7 +171,7 @@ export function generatePageMetadata({
   openGraph,
 }: PageMetadataOptions): Metadata {
   const url = `${SITE_CONFIG.url}${path}`;
-  
+
   return {
     title,
     description,
@@ -192,9 +191,7 @@ export function generatePageMetadata({
       description,
       card: "summary_large_image",
     },
-    robots: noIndex
-      ? { index: false, follow: false }
-      : DEFAULT_METADATA.robots,
+    robots: noIndex ? { index: false, follow: false } : DEFAULT_METADATA.robots,
   };
 }
 
@@ -204,84 +201,95 @@ export function generatePageMetadata({
 
 export const PAGE_METADATA = {
   home: {
-    title: "Peck - #1 Woodpecker Method Chess Training App | Free Puzzle Trainer",
-    description: "Master chess tactics with the Woodpecker Method. The best free online chess puzzle training app. Solve the same puzzles faster each cycle to build pattern recognition and improve your tactical vision.",
+    title: "Peck - Free Woodpecker Method Chess Training App",
+    description:
+      "Master chess tactics with the Woodpecker Method for free. The best online chess puzzle training app. Solve the same puzzles faster each cycle to build pattern recognition and improve your tactical vision.",
     path: "/",
     keywords: [
       "woodpecker method",
+      "free woodpecker method",
       "woodpecker method chess",
-      "woodpecker chess training",
-      "woodpecker method app",
       "chess puzzle trainer",
       "free chess training",
     ],
   },
   woodpeckerMethod: {
-    title: "What is the Woodpecker Method? | Complete Chess Training Guide",
-    description: "Learn the Woodpecker Method for chess improvement. Discover how solving the same tactical puzzles repeatedly builds pattern recognition and calculation speed. Free online training available.",
+    title: "What is the Woodpecker Method? | Chess Training Guide",
+    description:
+      "Learn the Woodpecker Method for chess improvement. Discover how solving the same tactical puzzles repeatedly builds pattern recognition and calculation speed. Free training available.",
     path: "/woodpecker-method",
     keywords: [
       "woodpecker method",
       "what is woodpecker method",
       "woodpecker method explained",
-      "woodpecker method chess",
       "how to use woodpecker method",
       "woodpecker method guide",
     ],
   },
   dashboard: {
     title: "Dashboard - Track Your Woodpecker Method Progress",
-    description: "Track your Woodpecker Method chess training progress. View your cycle times, accuracy stats, streaks, and achievements.",
+    description:
+      "Track your Woodpecker Method chess training progress. View your cycle times, accuracy stats, streaks, and achievements.",
     path: "/dashboard",
   },
   training: {
     title: "Start Woodpecker Method Training | Chess Puzzle Cycles",
-    description: "Begin your Woodpecker Method training session. Solve chess puzzles in cycles, getting faster each round as patterns become automatic.",
+    description:
+      "Begin your Woodpecker Method training session. Solve chess puzzles in cycles, getting faster each round as patterns become automatic.",
     path: "/training",
   },
   trainingNew: {
     title: "Create Woodpecker Method Puzzle Set | Customize Your Training",
-    description: "Create a personalized Woodpecker Method puzzle set. Choose your rating range, set size, and target cycles for optimal chess improvement.",
+    description:
+      "Create a personalized Woodpecker Method puzzle set. Choose your rating range, set size, and target cycles for optimal chess improvement.",
     path: "/training/new",
   },
   progress: {
     title: "Woodpecker Method Progress Analytics | Track Improvement",
-    description: "Analyze your Woodpecker Method training progress. View cycle time improvements, accuracy trends, and identify problem puzzles.",
+    description:
+      "Analyze your Woodpecker Method training progress. View cycle time improvements, accuracy trends, and identify problem puzzles.",
     path: "/progress",
   },
   leaderboard: {
     title: "Woodpecker Method Leaderboard | Top Chess Trainers",
-    description: "See how you rank against other Woodpecker Method practitioners. Compare cycle times, accuracy, and streaks with the community.",
+    description:
+      "See how you rank against other Woodpecker Method practitioners. Compare cycle times, accuracy, and streaks with the community.",
     path: "/leaderboard",
   },
   achievements: {
     title: "Woodpecker Method Achievements | Training Milestones",
-    description: "Unlock achievements as you master the Woodpecker Method. Track your milestones in chess tactical training.",
+    description:
+      "Unlock achievements as you master the Woodpecker Method. Track your milestones in chess tactical training.",
     path: "/achievements",
   },
   settings: {
     title: "Settings | Customize Your Woodpecker Method Training",
-    description: "Customize your Woodpecker Method training experience. Adjust puzzle difficulty, set size preferences, and training parameters.",
+    description:
+      "Customize your Woodpecker Method training experience. Adjust puzzle difficulty, set size preferences, and training parameters.",
     path: "/settings",
   },
   signIn: {
     title: "Sign In | Woodpecker Method Chess Training",
-    description: "Sign in to continue your Woodpecker Method chess training. Pick up where you left off in your puzzle cycles.",
+    description:
+      "Sign in to continue your Woodpecker Method chess training. Pick up where you left off in your puzzle cycles.",
     path: "/sign-in",
   },
   signUp: {
     title: "Start Free Woodpecker Method Training | Create Account",
-    description: "Create your free account and start Woodpecker Method chess training today. No credit card required. Improve your tactics now.",
+    description:
+      "Create your free account and start Woodpecker Method chess training today. No credit card required.",
     path: "/sign-up",
   },
   privacy: {
     title: "Privacy Policy | Peck Woodpecker Method Training",
-    description: "Privacy policy for Peck, the Woodpecker Method chess training app. Learn how we protect your data.",
+    description:
+      "Privacy policy for Peck, the Woodpecker Method chess training app. Learn how we protect your data.",
     path: "/privacy",
   },
   terms: {
     title: "Terms of Service | Peck Woodpecker Method Training",
-    description: "Terms of service for Peck, the Woodpecker Method chess training platform.",
+    description:
+      "Terms of service for Peck, the Woodpecker Method chess training platform.",
     path: "/terms",
   },
 } as const;
@@ -301,7 +309,7 @@ export function generateOrganizationSchema() {
     alternateName: "Peck Chess",
     url: SITE_CONFIG.url,
     logo: `${SITE_CONFIG.url}/android-chrome-512x512.png`,
-    description: "The leading Woodpecker Method chess training platform",
+    description: "Free Woodpecker Method chess training platform",
     email: SITE_CONFIG.email,
     sameAs: [
       `https://twitter.com/${SITE_CONFIG.twitterHandle.replace("@", "")}`,
@@ -317,13 +325,15 @@ export function generateSoftwareApplicationSchema() {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     name: `${SITE_CONFIG.name} - Woodpecker Method Chess Training`,
-    alternateName: ["Peck Chess", "Woodpecker Method App", "Peck Woodpecker Trainer"],
-    description: "The #1 Woodpecker Method chess training app. Master chess tactics through intensive puzzle repetition with the scientifically-proven Woodpecker Method.",
+    alternateName: ["Peck Chess", "Woodpecker Method App"],
+    description:
+      "Free Woodpecker Method chess training app. Master chess tactics through intensive puzzle repetition with the scientifically-proven Woodpecker Method.",
     url: SITE_CONFIG.url,
     applicationCategory: "GameApplication",
     applicationSubCategory: "Chess Training",
     operatingSystem: "Any",
     browserRequirements: "Requires JavaScript. Requires HTML5.",
+    isAccessibleForFree: true,
     offers: {
       "@type": "Offer",
       price: "0",
@@ -360,11 +370,13 @@ export function generateWebApplicationSchema() {
     "@context": "https://schema.org",
     "@type": "WebApplication",
     name: `${SITE_CONFIG.name} - Woodpecker Method`,
-    description: "Free online Woodpecker Method chess training. Solve puzzles in cycles to build tactical pattern recognition.",
+    description:
+      "Free online Woodpecker Method chess training. Solve puzzles in cycles to build tactical pattern recognition.",
     url: SITE_CONFIG.url,
     applicationCategory: "EducationalApplication",
     operatingSystem: "Any",
     browserRequirements: "Requires JavaScript. Requires HTML5.",
+    isAccessibleForFree: true,
     offers: {
       "@type": "Offer",
       price: "0",
@@ -391,7 +403,7 @@ export function generateWebSiteSchema() {
     name: `${SITE_CONFIG.name} - Woodpecker Method Chess Training`,
     alternateName: ["Peck Chess", "Peck Woodpecker Method"],
     url: SITE_CONFIG.url,
-    description: "The #1 Woodpecker Method chess training app",
+    description: "Free Woodpecker Method chess training app",
     publisher: {
       "@type": "Organization",
       name: SITE_CONFIG.name,
@@ -416,7 +428,8 @@ export function generateHowToSchema() {
     "@context": "https://schema.org",
     "@type": "HowTo",
     name: "How to Use the Woodpecker Method for Chess Training",
-    description: "Learn how to use the Woodpecker Method to improve your chess tactics. This step-by-step guide shows you how to build pattern recognition through puzzle repetition.",
+    description:
+      "Learn how to use the Woodpecker Method to improve your chess tactics. This step-by-step guide shows you how to build pattern recognition through puzzle repetition.",
     image: `${SITE_CONFIG.url}/og-image.png`,
     totalTime: "PT30M",
     estimatedCost: {
@@ -537,7 +550,7 @@ export function generateWoodpeckerFAQSchema() {
         name: "What is the best Woodpecker Method app?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Peck is the best free Woodpecker Method training app. It provides curated puzzles from the Lichess database, automatic cycle tracking, progress analytics, and gamification features like streaks and achievements. Unlike other apps, Peck is specifically designed for the Woodpecker Method with features like cycle time tracking and pattern recognition metrics.",
+          text: "Peck is a free Woodpecker Method training app with curated puzzles from the Lichess database, automatic cycle tracking, progress analytics, and gamification features like streaks and achievements. It's specifically designed for the Woodpecker Method with cycle time tracking and pattern recognition metrics.",
         },
       },
       {
@@ -545,7 +558,7 @@ export function generateWoodpeckerFAQSchema() {
         name: "Can I use the Woodpecker Method for free?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Yes, Peck offers free Woodpecker Method training. You get access to millions of high-quality puzzles from the Lichess database, unlimited puzzle sets, full progress tracking, and all gamification features at no cost. No credit card required.",
+          text: "Yes, Peck is completely free. You get access to millions of high-quality puzzles from the Lichess database, unlimited puzzle sets, full progress tracking, and all features at no cost. No credit card required.",
         },
       },
       {
@@ -564,6 +577,22 @@ export function generateWoodpeckerFAQSchema() {
           text: "The Woodpecker Method was developed by Swedish Grandmaster Axel Smith and International Master Hans Tikkanen. They published the method in their 2018 book 'The Woodpecker Method'. The name comes from how woodpeckers repeatedly peck at trees - just as you repeatedly solve the same puzzles. Both authors used this method to achieve their chess titles.",
         },
       },
+      {
+        "@type": "Question",
+        name: "How much does Peck cost?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Peck is free. All features including unlimited puzzle sets, progress analytics, achievements, and leaderboards are available at no cost.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Why is Peck free?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Peck is free because we believe the Woodpecker Method should be accessible to every chess player. We use open-source puzzles from the Lichess database and want to help players improve without financial barriers.",
+        },
+      },
     ],
   };
 }
@@ -572,7 +601,7 @@ export function generateWoodpeckerFAQSchema() {
  * Generate FAQ schema (generic version)
  */
 export function generateFAQSchema(
-  faqs: Array<{ question: string; answer: string }>
+  faqs: Array<{ question: string; answer: string }>,
 ) {
   return {
     "@context": "https://schema.org",
@@ -592,7 +621,7 @@ export function generateFAQSchema(
  * Generate BreadcrumbList schema
  */
 export function generateBreadcrumbSchema(
-  items: Array<{ name: string; url: string }>
+  items: Array<{ name: string; url: string }>,
 ) {
   return {
     "@context": "https://schema.org",
@@ -601,7 +630,9 @@ export function generateBreadcrumbSchema(
       "@type": "ListItem",
       position: index + 1,
       name: item.name,
-      item: item.url.startsWith("http") ? item.url : `${SITE_CONFIG.url}${item.url}`,
+      item: item.url.startsWith("http")
+        ? item.url
+        : `${SITE_CONFIG.url}${item.url}`,
     })),
   };
 }

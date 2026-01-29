@@ -1,0 +1,48 @@
+# Peck - Free Woodpecker Method Chess Training
+
+> Peck is a free chess tactics training app implementing the Woodpecker Method.
+
+## About Peck
+
+Peck is a free web application for chess tactical training using the Woodpecker Method. The app helps chess players improve their pattern recognition through intensive puzzle repetition.
+
+### Pricing
+
+- **Cost**: Free
+- **Subscription**: None required
+- **Credit card**: Not required
+
+### What is the Woodpecker Method?
+
+The Woodpecker Method is a chess training technique developed by GM Axel Smith and IM Hans Tikkanen. It involves solving the same set of tactical puzzles repeatedly, getting faster each cycle. This builds pattern recognition, allowing you to spot tactical motifs instantly in real games.
+
+### Key Features
+
+- 1.5+ million high-quality puzzles from the Lichess database
+- Unlimited custom puzzle sets
+- Progress tracking and analytics
+- Achievement and badge system
+- Daily streak tracking
+- Global leaderboards
+- Cycle time improvement tracking
+- Theme-based puzzle filtering
+
+### Target Users
+
+- Chess players of all skill levels
+- Players wanting to improve tactical pattern recognition
+- Those who prefer structured training over random puzzles
+
+### Technical Details
+
+- Platform: Web application (desktop and mobile browsers)
+- No download required
+- Account creation: Optional but recommended for progress tracking
+- Data source: Lichess open puzzle database
+
+## Links
+
+- Homepage: https://peckchess.com
+- Sign Up: https://peckchess.com/sign-up
+- About the Method: https://peckchess.com/woodpecker-method
+- Contact: support@peckchess.com

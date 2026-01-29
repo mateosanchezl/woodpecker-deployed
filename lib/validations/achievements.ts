@@ -7,6 +7,9 @@ export const achievementCategorySchema = z.enum([
   'cycles',
   'time',
   'themes',
+  'accuracy',
+  'mastery',
+  'leaderboard',
 ])
 
 export const achievementSchema = z.object({

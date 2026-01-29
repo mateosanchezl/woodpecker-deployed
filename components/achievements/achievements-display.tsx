@@ -15,13 +15,19 @@ const CATEGORY_LABELS: Record<AchievementCategory, string> = {
   cycles: 'Cycles',
   time: 'Time',
   themes: 'Themes',
+  accuracy: 'Accuracy',
+  mastery: 'Mastery',
+  leaderboard: 'Competitive',
 }
 
 const CATEGORY_ORDER: AchievementCategory[] = [
   'puzzles',
   'speed',
+  'accuracy',
   'cycles',
   'streaks',
+  'mastery',
+  'leaderboard',
   'time',
   'themes',
 ]

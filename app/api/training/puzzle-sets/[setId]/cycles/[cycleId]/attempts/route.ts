@@ -334,6 +334,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       timeSpentMs: timeSpent,
       attemptedAt,
       puzzleThemes: puzzleInSet.puzzle.themes,
+      puzzleRating: puzzleInSet.puzzle.rating,
     })
     allUnlockedAchievements.push(...attemptAchievements.newlyUnlocked)
 

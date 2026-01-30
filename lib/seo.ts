@@ -292,6 +292,74 @@ export const PAGE_METADATA = {
       "Terms of service for Peck, the Woodpecker Method chess training platform.",
     path: "/terms",
   },
+ // Public marketing pages (Phase 1 SEO)
+  features: {
+    title: "Features | Woodpecker Method Chess Training",
+    description:
+      "Explore Peck's features: Woodpecker Method cycles, progress analytics, achievements, streaks, leaderboards, and personalized puzzle sets. Free chess tactics training.",
+    path: "/features",
+    keywords: [
+      "woodpecker method features",
+      "chess training app features",
+      "chess puzzle trainer",
+      "tactical training",
+    ],
+  },
+  pricing: {
+    title: "Pricing | Free Woodpecker Method Training",
+    description:
+      "Peck is free. No credit card required. Full access to Woodpecker Method training, unlimited puzzle sets, progress tracking, and achievements.",
+    path: "/pricing",
+    keywords: [
+      "woodpecker method free",
+      "free chess training",
+      "chess app pricing",
+    ],
+  },
+  about: {
+    title: "About Peck | Woodpecker Method Chess Training",
+    description:
+      "Learn about Peck, the free Woodpecker Method chess training app. Our mission is to make tactical improvement accessible to every chess player.",
+    path: "/about",
+    keywords: [
+      "about peck chess",
+      "woodpecker method app",
+      "chess training",
+    ],
+  },
+  faq: {
+    title: "FAQ | Woodpecker Method & Peck",
+    description:
+      "Frequently asked questions about the Woodpecker Method and Peck: puzzle sets, cycles, ratings, improvement, and how to get started.",
+    path: "/faq",
+    keywords: [
+      "woodpecker method faq",
+      "chess training faq",
+      "woodpecker method questions",
+    ],
+  },
+  blog: {
+    title: "Blog | Woodpecker Method & Chess Training",
+    description:
+      "Articles and tips on the Woodpecker Method, chess tactics training, and improving your game with Peck.",
+    path: "/blog",
+    keywords: [
+      "woodpecker method blog",
+      "chess training blog",
+      "chess tactics",
+    ],
+  },
+  docs: {
+    title: "Documentation | Peck Woodpecker Method",
+    description:
+      "Documentation and guides for Peck: getting started, Woodpecker Method setup, and training best practices.",
+    path: "/docs",
+    keywords: [
+      "peck documentation",
+      "woodpecker method guide",
+      "chess training docs",
+    ],
+  },
 } as const;
 
 // =============================================================================
@@ -681,6 +749,51 @@ export function generateArticleSchema(article: {
 // =============================================================================
 // Utility Functions
 // =============================================================================
+
+// =============================================================================
+// Dynamic route metadata helpers (blog/docs shells)
+// =============================================================================
+
+export interface SlugMetadataInput {
+  /** Single slug (blog) or joined path segments (docs). For docs/[[...slug]], pass slug.join("/") or "" for index. */
+  slug: string;
+  title?: string;
+  description?: string;
+  pathPrefix: "/blog" | "/docs";
+}
+
+/**
+ * Generate metadata for a blog post or doc page by slug.
+ * Use when building generateMetadata in blog/[slug] or docs/[[...slug]].
+ * For docs catch-all, pass slug as the joined path (e.g. slug.join("/")).
+ */
+export function generateSlugPageMetadata({
+  slug,
+  title,
+  description,
+  pathPrefix,
+}: SlugMetadataInput): Metadata {
+  const path = pathPrefix === "/blog" ? `/blog/${slug}` : slug ? `/docs/${slug}` : "/docs";
+  const slugTitle = slug ? slug.replace(/-/g, " ").replace(/\//g, " · ") : "";
+  const defaultTitle =
+    pathPrefix === "/blog"
+      ? slugTitle
+        ? `${slugTitle} | Peck Blog`
+        : PAGE_METADATA.blog.title
+      : slugTitle
+        ? `${slugTitle} | Peck Docs`
+        : PAGE_METADATA.docs.title;
+  const defaultDescription =
+    pathPrefix === "/blog"
+      ? (slug ? "Woodpecker Method and chess training tips from Peck." : PAGE_METADATA.blog.description)
+      : (slug ? "Documentation and guides for Peck Woodpecker Method training." : PAGE_METADATA.docs.description);
+  return generatePageMetadata({
+    title: title ?? defaultTitle,
+    description: description ?? defaultDescription,
+    path,
+    openGraph: { type: pathPrefix === "/blog" ? "article" : "website" },
+  });
+}
 
 /**
  * Generate canonical URL for a given path

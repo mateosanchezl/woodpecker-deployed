@@ -54,12 +54,42 @@ export default function LandingPage() {
             />
             <span className="font-serif tracking-tight">Peck</span>
           </div>
-          <nav className="flex items-center gap-4">
+          <nav className="flex items-center gap-3 sm:gap-4">
+            <Link
+              href="/features"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden md:inline-block"
+            >
+              Features
+            </Link>
+            <Link
+              href="/pricing"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden md:inline-block"
+            >
+              Pricing
+            </Link>
+            <Link
+              href="/about"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden lg:inline-block"
+            >
+              About
+            </Link>
+            <Link
+              href="/faq"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:inline-block"
+            >
+              FAQ
+            </Link>
+            <Link
+              href="/blog"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden lg:inline-block"
+            >
+              Blog
+            </Link>
             <Link
               href="/woodpecker-method"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:inline-block"
             >
-              What is Woodpecker Method?
+              Woodpecker Method
             </Link>
             <SignedOut>
               <Link href="/sign-in">
@@ -455,7 +485,37 @@ export default function LandingPage() {
             <div className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} Peck. All rights reserved.
             </div>
-            <div className="flex gap-6">
+            <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
+              <Link
+                href="/features"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Features
+              </Link>
+              <Link
+                href="/pricing"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Pricing
+              </Link>
+              <Link
+                href="/about"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                About
+              </Link>
+              <Link
+                href="/faq"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                FAQ
+              </Link>
+              <Link
+                href="/blog"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Blog
+              </Link>
               <Link
                 href="/woodpecker-method"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -475,7 +535,7 @@ export default function LandingPage() {
                 Terms
               </Link>
               <a
-                href="mailto:dwyc.co@gmail.com"
+                href="mailto:support@peckchess.com"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 Contact

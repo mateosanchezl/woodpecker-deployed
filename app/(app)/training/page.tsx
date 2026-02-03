@@ -44,22 +44,40 @@ interface PuzzleSetData {
  * Shows puzzle sets and allows starting/continuing training cycles.
  */
 export default function TrainingPage() {
-  const searchParams = useSearchParams()
-  const key = `${searchParams.get('setId') ?? ''}:${searchParams.get('cycleId') ?? ''}:${searchParams.get('quickstart') ?? ''}`
-
   return (
     <Suspense fallback={<TrainingPageSkeleton />}>
-      <TrainingPageContent key={key} />
+      <TrainingPageContent />
     </Suspense>
   )
 }
 
 function TrainingPageContent() {
   const searchParams = useSearchParams()
-  const router = useRouter()
   const urlSetId = searchParams.get('setId')
   const urlCycleId = searchParams.get('cycleId')
   const quickstart = searchParams.get('quickstart') === '1'
+  const key = `${urlSetId ?? ''}:${urlCycleId ?? ''}:${quickstart ? '1' : ''}`
+
+  return (
+    <TrainingPageInner
+      key={key}
+      urlSetId={urlSetId}
+      urlCycleId={urlCycleId}
+      quickstart={quickstart}
+    />
+  )
+}
+
+function TrainingPageInner({
+  urlSetId,
+  urlCycleId,
+  quickstart,
+}: {
+  urlSetId: string | null
+  urlCycleId: string | null
+  quickstart: boolean
+}) {
+  const router = useRouter()
   const queryClient = useQueryClient()
 
   // Fetch user's active puzzle sets

@@ -49,11 +49,30 @@ export default function NewPuzzleSetPage() {
       }
       return res.json()
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['puzzle-sets'] })
       queryClient.invalidateQueries({ queryKey: ['user'] })
       toast.success('Puzzle set created successfully!')
-      router.push(`/training?setId=${data.puzzleSet.id}`)
+      try {
+        const cycleRes = await fetch(
+          `/api/training/puzzle-sets/${data.puzzleSet.id}/cycles`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          }
+        )
+        if (!cycleRes.ok) {
+          const error = await cycleRes.json()
+          throw new Error(error.error || 'Failed to start cycle')
+        }
+        const cycleData = await cycleRes.json()
+        router.push(
+          `/training?setId=${data.puzzleSet.id}&cycleId=${cycleData.cycle.id}`
+        )
+      } catch (error) {
+        toast.error((error as Error).message || 'Failed to start cycle')
+        router.push(`/training?setId=${data.puzzleSet.id}`)
+      }
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to create puzzle set')

@@ -15,17 +15,17 @@ import { cn } from "@/lib/utils";
 // Update this object when you want to announce a new update
 // Increment the version to show the notification to users who dismissed the previous one
 export const CURRENT_UPDATE = {
-  version: "1.1.0",
-  title: "New Achievements System! 🏆",
+  version: "1.2.0",
+  title: "Faster Start, First Puzzle in Seconds",
   description:
-    "Unlock achievements as you progress through your chess training journey.",
+    "We streamlined onboarding so you can jump straight into training without the long setup.",
   features: [
-    "Earn badges for completing puzzle sets and cycles",
-    "Track your streak milestones and XP gains",
-    "View all your achievements in the new Achievements page",
+    "Quick Start builds a starter puzzle set automatically",
+    "Your first cycle starts immediately—no extra clicks",
+    "Customize your set size, rating, and cycles anytime",
   ],
-  date: "2026-01-29",
-  learnMoreUrl: "/achievements",
+  date: "2026-02-03",
+  learnMoreUrl: "/training",
 };
 
 const STORAGE_KEY = "woodpecker-dismissed-update";

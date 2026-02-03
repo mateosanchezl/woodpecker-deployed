@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useCallback, Suspense } from 'react'
+import { useState, useCallback, Suspense, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { TrainingSession } from '@/components/training/training-session'
 import {
@@ -18,7 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Play, Target, TrendingUp, MoreVertical, Trash2, Clock, Flame } from 'lucide-react'
+import { Play, Target, TrendingUp, MoreVertical, Trash2, Clock, Flame, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useStreak } from '@/hooks/use-streak'
 import { useNavigationGuard } from '@/hooks/use-navigation-guard'
@@ -44,16 +44,22 @@ interface PuzzleSetData {
  * Shows puzzle sets and allows starting/continuing training cycles.
  */
 export default function TrainingPage() {
+  const searchParams = useSearchParams()
+  const key = `${searchParams.get('setId') ?? ''}:${searchParams.get('cycleId') ?? ''}:${searchParams.get('quickstart') ?? ''}`
+
   return (
     <Suspense fallback={<TrainingPageSkeleton />}>
-      <TrainingPageContent />
+      <TrainingPageContent key={key} />
     </Suspense>
   )
 }
 
 function TrainingPageContent() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const urlSetId = searchParams.get('setId')
+  const urlCycleId = searchParams.get('cycleId')
+  const quickstart = searchParams.get('quickstart') === '1'
   const queryClient = useQueryClient()
 
   // Fetch user's active puzzle sets
@@ -71,7 +77,7 @@ function TrainingPageContent() {
   })
 
   const [selectedSetId, setSelectedSetId] = useState<string | null>(urlSetId)
-  const [activeCycleId, setActiveCycleId] = useState<string | null>(null)
+  const [activeCycleId, setActiveCycleId] = useState<string | null>(urlCycleId)
 
   // Delete puzzle set mutation
   const deleteMutation = useMutation({
@@ -94,6 +100,39 @@ function TrainingPageContent() {
     },
   })
 
+  // Quick start mutation
+  const quickStartMutation = useMutation<{
+    puzzleSet: {
+      id: string
+    }
+    cycle: {
+      id: string
+    }
+  }, Error>({
+    mutationFn: async () => {
+      const res = await fetch('/api/training/quick-start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to quick start')
+      }
+      return res.json()
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['puzzle-sets'] })
+      queryClient.invalidateQueries({ queryKey: ['user'] })
+      setSelectedSetId(data.puzzleSet.id)
+      setActiveCycleId(data.cycle.id)
+      router.replace(`/training?setId=${data.puzzleSet.id}&cycleId=${data.cycle.id}`)
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to quick start')
+    },
+  })
+
   // Create cycle mutation
   const createCycleMutation = useCreateCycle(selectedSetId || '')
 
@@ -102,6 +141,18 @@ function TrainingPageContent() {
     puzzleSetId: selectedSetId || '',
     cycleId: activeCycleId,
   })
+
+  const hasNoSets = !loadingSets && (puzzleSets?.sets?.length ?? 0) === 0
+  const quickStartTriggeredRef = useRef(false)
+
+  useEffect(() => {
+    if (!quickstart || !hasNoSets || activeCycleId || quickStartTriggeredRef.current) {
+      return
+    }
+
+    quickStartTriggeredRef.current = true
+    quickStartMutation.mutate()
+  }, [quickstart, hasNoSets, activeCycleId, quickStartMutation])
 
   // Handle starting a new cycle
   const handleStartCycle = useCallback(async (setId: string) => {
@@ -162,11 +213,6 @@ function TrainingPageContent() {
     return <TrainingPageSkeleton />
   }
 
-  // No puzzle sets
-  if (!puzzleSets?.sets || puzzleSets.sets.length === 0) {
-    return <NoPuzzleSetsCard />
-  }
-
   // Training in progress
   if (activeCycleId && selectedSetId) {
     return (
@@ -197,6 +243,25 @@ function TrainingPageContent() {
           onCancel={cancelLeave}
         />
       </div>
+    )
+  }
+
+  // No puzzle sets
+  if (!puzzleSets?.sets || puzzleSets.sets.length === 0) {
+    if (quickstart && !quickStartMutation.isError) {
+      return <QuickStartLoadingCard />
+    }
+
+    if (quickStartMutation.isPending) {
+      return <QuickStartLoadingCard />
+    }
+
+    return (
+      <QuickStartCard
+        onQuickStart={() => quickStartMutation.mutate()}
+        isStarting={quickStartMutation.isPending}
+        error={quickStartMutation.isError ? quickStartMutation.error?.message : null}
+      />
     )
   }
 
@@ -500,20 +565,70 @@ function TrainingPageSkeleton() {
   )
 }
 
-function NoPuzzleSetsCard() {
+function QuickStartCard({
+  onQuickStart,
+  isStarting,
+  error,
+}: {
+  onQuickStart: () => void
+  isStarting: boolean
+  error: string | null
+}) {
   return (
     <div className="py-4">
-      <Card className="max-w-md mx-auto">
-        <CardHeader className="text-center">
-          <CardTitle>No Puzzle Sets</CardTitle>
+      <Card className="max-w-xl mx-auto">
+        <CardHeader className="text-center space-y-2">
+          <CardTitle>Start Training Now</CardTitle>
           <CardDescription>
-            You don&apos;t have any puzzle sets yet. Create one to start training.
+            You repeat a fixed set in cycles. Each cycle gets faster as patterns become automatic.
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex justify-center">
-          <Button asChild>
-            <Link href="/training/new">Create Puzzle Set</Link>
-          </Button>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button onClick={onQuickStart} disabled={isStarting} className="gap-2">
+              {isStarting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Setting up...
+                </>
+              ) : (
+                <>
+                  <Play className="h-4 w-4" />
+                  Start Training Now
+                </>
+              )}
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/training/new">Customize First Set</Link>
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground text-center">
+            Want the full method?{' '}
+            <Link href="/woodpecker-method" className="underline underline-offset-2">
+              Learn the Woodpecker Method
+            </Link>
+          </p>
+          {error && (
+            <p className="text-sm text-red-600 text-center">{error}</p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function QuickStartLoadingCard() {
+  return (
+    <div className="py-4">
+      <Card className="max-w-xl mx-auto">
+        <CardHeader className="text-center space-y-2">
+          <CardTitle>Setting up your first puzzle set...</CardTitle>
+          <CardDescription>
+            Picking puzzles and creating your first cycle.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex justify-center py-6">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </CardContent>
       </Card>
     </div>

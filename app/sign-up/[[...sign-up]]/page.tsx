@@ -11,7 +11,7 @@ export default function SignUpPage() {
   return (
     <main className="flex min-h-screen items-center justify-center">
       <h1 className="sr-only">Create your Peck account</h1>
-      <SignUp />
+      <SignUp afterSignUpUrl="/training?quickstart=1" />
     </main>
   );
 }

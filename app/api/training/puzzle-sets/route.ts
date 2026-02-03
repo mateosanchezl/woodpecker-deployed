@@ -172,6 +172,13 @@ export async function POST(request: NextRequest) {
         })),
       })
 
+      if (!user.hasCompletedOnboarding) {
+        await tx.user.update({
+          where: { id: user.id },
+          data: { hasCompletedOnboarding: true },
+        })
+      }
+
       return set
     })
 

@@ -1,4 +1,5 @@
 import { currentUser } from '@clerk/nextjs/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 
 /**
@@ -40,14 +41,51 @@ export async function ensureUserExists(clerkId: string) {
     ? `${clerkUser.firstName}${clerkUser.lastName ? ` ${clerkUser.lastName}` : ''}`
     : null
 
-  // Create the user
-  user = await prisma.user.create({
-    data: {
-      clerkId,
-      email: primaryEmail.emailAddress,
-      name,
-    },
+  // If a user already exists with this email, link the clerkId
+  const existingByEmail = await prisma.user.findUnique({
+    where: { email: primaryEmail.emailAddress },
   })
+
+  if (existingByEmail) {
+    user = await prisma.user.update({
+      where: { id: existingByEmail.id },
+      data: {
+        clerkId,
+        name: existingByEmail.name ?? name,
+      },
+    })
+    return user
+  }
+
+  // Create the user
+  try {
+    user = await prisma.user.create({
+      data: {
+        clerkId,
+        email: primaryEmail.emailAddress,
+        name,
+      },
+    })
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      const userByEmail = await prisma.user.findUnique({
+        where: { email: primaryEmail.emailAddress },
+      })
+      if (userByEmail) {
+        user = await prisma.user.update({
+          where: { id: userByEmail.id },
+          data: {
+            clerkId,
+            name: userByEmail.name ?? name,
+          },
+        })
+      } else {
+        throw error
+      }
+    } else {
+      throw error
+    }
+  }
 
   console.log(`User auto-created in development: ${clerkId}`)
 

@@ -210,6 +210,30 @@ export const createPuzzleSetResponseSchema = z.object({
 export type CreatePuzzleSetResponse = z.infer<typeof createPuzzleSetResponseSchema>
 
 /**
+ * Schema for quick start request.
+ */
+export const quickStartRequestSchema = z.object({
+  estimatedRating: z
+    .number()
+    .int()
+    .min(800, 'Rating must be at least 800')
+    .max(2600, 'Rating must be at most 2600')
+    .optional(),
+})
+
+export type QuickStartRequest = z.infer<typeof quickStartRequestSchema>
+
+/**
+ * Schema for quick start response.
+ */
+export const quickStartResponseSchema = z.object({
+  puzzleSet: createPuzzleSetResponseSchema.shape.puzzleSet,
+  cycle: createCycleResponseSchema.shape.cycle,
+})
+
+export type QuickStartResponse = z.infer<typeof quickStartResponseSchema>
+
+/**
  * Schema for completing onboarding.
  */
 export const completeOnboardingSchema = z.object({

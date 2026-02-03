@@ -1,14 +1,10 @@
 "use client";
 
-import { useCallback } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
-import { CreatePuzzleSetForm } from "@/components/onboarding/create-puzzle-set-form";
 import { StreakCard } from "@/components/dashboard/streak-card";
 import { XpCard } from "@/components/dashboard/xp-card";
 import { UpdateNotification } from "@/components/dashboard/update-notification";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   Card,
   CardContent,
@@ -27,7 +23,7 @@ import {
   Clock,
   CheckCircle2,
 } from "lucide-react";
-import { toast } from "sonner";
+import Link from "next/link";
 
 interface UserData {
   user: {
@@ -62,7 +58,6 @@ interface PuzzleSetsData {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const queryClient = useQueryClient();
 
   // Fetch user data
   const { data: userData, isLoading: userLoading } = useQuery<UserData>({
@@ -83,116 +78,49 @@ export default function DashboardPage() {
         if (!res.ok) throw new Error("Failed to fetch puzzle sets");
         return res.json();
       },
-      enabled: userData?.user.hasCompletedOnboarding,
+      enabled: !!userData,
     });
 
-  // Complete onboarding mutation
-  const completeOnboardingMutation = useMutation({
-    mutationFn: async (data: { estimatedRating: number }) => {
-      const res = await fetch("/api/user", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Failed to complete onboarding");
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["user"] });
-      toast.success("Onboarding completed!");
-    },
-    onError: () => {
-      toast.error("Failed to complete onboarding");
-    },
-  });
-
-  // Create puzzle set mutation
-  const createPuzzleSetMutation = useMutation({
-    mutationFn: async (data: {
-      name: string;
-      targetRating: number;
-      ratingRange: number;
-      size: number;
-      targetCycles: number;
-    }) => {
-      const res = await fetch("/api/training/puzzle-sets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to create puzzle set");
-      }
-      return res.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["puzzle-sets"] });
-      queryClient.invalidateQueries({ queryKey: ["user"] });
-      toast.success("Puzzle set created successfully!");
-      // Navigate to training with the new puzzle set
-      router.push(`/training?setId=${data.puzzleSet.id}`);
-    },
-    onError: (error) => {
-      toast.error(error.message || "Failed to create puzzle set");
-    },
-  });
-
-  const handleOnboardingComplete = useCallback(
-    (data: { estimatedRating: number }) => {
-      completeOnboardingMutation.mutate(data);
-    },
-    [completeOnboardingMutation],
-  );
-
-  const handleCreatePuzzleSet = useCallback(
-    (data: {
-      name: string;
-      targetRating: number;
-      ratingRange: number;
-      size: number;
-      targetCycles: number;
-    }) => {
-      createPuzzleSetMutation.mutate(data);
-    },
-    [createPuzzleSetMutation],
-  );
+  
 
   // Loading state
   if (userLoading || !userData) {
     return <DashboardSkeleton />;
   }
 
-  const showOnboarding = !userData.user.hasCompletedOnboarding;
-  const showCreateSet = !showOnboarding && userData.user.puzzleSetCount === 0;
+  const showQuickStart = userData.user.puzzleSetCount === 0;
 
   return (
     <>
-      <Dialog open={showOnboarding} onOpenChange={() => {}}>
-        <DialogContent
-          className="[&>button]:hidden max-w-2xl"
-          onInteractOutside={(e) => e.preventDefault()}
-          onEscapeKeyDown={(e) => e.preventDefault()}
-        >
-          <OnboardingWizard
-            onComplete={handleOnboardingComplete}
-            isSubmitting={completeOnboardingMutation.isPending}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {showCreateSet ? (
-        <div className="max-w-4xl mx-auto py-8 w-full">
-          <CreatePuzzleSetForm
-            userRating={userData.user.estimatedRating}
-            onSubmit={handleCreatePuzzleSet}
-            isSubmitting={createPuzzleSetMutation.isPending}
-          />
-          {createPuzzleSetMutation.isError && (
-            <p className="text-sm text-red-600 mt-4 text-center">
-              {createPuzzleSetMutation.error.message}
-            </p>
-          )}
+      {showQuickStart ? (
+        <div className="max-w-2xl mx-auto py-8 w-full">
+          <Card>
+            <CardHeader className="text-center space-y-2">
+              <CardTitle>Start Training Now</CardTitle>
+              <CardDescription>
+                You repeat a fixed set in cycles. Each cycle gets faster as patterns become automatic.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button asChild className="gap-2">
+                  <Link href="/training?quickstart=1">
+                    <Play className="h-4 w-4" />
+                    Start Training Now
+                  </Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href="/training/new">Customize First Set</Link>
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Want the full method?{' '}
+                <Link href="/woodpecker-method" className="underline underline-offset-2">
+                  Learn the Woodpecker Method
+                </Link>
+              </p>
+            </CardContent>
+          </Card>
         </div>
       ) : (
         <div className="space-y-8">

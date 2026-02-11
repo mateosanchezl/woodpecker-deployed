@@ -37,86 +37,12 @@ const staggerContainer = {
 };
 
 import { FeaturesSection } from "@/components/landing/features-section";
+import { LandingNavbar } from "@/components/landing/navbar";
 
 export default function LandingPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground overflow-x-hidden selection:bg-primary/20">
-      {/* Header */}
-      <header className="fixed top-0 z-40 w-full border-b border-border/40 bg-background/95">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2 font-bold text-xl tracking-tight">
-            <Image
-              src="/darklogo.png"
-              alt="Peck Logo"
-              width={32}
-              height={32}
-              className="h-8 w-8"
-            />
-            <span className="font-serif tracking-tight">Peck</span>
-          </div>
-          <nav className="flex items-center gap-3 sm:gap-4">
-            <Link
-              href="/features"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden md:inline-block"
-            >
-              Features
-            </Link>
-            <Link
-              href="/pricing"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden md:inline-block"
-            >
-              Pricing
-            </Link>
-            <Link
-              href="/about"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden lg:inline-block"
-            >
-              About
-            </Link>
-            <Link
-              href="/faq"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:inline-block"
-            >
-              FAQ
-            </Link>
-            <Link
-              href="/blog"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden lg:inline-block"
-            >
-              Blog
-            </Link>
-            <Link
-              href="/woodpecker-method"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:inline-block"
-            >
-              Woodpecker Method
-            </Link>
-            <SignedOut>
-              <Link href="/sign-in">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="hover:bg-primary/5"
-                >
-                  Log in
-                </Button>
-              </Link>
-              <Link href="/sign-up">
-                <Button size="sm" className="shadow-md shadow-primary/20">
-                  Start Training
-                </Button>
-              </Link>
-            </SignedOut>
-            <SignedIn>
-              <Link href="/dashboard">
-                <Button size="sm" className="shadow-md shadow-primary/20">
-                  Go to Dashboard
-                </Button>
-              </Link>
-            </SignedIn>
-          </nav>
-        </div>
-      </header>
+      <LandingNavbar />
 
       <main className="flex-1">
         {/* Hero Section */}

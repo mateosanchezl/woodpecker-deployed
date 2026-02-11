@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { LandingNavbar } from "@/components/landing/navbar";
 import {
   generatePageMetadata,
   PAGE_METADATA,
@@ -30,7 +31,8 @@ export const metadata: Metadata = {
 export default function WoodpeckerMethodPage() {
   const articleSchema = generateArticleSchema({
     title: "What is the Woodpecker Method? Complete Chess Training Guide",
-    description: "Learn how the Woodpecker Method can transform your chess tactics through intensive puzzle repetition.",
+    description:
+      "Learn how the Woodpecker Method can transform your chess tactics through intensive puzzle repetition.",
     url: `${SITE_CONFIG.url}/woodpecker-method`,
     datePublished: "2024-01-01T00:00:00Z",
     dateModified: new Date().toISOString(),
@@ -54,48 +56,39 @@ export default function WoodpeckerMethodPage() {
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(generateHowToSchema()) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(generateHowToSchema()),
+        }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(generateWoodpeckerFAQSchema()) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(generateWoodpeckerFAQSchema()),
+        }}
       />
 
       <div className="min-h-screen bg-background">
-        {/* Header */}
-        <header className="border-b border-border/40 bg-background/95 backdrop-blur">
-          <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-            <Link href="/" className="flex items-center gap-2 font-bold text-xl">
-              <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold">
-                P
-              </div>
-              <span className="font-serif">Peck</span>
-            </Link>
-            <nav className="flex items-center gap-4">
-              <Link href="/sign-up">
-                <Button size="sm">Start Training Free</Button>
-              </Link>
-            </nav>
-          </div>
-        </header>
+        <LandingNavbar />
 
         <main>
           {/* Hero Section */}
-          <section className="py-16 sm:py-24 border-b border-border/40">
+          <section className="pt-32 pb-16 sm:pt-40 sm:pb-24 border-b border-border/40">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
               <div className="max-w-4xl mx-auto text-center">
                 <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary mb-6">
                   <BookOpen className="h-4 w-4" />
                   <span>Complete Guide</span>
                 </div>
-                
+
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
-                  What is the <span className="text-primary">Woodpecker Method</span>?
+                  What is the{" "}
+                  <span className="text-primary">Woodpecker Method</span>?
                 </h1>
-                
+
                 <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-                  The scientifically-proven chess training technique that builds 
-                  tactical pattern recognition through intensive puzzle repetition.
+                  The scientifically-proven chess training technique that builds
+                  tactical pattern recognition through intensive puzzle
+                  repetition.
                 </p>
 
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -123,21 +116,29 @@ export default function WoodpeckerMethodPage() {
                   <h2 className="text-3xl font-bold tracking-tight mb-6">
                     The Woodpecker Method Explained
                   </h2>
-                  
+
                   <p className="text-lg text-muted-foreground leading-relaxed mb-6">
-                    The <strong>Woodpecker Method</strong> is a chess training technique developed by 
-                    Swedish Grandmaster <strong>Axel Smith</strong> and International Master <strong>Hans Tikkanen</strong>. 
-                    Published in their 2018 book, this method has helped countless players improve their 
-                    tactical ability through a simple but powerful approach: <em>solve the same puzzles 
-                    repeatedly until the patterns become automatic</em>.
+                    The <strong>Woodpecker Method</strong> is a chess training
+                    technique developed by Swedish Grandmaster{" "}
+                    <strong>Axel Smith</strong> and International Master{" "}
+                    <strong>Hans Tikkanen</strong>. Published in their 2018
+                    book, this method has helped countless players improve their
+                    tactical ability through a simple but powerful approach:{" "}
+                    <em>
+                      solve the same puzzles repeatedly until the patterns
+                      become automatic
+                    </em>
+                    .
                   </p>
 
                   <p className="text-lg text-muted-foreground leading-relaxed mb-6">
-                    Unlike traditional puzzle training where you solve new puzzles every day, the 
-                    Woodpecker Method focuses on <strong>repetition and speed</strong>. You select a 
-                    fixed set of tactical puzzles and solve them in cycles, getting faster each time. 
-                    By the end of your training, patterns that once required minutes of calculation 
-                    are recognized instantly.
+                    Unlike traditional puzzle training where you solve new
+                    puzzles every day, the Woodpecker Method focuses on{" "}
+                    <strong>repetition and speed</strong>. You select a fixed
+                    set of tactical puzzles and solve them in cycles, getting
+                    faster each time. By the end of your training, patterns that
+                    once required minutes of calculation are recognized
+                    instantly.
                   </p>
 
                   <div className="bg-primary/5 border border-primary/20 rounded-xl p-6 my-8">
@@ -146,9 +147,10 @@ export default function WoodpeckerMethodPage() {
                       Why "Woodpecker"?
                     </h3>
                     <p className="text-muted-foreground mb-0">
-                      The name comes from how woodpeckers repeatedly peck at trees with rapid, 
-                      consistent strikes. Similarly, you repeatedly "peck" at the same puzzles, 
-                      each time getting faster and more accurate until the patterns are burned 
+                      The name comes from how woodpeckers repeatedly peck at
+                      trees with rapid, consistent strikes. Similarly, you
+                      repeatedly "peck" at the same puzzles, each time getting
+                      faster and more accurate until the patterns are burned
                       into your chess intuition.
                     </p>
                   </div>
@@ -170,35 +172,40 @@ export default function WoodpeckerMethodPage() {
                     {
                       step: 1,
                       title: "Create Your Puzzle Set",
-                      description: "Select 100-300 tactical puzzles slightly below your rating. Quality matters more than quantity. Peck automatically curates high-quality puzzles from the Lichess database.",
+                      description:
+                        "Select 100-300 tactical puzzles slightly below your rating. Quality matters more than quantity. Peck automatically curates high-quality puzzles from the Lichess database.",
                       icon: Target,
                       time: "5 minutes",
                     },
                     {
                       step: 2,
                       title: "Complete Cycle 1 - Solve Carefully",
-                      description: "Solve all puzzles in your set, taking time to calculate fully. Don't rush this first cycle. Understanding each pattern deeply is crucial for later speed.",
+                      description:
+                        "Solve all puzzles in your set, taking time to calculate fully. Don't rush this first cycle. Understanding each pattern deeply is crucial for later speed.",
                       icon: Clock,
                       time: "45-60 minutes",
                     },
                     {
                       step: 3,
                       title: "Complete Cycle 2 - Build Speed",
-                      description: "Solve the same puzzles again. You'll recognize patterns from Cycle 1 and solve faster. Aim to cut your total time in half.",
+                      description:
+                        "Solve the same puzzles again. You'll recognize patterns from Cycle 1 and solve faster. Aim to cut your total time in half.",
                       icon: Repeat,
                       time: "20-30 minutes",
                     },
                     {
                       step: 4,
                       title: "Cycles 3-5 - Master the Patterns",
-                      description: "Continue repeating the set. Each cycle should be faster as patterns become automatic. Most users achieve 8x speed improvement by cycle 4-5.",
+                      description:
+                        "Continue repeating the set. Each cycle should be faster as patterns become automatic. Most users achieve 8x speed improvement by cycle 4-5.",
                       icon: Zap,
                       time: "7-15 minutes",
                     },
                     {
                       step: 5,
                       title: "Track and Analyze",
-                      description: "Monitor your cycle times and accuracy. Identify problem puzzles that need extra attention. When times plateau, you've mastered the set.",
+                      description:
+                        "Monitor your cycle times and accuracy. Identify problem puzzles that need extra attention. When times plateau, you've mastered the set.",
                       icon: TrendingUp,
                       time: "Ongoing",
                     },
@@ -214,11 +221,19 @@ export default function WoodpeckerMethodPage() {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <span className="text-sm font-medium text-primary">Step {item.step}</span>
-                          <span className="text-sm text-muted-foreground">~{item.time}</span>
+                          <span className="text-sm font-medium text-primary">
+                            Step {item.step}
+                          </span>
+                          <span className="text-sm text-muted-foreground">
+                            ~{item.time}
+                          </span>
                         </div>
-                        <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
-                        <p className="text-muted-foreground">{item.description}</p>
+                        <h3 className="text-xl font-semibold mb-2">
+                          {item.title}
+                        </h3>
+                        <p className="text-muted-foreground">
+                          {item.description}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -239,27 +254,33 @@ export default function WoodpeckerMethodPage() {
                   {[
                     {
                       title: "Pattern Recognition",
-                      description: "Repeated exposure to tactical motifs trains your brain to recognize them instantly, without conscious calculation.",
+                      description:
+                        "Repeated exposure to tactical motifs trains your brain to recognize them instantly, without conscious calculation.",
                     },
                     {
                       title: "Speed Under Pressure",
-                      description: "When patterns are automatic, you save time in real games for complex positions that require deep calculation.",
+                      description:
+                        "When patterns are automatic, you save time in real games for complex positions that require deep calculation.",
                     },
                     {
                       title: "Confidence Building",
-                      description: "Knowing you've mastered specific patterns gives you confidence to play sharply in tactical positions.",
+                      description:
+                        "Knowing you've mastered specific patterns gives you confidence to play sharply in tactical positions.",
                     },
                     {
                       title: "Measurable Progress",
-                      description: "Cycle time improvements provide concrete evidence of your growth, keeping you motivated.",
+                      description:
+                        "Cycle time improvements provide concrete evidence of your growth, keeping you motivated.",
                     },
                     {
                       title: "Efficient Training",
-                      description: "No time wasted on puzzles far above your level. Every puzzle contributes to building your tactical foundation.",
+                      description:
+                        "No time wasted on puzzles far above your level. Every puzzle contributes to building your tactical foundation.",
                     },
                     {
                       title: "Scientific Basis",
-                      description: "Based on spaced repetition principles proven effective in learning research and memory science.",
+                      description:
+                        "Based on spaced repetition principles proven effective in learning research and memory science.",
                     },
                   ].map((benefit, i) => (
                     <div
@@ -269,8 +290,12 @@ export default function WoodpeckerMethodPage() {
                       <div className="flex items-start gap-3">
                         <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                         <div>
-                          <h3 className="font-semibold mb-2">{benefit.title}</h3>
-                          <p className="text-sm text-muted-foreground">{benefit.description}</p>
+                          <h3 className="font-semibold mb-2">
+                            {benefit.title}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            {benefit.description}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -333,12 +358,17 @@ export default function WoodpeckerMethodPage() {
                     Start Your Woodpecker Method Training
                   </h2>
                   <p className="text-primary-foreground/80 text-lg mb-8 max-w-xl mx-auto">
-                    Join thousands of chess players improving their tactics with the 
-                    Woodpecker Method. Free forever, no credit card required.
+                    Join thousands of chess players improving their tactics with
+                    the Woodpecker Method. Free forever, no credit card
+                    required.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
                     <Link href="/sign-up">
-                      <Button size="lg" variant="secondary" className="h-12 px-8 w-full sm:w-auto">
+                      <Button
+                        size="lg"
+                        variant="secondary"
+                        className="h-12 px-8 w-full sm:w-auto"
+                      >
                         Create Free Account
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
@@ -365,13 +395,22 @@ export default function WoodpeckerMethodPage() {
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
               <div>© {new Date().getFullYear()} Peck. All rights reserved.</div>
               <div className="flex gap-6">
-                <Link href="/privacy" className="hover:text-foreground transition-colors">
+                <Link
+                  href="/privacy"
+                  className="hover:text-foreground transition-colors"
+                >
                   Privacy
                 </Link>
-                <Link href="/terms" className="hover:text-foreground transition-colors">
+                <Link
+                  href="/terms"
+                  className="hover:text-foreground transition-colors"
+                >
                   Terms
                 </Link>
-                <a href="mailto:support@peckchess.com" className="hover:text-foreground transition-colors">
+                <a
+                  href="mailto:support@peckchess.com"
+                  className="hover:text-foreground transition-colors"
+                >
                   Contact
                 </a>
               </div>

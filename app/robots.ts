@@ -34,23 +34,23 @@ export default function robots(): MetadataRoute.Robots {
       // AI/LLM crawlers - allow access to learn about our free service
       {
         userAgent: "GPTBot",
-        allow: ["/", "/llms.txt", "/woodpecker-method"],
+        allow: ["/", "/llms.txt", "/woodpecker-method", "/blog"],
       },
       {
         userAgent: "ChatGPT-User",
-        allow: ["/", "/llms.txt", "/woodpecker-method"],
+        allow: ["/", "/llms.txt", "/woodpecker-method", "/blog"],
       },
       {
         userAgent: "Claude-Web",
-        allow: ["/", "/llms.txt", "/woodpecker-method"],
+        allow: ["/", "/llms.txt", "/woodpecker-method", "/blog"],
       },
       {
         userAgent: "Anthropic-AI",
-        allow: ["/", "/llms.txt", "/woodpecker-method"],
+        allow: ["/", "/llms.txt", "/woodpecker-method", "/blog"],
       },
       {
         userAgent: "PerplexityBot",
-        allow: ["/", "/llms.txt", "/woodpecker-method"],
+        allow: ["/", "/llms.txt", "/woodpecker-method", "/blog"],
       },
     ],
     sitemap: `${SITE_CONFIG.url}/sitemap.xml`,

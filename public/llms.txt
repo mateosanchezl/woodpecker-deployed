@@ -45,4 +45,6 @@ The Woodpecker Method is a chess training technique developed by GM Axel Smith a
 - Homepage: https://peckchess.com
 - Sign Up: https://peckchess.com/sign-up
 - About the Method: https://peckchess.com/woodpecker-method
+- Blog: https://peckchess.com/blog
+- RSS Feed: https://peckchess.com/blog/rss.xml
 - Contact: support@peckchess.com

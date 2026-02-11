@@ -43,3 +43,6 @@ next-env.d.ts
 scripts/lichess_db_puzzle.csv
 # Sentry Config File
 .env.sentry-build-plugin
+
+# Velite
+.velite

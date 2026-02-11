@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
 import { SITE_CONFIG } from "@/lib/seo";
+import { getPublishedPosts, getAllTags } from "@/lib/blog";
+import type { Post } from "#site/content";
 
 /**
  * Sitemap configuration for search engine discovery
@@ -7,6 +9,8 @@ import { SITE_CONFIG } from "@/lib/seo";
  * Optimized for ranking on "woodpecker method" and "free chess training" keywords.
  * The /woodpecker-method page is given high priority as it targets
  * our primary keyword directly.
+ *
+ * Blog posts are dynamically included from the Velite content pipeline.
  */
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = SITE_CONFIG.url;
@@ -85,5 +89,23 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 
-  return staticPages;
+  // Dynamic blog post pages
+  const posts = getPublishedPosts();
+  const blogPages: MetadataRoute.Sitemap = posts.map((post: Post) => ({
+    url: `${baseUrl}/blog/${post.slug}`,
+    lastModified: new Date(post.updated || post.date),
+    changeFrequency: "monthly",
+    priority: 0.6,
+  }));
+
+  // Tag archive pages
+  const tags = getAllTags();
+  const tagPages: MetadataRoute.Sitemap = tags.map((tag: string) => ({
+    url: `${baseUrl}/blog/tags/${tag}`,
+    lastModified: new Date(),
+    changeFrequency: "weekly",
+    priority: 0.4,
+  }));
+
+  return [...staticPages, ...blogPages, ...tagPages];
 }

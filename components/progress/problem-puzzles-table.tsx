@@ -1,6 +1,6 @@
-'use client'
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -8,49 +8,51 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import { AlertTriangle } from 'lucide-react'
-import type { ProblemPuzzle } from '@/lib/validations/progress'
+} from "@/components/ui/table";
+import { AlertTriangle, ArrowRight } from "lucide-react";
+import type { ProblemPuzzle } from "@/lib/validations/progress";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 interface ProblemPuzzlesTableProps {
-  puzzles: ProblemPuzzle[]
+  puzzles: ProblemPuzzle[];
 }
 
 // Format theme names for display (camelCase to Title Case)
 function formatTheme(theme: string): string {
   return theme
-    .replace(/([A-Z])/g, ' $1')
+    .replace(/([A-Z])/g, " $1")
     .replace(/^./, (str) => str.toUpperCase())
-    .trim()
+    .trim();
 }
 
 // Theme badge colors for visual variety
 const THEME_COLORS = [
-  'bg-violet-100 text-violet-700',
-  'bg-sky-100 text-sky-700',
-  'bg-amber-100 text-amber-700',
-  'bg-rose-100 text-rose-700',
-  'bg-emerald-100 text-emerald-700',
-  'bg-purple-100 text-purple-700',
-]
+  "bg-violet-100 text-violet-700",
+  "bg-sky-100 text-sky-700",
+  "bg-amber-100 text-amber-700",
+  "bg-rose-100 text-rose-700",
+  "bg-emerald-100 text-emerald-700",
+  "bg-purple-100 text-purple-700",
+];
 
 function getThemeColor(theme: string): string {
   // Simple hash to get consistent color for each theme
-  let hash = 0
+  let hash = 0;
   for (let i = 0; i < theme.length; i++) {
-    hash = theme.charCodeAt(i) + ((hash << 5) - hash)
+    hash = theme.charCodeAt(i) + ((hash << 5) - hash);
   }
-  return THEME_COLORS[Math.abs(hash) % THEME_COLORS.length]
+  return THEME_COLORS[Math.abs(hash) % THEME_COLORS.length];
 }
 
 function formatTime(ms: number): string {
-  const seconds = Math.floor(ms / 1000)
+  const seconds = Math.floor(ms / 1000);
   if (seconds < 60) {
-    return `${seconds}s`
+    return `${seconds}s`;
   }
-  const minutes = Math.floor(seconds / 60)
-  const remainingSeconds = seconds % 60
-  return `${minutes}m ${remainingSeconds}s`
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}m ${remainingSeconds}s`;
 }
 
 export function ProblemPuzzlesTable({ puzzles }: ProblemPuzzlesTableProps) {
@@ -71,18 +73,26 @@ export function ProblemPuzzlesTable({ puzzles }: ProblemPuzzlesTableProps) {
           </div>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base font-medium flex items-center gap-2">
-          <div className="rounded-lg bg-amber-100 p-1.5">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-          </div>
-          Problem Puzzles
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base font-medium flex items-center gap-2">
+            <div className="rounded-lg bg-amber-100 p-1.5">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+            </div>
+            Problem Puzzles
+          </CardTitle>
+          <Link href="/training/review">
+            <Button variant="outline" size="sm">
+              Practice
+              <ArrowRight className="ml-1 h-3 w-3" />
+            </Button>
+          </Link>
+        </div>
         <p className="text-sm text-muted-foreground">
           Puzzles you&apos;ve struggled with across cycles
         </p>
@@ -101,16 +111,16 @@ export function ProblemPuzzlesTable({ puzzles }: ProblemPuzzlesTableProps) {
           <TableBody>
             {puzzles.map((puzzle) => {
               const successColor =
-                puzzle.successRate >= 50
-                  ? 'text-amber-600'
-                  : 'text-rose-600'
+                puzzle.successRate >= 50 ? "text-amber-600" : "text-rose-600";
 
               return (
                 <TableRow key={puzzle.puzzleId}>
                   <TableCell className="font-medium tabular-nums">
                     {puzzle.position}
                   </TableCell>
-                  <TableCell className="tabular-nums">{puzzle.rating}</TableCell>
+                  <TableCell className="tabular-nums">
+                    {puzzle.rating}
+                  </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {puzzle.themes.slice(0, 3).map((theme) => (
@@ -128,7 +138,9 @@ export function ProblemPuzzlesTable({ puzzles }: ProblemPuzzlesTableProps) {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className={`text-right tabular-nums ${successColor}`}>
+                  <TableCell
+                    className={`text-right tabular-nums ${successColor}`}
+                  >
                     {puzzle.successRate}%
                     <span className="text-muted-foreground text-xs ml-1">
                       ({puzzle.correctAttempts}/{puzzle.totalAttempts})
@@ -138,11 +150,11 @@ export function ProblemPuzzlesTable({ puzzles }: ProblemPuzzlesTableProps) {
                     {formatTime(puzzle.averageTime)}
                   </TableCell>
                 </TableRow>
-              )
+              );
             })}
           </TableBody>
         </Table>
       </CardContent>
     </Card>
-  )
+  );
 }

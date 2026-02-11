@@ -1,16 +1,17 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Image from "next/image"
+import * as React from "react";
+import Image from "next/image";
 import {
   Award,
   BookOpen,
   LayoutDashboard,
   MessageSquare,
+  RefreshCcw,
   Settings,
   Trophy,
   Users,
-} from "lucide-react"
+} from "lucide-react";
 
 import {
   Sidebar,
@@ -24,11 +25,11 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-} from "@/components/ui/sidebar"
-import { StreakBadge } from "@/components/sidebar/streak-badge"
-import { UserLevelDisplay } from "@/components/sidebar/user-level-display"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+} from "@/components/ui/sidebar";
+import { StreakBadge } from "@/components/sidebar/streak-badge";
+import { UserLevelDisplay } from "@/components/sidebar/user-level-display";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const data = {
   navMain: [
@@ -41,6 +42,11 @@ const data = {
       title: "Training",
       url: "/training",
       icon: BookOpen,
+    },
+    {
+      title: "Review",
+      url: "/training/review",
+      icon: RefreshCcw,
     },
     {
       title: "Progress",
@@ -63,10 +69,10 @@ const data = {
       icon: Settings,
     },
   ],
-}
+};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const pathname = usePathname()
+  const pathname = usePathname();
 
   return (
     <Sidebar {...props}>
@@ -125,5 +131,5 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }

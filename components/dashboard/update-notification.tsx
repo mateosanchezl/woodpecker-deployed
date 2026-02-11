@@ -15,17 +15,18 @@ import { cn } from "@/lib/utils";
 // Update this object when you want to announce a new update
 // Increment the version to show the notification to users who dismissed the previous one
 export const CURRENT_UPDATE = {
-  version: "1.2.0",
-  title: "Faster Start, First Puzzle in Seconds",
+  version: "2.0.0",
+  title: "The Improvement Area – Level Up Your Weaknesses",
   description:
-    "We streamlined onboarding so you can jump straight into training without the long setup.",
+    "A breakthrough feature that transforms how you train. Focus intensely on your toughest puzzles with guided walkthroughs and spaced repetition—the secret to dramatic rating gains.",
   features: [
-    "Quick Start builds a starter puzzle set automatically",
-    "Your first cycle starts immediately—no extra clicks",
-    "Customize your set size, rating, and cycles anytime",
+    "Improvement Area: Review your most-struggled puzzles in one focused zone",
+    "Discover your weakest themes and drill them with targeted practice",
+    "Step through solutions interactively or watch auto-play demonstrations",
+    "Spaced repetition ordering ensures optimal learning and retention",
   ],
-  date: "2026-02-03",
-  learnMoreUrl: "/training",
+  date: "2026-02-11",
+  learnMoreUrl: "/training/review",
 };
 
 const STORAGE_KEY = "woodpecker-dismissed-update";

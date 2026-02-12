@@ -81,8 +81,6 @@ export default function DashboardPage() {
       enabled: !!userData,
     });
 
-  
-
   // Loading state
   if (userLoading || !userData) {
     return <DashboardSkeleton />;
@@ -98,7 +96,8 @@ export default function DashboardPage() {
             <CardHeader className="text-center space-y-2">
               <CardTitle>Start Training Now</CardTitle>
               <CardDescription>
-                You repeat a fixed set in cycles. Each cycle gets faster as patterns become automatic.
+                You repeat a fixed set in cycles. Each cycle gets faster as
+                patterns become automatic.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -114,8 +113,11 @@ export default function DashboardPage() {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground text-center">
-                Want the full method?{' '}
-                <Link href="/woodpecker-method" className="underline underline-offset-2">
+                Want the full method?{" "}
+                <Link
+                  href="/woodpecker-method"
+                  className="underline underline-offset-2"
+                >
                   Learn the Woodpecker Method
                 </Link>
               </p>

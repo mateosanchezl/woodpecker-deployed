@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/sidebar";
 import { StreakBadge } from "@/components/sidebar/streak-badge";
 import { UserLevelDisplay } from "@/components/sidebar/user-level-display";
+import { ReviewPromptModal } from "@/components/review/review-prompt-modal";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -73,6 +74,7 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
+  const [isReviewModalOpen, setIsReviewModalOpen] = React.useState(false);
 
   return (
     <Sidebar {...props}>
@@ -115,11 +117,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <a href="mailto:dwyc.co@gmail.com">
-                <MessageSquare />
-                <span>Have Feedback?</span>
-              </a>
+            <SidebarMenuButton onClick={() => setIsReviewModalOpen(true)}>
+              <MessageSquare />
+              <span>Have Feedback?</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -129,6 +129,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <span>by Mateo</span>
         </div>
       </SidebarFooter>
+      <ReviewPromptModal
+        open={isReviewModalOpen}
+        onOpenChange={setIsReviewModalOpen}
+      />
       <SidebarRail />
     </Sidebar>
   );

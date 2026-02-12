@@ -1,11 +1,11 @@
-import type { Metadata } from "next"
-import { AppSidebar } from "@/components/app-sidebar"
+import type { Metadata } from "next";
+import { AppSidebar } from "@/components/app-sidebar";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from "@/components/ui/sidebar"
-import { Separator } from "@/components/ui/separator"
+} from "@/components/ui/sidebar";
+import { Separator } from "@/components/ui/separator";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -13,9 +13,9 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { UserButton } from "@clerk/nextjs"
-import { ThemeToggle } from "@/components/theme-toggle"
+} from "@/components/ui/breadcrumb";
+import { UserButton } from "@clerk/nextjs";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 /**
  * Metadata for protected app pages
@@ -26,13 +26,9 @@ export const metadata: Metadata = {
     index: false,
     follow: false,
   },
-}
+};
 
-export default function AppLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -58,13 +54,11 @@ export default function AppLayout({
             </div>
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4">
-          {children}
-        </div>
+        <div className="flex flex-1 flex-col gap-4 p-4">{children}</div>
         <footer className="border-t py-4 px-4 text-center text-xs text-muted-foreground">
           Peck Chess
         </footer>
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
 }

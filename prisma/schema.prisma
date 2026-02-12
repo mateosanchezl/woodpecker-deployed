@@ -45,12 +45,27 @@ model User {
   // Relations
   puzzleSets       PuzzleSet[]
   achievements     UserAchievement[]
+  appReview        AppReview?
 
   @@index([clerkId])
   @@index([showOnLeaderboard, totalCorrectAttempts(sort: Desc)])
   @@index([showOnLeaderboard, weeklyCorrectAttempts(sort: Desc)])
   @@index([showOnLeaderboard, totalXp(sort: Desc)])
   @@index([showOnLeaderboard, weeklyXp(sort: Desc)])
+}
+
+model AppReview {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating    Int
+  headline  String?
+  comment   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([rating])
+  @@index([createdAt(sort: Desc)])
 }
 
 model Puzzle {

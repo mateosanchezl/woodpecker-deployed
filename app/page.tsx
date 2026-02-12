@@ -9,11 +9,10 @@ import {
   generateSoftwareApplicationSchema,
 } from "@/lib/seo";
 import {
-  PUBLIC_STATS_REVALIDATE_SECONDS,
   getPublicCompletedPuzzlesCount,
 } from "@/lib/public-stats";
 
-export const revalidate = PUBLIC_STATS_REVALIDATE_SECONDS;
+export const revalidate = 43200;
 
 /**
  * Landing page metadata - Optimized for "woodpecker method" keywords

@@ -47,36 +47,64 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const { puzzleInSetId, timeSpent, isCorrect, wasSkipped, movesPlayed } =
       validation.data
 
-    // Get the user's database ID from their Clerk ID
+    // Get the user (select only fields needed for this route)
     const user = await prisma.user.findUnique({
       where: { clerkId: userId },
+      select: {
+        id: true,
+        totalCorrectAttempts: true,
+        weeklyCorrectAttempts: true,
+        weeklyCorrectStartDate: true,
+        totalXp: true,
+        weeklyXp: true,
+        weeklyXpStartDate: true,
+        currentStreak: true,
+        longestStreak: true,
+        lastTrainedDate: true,
+      },
     })
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Verify the puzzle set belongs to the user
-    const puzzleSet = await prisma.puzzleSet.findUnique({
-      where: { id: setId },
-      include: {
-        puzzles: true,
-      },
-    })
+    // Run all pre-checks in parallel (4 queries, 1 DB round trip)
+    const [puzzleInSet, cycle, existingAttempt, puzzleSetOwnership] =
+      await Promise.all([
+        prisma.puzzleInSet.findUnique({
+          where: { id: puzzleInSetId },
+          include: {
+            puzzle: {
+              select: { themes: true, rating: true },
+            },
+            attempts: {
+              orderBy: { attemptedAt: 'desc' as const },
+              take: 1,
+              select: { isCorrect: true, timeSpent: true },
+            },
+          },
+        }),
+        prisma.cycle.findUnique({
+          where: { id: cycleId },
+        }),
+        prisma.attempt.findFirst({
+          where: { cycleId, puzzleInSetId },
+        }),
+        prisma.puzzleSet.findFirst({
+          where: { id: setId, userId: user.id },
+          select: { id: true },
+        }),
+      ])
 
-    if (!puzzleSet) {
-      return NextResponse.json({ error: 'Puzzle set not found' }, { status: 404 })
+    // Validate puzzle set ownership (covers both "not found" and "not owned")
+    if (!puzzleSetOwnership) {
+      return NextResponse.json(
+        { error: 'Puzzle set not found' },
+        { status: 404 }
+      )
     }
 
-    if (puzzleSet.userId !== user.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    // Verify the cycle belongs to this puzzle set
-    const cycle = await prisma.cycle.findUnique({
-      where: { id: cycleId },
-    })
-
+    // Validate cycle
     if (!cycle) {
       return NextResponse.json({ error: 'Cycle not found' }, { status: 404 })
     }
@@ -88,21 +116,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       )
     }
 
-    // Verify the puzzleInSet exists and belongs to this set
-    const puzzleInSet = await prisma.puzzleInSet.findUnique({
-      where: { id: puzzleInSetId },
-      include: {
-        puzzle: {
-          select: { themes: true, rating: true },
-        },
-        attempts: {
-          orderBy: { attemptedAt: 'desc' },
-          take: 1,
-          select: { isCorrect: true, timeSpent: true },
-        },
-      },
-    })
-
+    // Validate puzzleInSet
     if (!puzzleInSet) {
       return NextResponse.json(
         { error: 'Puzzle not found in set' },
@@ -117,14 +131,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       )
     }
 
-    // Check if an attempt already exists for this puzzle in this cycle
-    const existingAttempt = await prisma.attempt.findFirst({
-      where: {
-        cycleId,
-        puzzleInSetId,
-      },
-    })
-
+    // Reject duplicate attempts
     if (existingAttempt) {
       return NextResponse.json(
         { error: 'Attempt already recorded for this puzzle in this cycle' },

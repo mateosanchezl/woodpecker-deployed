@@ -309,6 +309,8 @@ Required environment variables (stored in `.env.local`, gitignored):
 - `CLERK_SECRET_KEY` - Clerk secret key
 - `CLERK_WEBHOOK_SECRET` - Clerk webhook signing secret (from Clerk Dashboard → Webhooks)
 - `DATABASE_URL` - PostgreSQL connection string
+- `RESEND_API_KEY` - Resend API key (for transactional email, e.g. new-user notifications and daily summary cron)
+- `CRON_SECRET` - Secret for securing Vercel cron requests (set in Vercel project settings; cron sends `Authorization: Bearer <CRON_SECRET>`)
 
 
 These examples should be used as guidance when configuring Sentry functionality within a project.

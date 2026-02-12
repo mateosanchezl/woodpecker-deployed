@@ -5,10 +5,9 @@ import { attemptSchema } from '@/lib/validations/training'
 import { calculateStreakUpdate, getTodayUTC } from '@/lib/streak'
 import { getISOWeekStart, isSameISOWeek } from '@/lib/leaderboard'
 import {
-  checkAchievementsAfterAttempt,
-  checkAchievementsAfterCycleComplete,
-  checkAchievementsAfterStreakUpdate,
+  checkAllAchievements,
   type UnlockedAchievement,
+  type AchievementContext,
 } from '@/lib/achievements'
 import {
   calculatePuzzleAttemptXp,
@@ -325,47 +324,71 @@ export async function POST(request: NextRequest, context: RouteContext) {
     })
 
     // Check achievements (outside transaction for performance)
-    const allUnlockedAchievements: UnlockedAchievement[] = []
-    const attemptedAt = new Date()
+    // Build post-transaction user counters for achievement context
+    const postTxTotalCorrect = isCorrect
+      ? user.totalCorrectAttempts + 1
+      : user.totalCorrectAttempts
 
-    // Check attempt-related achievements
-    const attemptAchievements = await checkAchievementsAfterAttempt(user.id, {
-      isCorrect,
-      timeSpentMs: timeSpent,
-      attemptedAt,
-      puzzleThemes: puzzleInSet.puzzle.themes,
-      puzzleRating: puzzleInSet.puzzle.rating,
-    })
-    allUnlockedAchievements.push(...attemptAchievements.newlyUnlocked)
+    const currentWeekStartForAch = getISOWeekStart(new Date())
+    const needsWeeklyResetForAch =
+      !user.weeklyCorrectStartDate ||
+      !isSameISOWeek(user.weeklyCorrectStartDate, new Date())
+    const postTxWeeklyCorrect = !isCorrect
+      ? (needsWeeklyResetForAch ? 0 : user.weeklyCorrectAttempts)
+      : needsWeeklyResetForAch
+        ? 1
+        : user.weeklyCorrectAttempts + 1
 
-    // Check cycle completion achievements
+    const needsWeeklyXpResetForAch =
+      !user.weeklyXpStartDate ||
+      !isSameISOWeek(user.weeklyXpStartDate, new Date())
+    const postTxWeeklyXp =
+      result.xpGains.totalXp === 0
+        ? (needsWeeklyXpResetForAch ? 0 : user.weeklyXp)
+        : needsWeeklyXpResetForAch
+          ? result.xpGains.totalXp
+          : user.weeklyXp + result.xpGains.totalXp
+
+    const achievementCtx: AchievementContext = {
+      userId: user.id,
+      attempt: {
+        isCorrect,
+        timeSpentMs: timeSpent,
+        attemptedAt: new Date(),
+        puzzleThemes: puzzleInSet.puzzle.themes,
+        puzzleRating: puzzleInSet.puzzle.rating,
+      },
+      user: {
+        totalCorrectAttempts: postTxTotalCorrect,
+        weeklyCorrectAttempts: postTxWeeklyCorrect,
+        totalXp: result.xpGains.newTotalXp,
+        weeklyXp: postTxWeeklyXp,
+      },
+    }
+
+    // Add cycle-complete context if this was the last puzzle
     if (result.isLastPuzzle) {
       const cycleAccuracy =
         (result.updatedCycle.solvedCorrect / result.updatedCycle.totalPuzzles) * 100
-      const cycleAchievements = await checkAchievementsAfterCycleComplete(
-        user.id,
-        {
-          puzzleSetId: setId,
-          cycleNumber: cycle.cycleNumber,
-          accuracy: cycleAccuracy,
-          totalPuzzles: result.updatedCycle.totalPuzzles,
-          correctPuzzles: result.updatedCycle.solvedCorrect,
-        }
-      )
-      allUnlockedAchievements.push(...cycleAchievements.newlyUnlocked)
+      achievementCtx.cycleComplete = {
+        puzzleSetId: setId,
+        cycleNumber: cycle.cycleNumber,
+        accuracy: cycleAccuracy,
+        totalPuzzles: result.updatedCycle.totalPuzzles,
+        correctPuzzles: result.updatedCycle.solvedCorrect,
+      }
     }
 
-    // Check streak achievements if streak was updated
+    // Add streak context if streak was updated
     if (result.streakResult.streakIncremented) {
-      const streakAchievements = await checkAchievementsAfterStreakUpdate(
-        user.id,
-        {
-          currentStreak: result.streakResult.newStreak,
-          longestStreak: result.streakResult.newLongestStreak,
-        }
-      )
-      allUnlockedAchievements.push(...streakAchievements.newlyUnlocked)
+      achievementCtx.streak = {
+        currentStreak: result.streakResult.newStreak,
+        longestStreak: result.streakResult.newLongestStreak,
+      }
     }
+
+    const { newlyUnlocked: allUnlockedAchievements } =
+      await checkAllAchievements(achievementCtx)
 
     return NextResponse.json({
       attempt: {

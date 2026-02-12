@@ -1,6 +1,14 @@
 /**
- * Achievement evaluation engine
- * Checks and unlocks achievements based on user actions
+ * Achievement evaluation engine (optimized)
+ *
+ * Replaces the old per-category check functions with a single unified
+ * `checkAllAchievements()` that uses at most 3 DB queries total:
+ *   1. Load already-unlocked achievement IDs
+ *   2. Single CTE raw query for all DB-dependent achievement data
+ *   3. Batch-save any newly unlocked achievements
+ *
+ * Context-only achievements (Category A) need zero DB queries.
+ * The `rising-star` achievement is checked in the leaderboard route instead.
  */
 
 import { prisma } from "@/lib/prisma";
@@ -8,6 +16,10 @@ import {
   ACHIEVEMENT_DEFINITIONS,
   type AchievementDefinition,
 } from "./definitions";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 export interface UnlockedAchievement {
   id: string;
@@ -22,52 +34,505 @@ export interface AchievementCheckResult {
 }
 
 /**
- * Context provided when a puzzle attempt is recorded
+ * Unified context that supplies everything the achievement engine needs.
+ * The caller is responsible for passing post-transaction values for `user`.
  */
-export interface AttemptContext {
-  isCorrect: boolean;
-  timeSpentMs: number;
-  attemptedAt: Date;
-  puzzleThemes: string[];
-  puzzleRating?: number;
+export interface AchievementContext {
+  userId: string;
+
+  /** Always present when called from the attempt route */
+  attempt?: {
+    isCorrect: boolean;
+    timeSpentMs: number;
+    attemptedAt: Date;
+    puzzleThemes: string[];
+    puzzleRating: number;
+  };
+
+  /**
+   * User counters – must reflect the *post-transaction* state so that
+   * puzzle-count and weekly achievements evaluate correctly.
+   */
+  user: {
+    totalCorrectAttempts: number;
+    weeklyCorrectAttempts: number;
+    totalXp: number;
+    weeklyXp: number;
+  };
+
+  /** Present when the attempt completes a cycle */
+  cycleComplete?: {
+    puzzleSetId: string;
+    cycleNumber: number;
+    accuracy: number; // 0-100
+    totalPuzzles: number;
+    correctPuzzles: number;
+  };
+
+  /** Present when the streak was updated (first attempt of the day) */
+  streak?: {
+    currentStreak: number;
+    longestStreak: number;
+  };
 }
 
-/**
- * Context provided when a cycle is completed
- */
-export interface CycleCompleteContext {
+// ---------------------------------------------------------------------------
+// CTE result shape (from the single raw SQL query)
+// ---------------------------------------------------------------------------
+
+interface ThemeStat {
+  theme: string;
+  total: number;
+  correct: number;
+}
+
+interface RecentAttempt {
+  isCorrect: boolean;
+  timeSpent: number;
+  rn: number;
+}
+
+interface CycleCount {
+  puzzleSetId: string;
+  completed: number;
+}
+
+interface CycleTime {
   puzzleSetId: string;
   cycleNumber: number;
-  accuracy: number; // 0-100
-  totalPuzzles: number;
-  correctPuzzles: number;
+  totalTime: number;
 }
 
-/**
- * Context provided when streak is updated
- */
-export interface StreakContext {
-  currentStreak: number;
-  longestStreak: number;
+interface CteResult {
+  theme_stats: ThemeStat[] | null;
+  recent_attempts: RecentAttempt[] | null;
+  total_attempts: number | null;
+  high_rating_correct: number | null;
+  cycle_counts: CycleCount[] | null;
+  cycle_times: CycleTime[] | null;
 }
 
+// ---------------------------------------------------------------------------
+// IDs for each category, for early-exit logic
+// ---------------------------------------------------------------------------
+
+/** Category A: achievements that only need context data (zero DB queries) */
+const CATEGORY_A_IDS = new Set([
+  // From attempt context
+  "speed-demon",
+  "lightning-fast",
+  "early-bird",
+  "night-owl",
+  // From user counters
+  "first-blood",
+  "century",
+  "half-thousand",
+  "millennium",
+  "weekly-warrior",
+  // From cycle-complete context
+  "perfectionist",
+  "sharp-shooter",
+  "no-mistakes",
+  // From streak context
+  "on-fire",
+  "unstoppable",
+  "consistent-trainer",
+  "dedicated",
+]);
+
+/** Category B: achievements that need the CTE query */
+const CATEGORY_B_IDS = new Set([
+  "theme-master-fork",
+  "theme-master-pin",
+  "theme-master-skewer",
+  "mate-master",
+  "versatile",
+  "speed-streak",
+  "flawless-streak",
+  "tactical-prodigy",
+  "rating-climber",
+  "cycle-complete",
+  "woodpecker-pro",
+  "woodpecker-master",
+  "improvement-king",
+]);
+
+// ---------------------------------------------------------------------------
+// Main entry point
+// ---------------------------------------------------------------------------
+
 /**
- * Get user's already unlocked achievement IDs
+ * Check ALL achievements in a single pass. Returns newly unlocked achievements.
+ *
+ * DB queries:
+ *   1. `findMany` for already-unlocked IDs
+ *   2. Single CTE `$queryRaw` (skipped if all Category B already unlocked)
+ *   3. `createMany` for newly unlocked (skipped if nothing new)
  */
-async function getUserUnlockedAchievementIds(
-  userId: string,
-): Promise<Set<string>> {
+export async function checkAllAchievements(
+  ctx: AchievementContext,
+): Promise<AchievementCheckResult> {
+  // ---- Query 1: Load already-unlocked IDs -----------------------------------
   const userAchievements = await prisma.userAchievement.findMany({
-    where: { userId },
+    where: { userId: ctx.userId },
     select: { achievementId: true },
   });
-  return new Set(userAchievements.map((ua) => ua.achievementId));
+  const unlockedIds = new Set(userAchievements.map((ua) => ua.achievementId));
+
+  // Early exit: all 30 achievements already unlocked
+  if (unlockedIds.size >= ACHIEVEMENT_DEFINITIONS.length) {
+    return { newlyUnlocked: [] };
+  }
+
+  const toUnlock: string[] = [];
+
+  // ---- Category A: context-only checks (0 DB queries) -----------------------
+  checkCategoryA(ctx, unlockedIds, toUnlock);
+
+  // ---- Category B: CTE-dependent checks ------------------------------------
+  const hasPendingB = [...CATEGORY_B_IDS].some((id) => !unlockedIds.has(id));
+
+  if (hasPendingB) {
+    // ---- Query 2: Single CTE raw query --------------------------------------
+    const puzzleSetId = ctx.cycleComplete?.puzzleSetId ?? "__none__";
+    const cteRows = await prisma.$queryRaw<[{ data: CteResult }]>`
+WITH theme_stats AS (
+  SELECT theme,
+    COUNT(*)::int AS total,
+    COUNT(*) FILTER (WHERE a."isCorrect")::int AS correct
+  FROM "Attempt" a
+  JOIN "PuzzleInSet" pis ON a."puzzleInSetId" = pis.id
+  JOIN "Puzzle" p ON pis."puzzleId" = p.id
+  JOIN "PuzzleSet" ps ON pis."puzzleSetId" = ps.id,
+  LATERAL unnest(p.themes) AS theme
+  WHERE ps."userId" = ${ctx.userId}
+  GROUP BY theme
+),
+recent_attempts AS (
+  SELECT a."isCorrect",
+    a."timeSpent",
+    ROW_NUMBER() OVER (ORDER BY a."attemptedAt" DESC)::int AS rn
+  FROM "Attempt" a
+  JOIN "PuzzleInSet" pis ON a."puzzleInSetId" = pis.id
+  JOIN "PuzzleSet" ps ON pis."puzzleSetId" = ps.id
+  WHERE ps."userId" = ${ctx.userId}
+  ORDER BY a."attemptedAt" DESC
+  LIMIT 25
+),
+total_attempts AS (
+  SELECT COUNT(*)::int AS total
+  FROM "Attempt" a
+  JOIN "PuzzleInSet" pis ON a."puzzleInSetId" = pis.id
+  JOIN "PuzzleSet" ps ON pis."puzzleSetId" = ps.id
+  WHERE ps."userId" = ${ctx.userId}
+),
+high_rating_correct AS (
+  SELECT COUNT(*)::int AS count
+  FROM "Attempt" a
+  JOIN "PuzzleInSet" pis ON a."puzzleInSetId" = pis.id
+  JOIN "Puzzle" p ON pis."puzzleId" = p.id
+  JOIN "PuzzleSet" ps ON pis."puzzleSetId" = ps.id
+  WHERE ps."userId" = ${ctx.userId}
+    AND a."isCorrect" = true
+    AND p.rating >= 1800
+),
+cycle_counts AS (
+  SELECT c."puzzleSetId",
+    COUNT(*) FILTER (WHERE c."completedAt" IS NOT NULL)::int AS completed
+  FROM "Cycle" c
+  JOIN "PuzzleSet" ps ON c."puzzleSetId" = ps.id
+  WHERE ps."userId" = ${ctx.userId}
+  GROUP BY c."puzzleSetId"
+),
+cycle_times AS (
+  SELECT c."puzzleSetId",
+    c."cycleNumber",
+    c."totalTime"
+  FROM "Cycle" c
+  JOIN "PuzzleSet" ps ON c."puzzleSetId" = ps.id
+  WHERE ps."userId" = ${ctx.userId}
+    AND c."completedAt" IS NOT NULL
+    AND c."totalTime" IS NOT NULL
+    AND c."puzzleSetId" = ${puzzleSetId}
+  ORDER BY c."cycleNumber" ASC
+)
+SELECT json_build_object(
+  'theme_stats',        (SELECT json_agg(json_build_object('theme', theme, 'total', total, 'correct', correct)) FROM theme_stats),
+  'recent_attempts',    (SELECT json_agg(json_build_object('isCorrect', "isCorrect", 'timeSpent', "timeSpent", 'rn', rn)) FROM recent_attempts),
+  'total_attempts',     (SELECT total FROM total_attempts),
+  'high_rating_correct',(SELECT count FROM high_rating_correct),
+  'cycle_counts',       (SELECT json_agg(json_build_object('puzzleSetId', "puzzleSetId", 'completed', completed)) FROM cycle_counts),
+  'cycle_times',        (SELECT json_agg(json_build_object('puzzleSetId', "puzzleSetId", 'cycleNumber', "cycleNumber", 'totalTime', "totalTime")) FROM cycle_times)
+) AS data;`;
+
+    const cte: CteResult = cteRows[0].data;
+
+    checkCategoryB(ctx, unlockedIds, cte, toUnlock);
+  }
+
+  // ---- Query 3: Save newly unlocked ----------------------------------------
+  const newlyUnlocked = await saveUnlocked(ctx.userId, toUnlock);
+
+  return { newlyUnlocked };
 }
 
+// ---------------------------------------------------------------------------
+// Category A evaluators (pure logic, zero DB)
+// ---------------------------------------------------------------------------
+
+function checkCategoryA(
+  ctx: AchievementContext,
+  unlockedIds: Set<string>,
+  toUnlock: string[],
+): void {
+  const { attempt, user, cycleComplete, streak } = ctx;
+
+  // -- Attempt-context achievements -------------------------------------------
+  if (attempt) {
+    // Time-of-day (applies to any attempt, correct or not)
+    const hour = attempt.attemptedAt.getHours();
+    if (!unlockedIds.has("early-bird") && hour < 7) {
+      toUnlock.push("early-bird");
+    }
+    if (!unlockedIds.has("night-owl") && hour >= 0 && hour < 5) {
+      toUnlock.push("night-owl");
+    }
+
+    // Speed achievements (correct attempts only)
+    if (attempt.isCorrect) {
+      if (!unlockedIds.has("speed-demon") && attempt.timeSpentMs < 3000) {
+        toUnlock.push("speed-demon");
+      }
+      if (!unlockedIds.has("lightning-fast") && attempt.timeSpentMs < 1500) {
+        toUnlock.push("lightning-fast");
+      }
+    }
+  }
+
+  // -- User counter achievements (correct attempts only) ----------------------
+  if (attempt?.isCorrect || !attempt) {
+    const tc = user.totalCorrectAttempts;
+    if (!unlockedIds.has("first-blood") && tc >= 1) toUnlock.push("first-blood");
+    if (!unlockedIds.has("century") && tc >= 100) toUnlock.push("century");
+    if (!unlockedIds.has("half-thousand") && tc >= 500)
+      toUnlock.push("half-thousand");
+    if (!unlockedIds.has("millennium") && tc >= 1000)
+      toUnlock.push("millennium");
+
+    if (!unlockedIds.has("weekly-warrior") && user.weeklyCorrectAttempts >= 100)
+      toUnlock.push("weekly-warrior");
+  }
+
+  // -- Cycle-complete achievements --------------------------------------------
+  if (cycleComplete) {
+    if (!unlockedIds.has("perfectionist") && cycleComplete.accuracy === 100) {
+      toUnlock.push("perfectionist");
+    }
+    if (
+      !unlockedIds.has("sharp-shooter") &&
+      cycleComplete.totalPuzzles >= 50 &&
+      cycleComplete.accuracy >= 95
+    ) {
+      toUnlock.push("sharp-shooter");
+    }
+    if (
+      !unlockedIds.has("no-mistakes") &&
+      cycleComplete.totalPuzzles >= 20 &&
+      cycleComplete.accuracy === 100 &&
+      cycleComplete.correctPuzzles === cycleComplete.totalPuzzles
+    ) {
+      toUnlock.push("no-mistakes");
+    }
+  }
+
+  // -- Streak achievements ----------------------------------------------------
+  if (streak) {
+    const s = Math.max(streak.currentStreak, streak.longestStreak);
+    if (!unlockedIds.has("on-fire") && s >= 7) toUnlock.push("on-fire");
+    if (!unlockedIds.has("unstoppable") && s >= 30) toUnlock.push("unstoppable");
+    if (!unlockedIds.has("consistent-trainer") && s >= 14)
+      toUnlock.push("consistent-trainer");
+    if (!unlockedIds.has("dedicated") && s >= 60) toUnlock.push("dedicated");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Category B evaluators (use CTE results)
+// ---------------------------------------------------------------------------
+
+function checkCategoryB(
+  ctx: AchievementContext,
+  unlockedIds: Set<string>,
+  cte: CteResult,
+  toUnlock: string[],
+): void {
+  // -- Theme accuracy achievements --------------------------------------------
+  const themeStats = cte.theme_stats ?? [];
+
+  const themeChecks: {
+    id: string;
+    theme: string;
+    minAttempts: number;
+    minAccuracy: number;
+  }[] = [
+    { id: "theme-master-fork", theme: "fork", minAttempts: 20, minAccuracy: 90 },
+    { id: "theme-master-pin", theme: "pin", minAttempts: 20, minAccuracy: 90 },
+    {
+      id: "theme-master-skewer",
+      theme: "skewer",
+      minAttempts: 20,
+      minAccuracy: 90,
+    },
+    { id: "mate-master", theme: "mate", minAttempts: 30, minAccuracy: 90 },
+  ];
+
+  for (const check of themeChecks) {
+    if (unlockedIds.has(check.id)) continue;
+    const stat = themeStats.find((t) => t.theme === check.theme);
+    if (
+      stat &&
+      stat.total >= check.minAttempts &&
+      (stat.correct / stat.total) * 100 >= check.minAccuracy
+    ) {
+      toUnlock.push(check.id);
+    }
+  }
+
+  // -- Versatile (multi-theme mastery): 5 themes >= 80% accuracy, >= 15 each -
+  if (!unlockedIds.has("versatile")) {
+    const qualifying = themeStats.filter(
+      (t) => t.total >= 15 && (t.correct / t.total) * 100 >= 80,
+    ).length;
+    if (qualifying >= 5) {
+      toUnlock.push("versatile");
+    }
+  }
+
+  // -- Speed streak (last 10 correct & < 5 s each) ---------------------------
+  if (!unlockedIds.has("speed-streak") && ctx.attempt?.isCorrect && ctx.attempt.timeSpentMs < 5000) {
+    const recent = (cte.recent_attempts ?? [])
+      .filter((a) => a.rn <= 10)
+      .sort((a, b) => a.rn - b.rn);
+    if (
+      recent.length >= 10 &&
+      recent.every((a) => a.isCorrect && a.timeSpent < 5000)
+    ) {
+      toUnlock.push("speed-streak");
+    }
+  }
+
+  // -- Flawless streak (last 25 all correct) ----------------------------------
+  if (!unlockedIds.has("flawless-streak") && ctx.attempt?.isCorrect) {
+    const recent = cte.recent_attempts ?? [];
+    if (recent.length >= 25 && recent.every((a) => a.isCorrect)) {
+      toUnlock.push("flawless-streak");
+    }
+  }
+
+  // -- Tactical prodigy (overall accuracy >= 85% across 200+ attempts) --------
+  if (!unlockedIds.has("tactical-prodigy")) {
+    const totalAttempts = cte.total_attempts ?? 0;
+    if (totalAttempts >= 200) {
+      const accuracy =
+        (ctx.user.totalCorrectAttempts / totalAttempts) * 100;
+      if (accuracy >= 85) {
+        toUnlock.push("tactical-prodigy");
+      }
+    }
+  }
+
+  // -- Rating climber (50+ correct on puzzles rated >= 1800) ------------------
+  if (!unlockedIds.has("rating-climber")) {
+    const shouldCheck =
+      ctx.attempt?.puzzleRating !== undefined &&
+      ctx.attempt.puzzleRating >= 1800;
+    if (shouldCheck && (cte.high_rating_correct ?? 0) >= 50) {
+      toUnlock.push("rating-climber");
+    }
+  }
+
+  // -- Cycle-based achievements -----------------------------------------------
+  const cycleCounts = cte.cycle_counts ?? [];
+
+  // cycle-complete: any set with >= 1 completed cycle
+  if (!unlockedIds.has("cycle-complete")) {
+    if (cycleCounts.some((c) => c.completed >= 1)) {
+      toUnlock.push("cycle-complete");
+    }
+  }
+
+  // woodpecker-pro: any set with >= 5 completed cycles
+  if (!unlockedIds.has("woodpecker-pro")) {
+    if (cycleCounts.some((c) => c.completed >= 5)) {
+      toUnlock.push("woodpecker-pro");
+    }
+  }
+
+  // woodpecker-master: any set with >= 10 completed cycles
+  if (!unlockedIds.has("woodpecker-master")) {
+    if (cycleCounts.some((c) => c.completed >= 10)) {
+      toUnlock.push("woodpecker-master");
+    }
+  }
+
+  // -- Improvement king (50% time reduction first -> last cycle) --------------
+  if (!unlockedIds.has("improvement-king") && ctx.cycleComplete) {
+    const times = (cte.cycle_times ?? []).sort(
+      (a, b) => a.cycleNumber - b.cycleNumber,
+    );
+    if (times.length >= 2) {
+      const first = times[0].totalTime;
+      const last = times[times.length - 1].totalTime;
+      if (first && last) {
+        const reduction = ((first - last) / first) * 100;
+        if (reduction >= 50) {
+          toUnlock.push("improvement-king");
+        }
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Check rising-star (called from leaderboard route, not from attempt flow)
+// ---------------------------------------------------------------------------
+
 /**
- * Unlock achievements for a user
+ * Check the rising-star achievement when the user views the leaderboard.
+ * This avoids loading 100 users on every puzzle attempt.
  */
-async function unlockAchievements(
+export async function checkRisingStarAchievement(
+  userId: string,
+): Promise<AchievementCheckResult> {
+  // Check if already unlocked
+  const existing = await prisma.userAchievement.findUnique({
+    where: { userId_achievementId: { userId, achievementId: "rising-star" } },
+  });
+  if (existing) return { newlyUnlocked: [] };
+
+  // Check if user is in top 100 by weekly correct attempts
+  const users = await prisma.user.findMany({
+    where: { showOnLeaderboard: true, weeklyCorrectAttempts: { gt: 0 } },
+    select: { id: true },
+    orderBy: { weeklyCorrectAttempts: "desc" },
+    take: 100,
+  });
+
+  const isInTop100 = users.some((u) => u.id === userId);
+  if (!isInTop100) return { newlyUnlocked: [] };
+
+  const newlyUnlocked = await saveUnlocked(userId, ["rising-star"]);
+  return { newlyUnlocked };
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Save newly unlocked achievements and return their details.
+ */
+async function saveUnlocked(
   userId: string,
   achievementIds: string[],
 ): Promise<UnlockedAchievement[]> {
@@ -75,7 +540,6 @@ async function unlockAchievements(
 
   const now = new Date();
 
-  // Create user achievements
   await prisma.userAchievement.createMany({
     data: achievementIds.map((achievementId) => ({
       userId,
@@ -85,7 +549,6 @@ async function unlockAchievements(
     skipDuplicates: true,
   });
 
-  // Return the unlocked achievement details
   return achievementIds.map((id) => {
     const def = ACHIEVEMENT_DEFINITIONS.find((a) => a.id === id)!;
     return {
@@ -98,890 +561,9 @@ async function unlockAchievements(
   });
 }
 
-/**
- * Check puzzle count achievements (first-blood, century, half-thousand, millennium)
- */
-async function checkPuzzleCountAchievements(
-  userId: string,
-  unlockedIds: Set<string>,
-): Promise<string[]> {
-  const toUnlock: string[] = [];
-
-  // Get total correct attempts for user
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { totalCorrectAttempts: true },
-  });
-
-  if (!user) return toUnlock;
-
-  const totalCorrect = user.totalCorrectAttempts;
-
-  // Check first-blood
-  if (!unlockedIds.has("first-blood") && totalCorrect >= 1) {
-    toUnlock.push("first-blood");
-  }
-
-  // Check century
-  if (!unlockedIds.has("century") && totalCorrect >= 100) {
-    toUnlock.push("century");
-  }
-
-  // Check half-thousand
-  if (!unlockedIds.has("half-thousand") && totalCorrect >= 500) {
-    toUnlock.push("half-thousand");
-  }
-
-  // Check millennium
-  if (!unlockedIds.has("millennium") && totalCorrect >= 1000) {
-    toUnlock.push("millennium");
-  }
-
-  return toUnlock;
-}
-
-/**
- * Check speed achievement (speed-demon)
- */
-function checkSpeedAchievement(
-  context: AttemptContext,
-  unlockedIds: Set<string>,
-): string[] {
-  const toUnlock: string[] = [];
-
-  if (
-    !unlockedIds.has("speed-demon") &&
-    context.isCorrect &&
-    context.timeSpentMs < 3000
-  ) {
-    toUnlock.push("speed-demon");
-  }
-
-  return toUnlock;
-}
-
-/**
- * Check time-of-day achievements (early-bird, night-owl)
- */
-function checkTimeOfDayAchievements(
-  context: AttemptContext,
-  unlockedIds: Set<string>,
-): string[] {
-  const toUnlock: string[] = [];
-  const hour = context.attemptedAt.getHours();
-
-  // Early bird: before 7am
-  if (!unlockedIds.has("early-bird") && hour < 7) {
-    toUnlock.push("early-bird");
-  }
-
-  // Night owl: between midnight and 5am
-  if (!unlockedIds.has("night-owl") && hour >= 0 && hour < 5) {
-    toUnlock.push("night-owl");
-  }
-
-  return toUnlock;
-}
-
-/**
- * Check theme accuracy achievement (theme-master-fork)
- */
-async function checkThemeAccuracyAchievements(
-  userId: string,
-  context: AttemptContext,
-  unlockedIds: Set<string>,
-): Promise<string[]> {
-  const toUnlock: string[] = [];
-
-  // Only check if the puzzle has the fork theme
-  if (!context.puzzleThemes.includes("fork")) return toUnlock;
-  if (unlockedIds.has("theme-master-fork")) return toUnlock;
-
-  // Get all attempts on fork puzzles for this user
-  const forkAttempts = await prisma.attempt.findMany({
-    where: {
-      puzzleInSet: {
-        puzzle: {
-          themes: { has: "fork" },
-        },
-        puzzleSet: {
-          userId,
-        },
-      },
-    },
-    select: {
-      isCorrect: true,
-    },
-  });
-
-  const totalAttempts = forkAttempts.length;
-  const correctAttempts = forkAttempts.filter((a) => a.isCorrect).length;
-
-  // Need at least 20 attempts and 90% accuracy
-  if (totalAttempts >= 20) {
-    const accuracy = (correctAttempts / totalAttempts) * 100;
-    if (accuracy >= 90) {
-      toUnlock.push("theme-master-fork");
-    }
-  }
-
-  return toUnlock;
-}
-
-/**
- * Check cycle accuracy achievement (perfectionist)
- */
-function checkCycleAccuracyAchievement(
-  context: CycleCompleteContext,
-  unlockedIds: Set<string>,
-): string[] {
-  const toUnlock: string[] = [];
-
-  if (!unlockedIds.has("perfectionist") && context.accuracy === 100) {
-    toUnlock.push("perfectionist");
-  }
-
-  return toUnlock;
-}
-
-/**
- * Check cycles same set achievement (woodpecker-pro)
- */
-async function checkCyclesSameSetAchievement(
-  userId: string,
-  context: CycleCompleteContext,
-  unlockedIds: Set<string>,
-): Promise<string[]> {
-  const toUnlock: string[] = [];
-
-  if (unlockedIds.has("woodpecker-pro")) return toUnlock;
-
-  // Count completed cycles for this puzzle set
-  const completedCycles = await prisma.cycle.count({
-    where: {
-      puzzleSetId: context.puzzleSetId,
-      completedAt: { not: null },
-      puzzleSet: {
-        userId,
-      },
-    },
-  });
-
-  if (completedCycles >= 5) {
-    toUnlock.push("woodpecker-pro");
-  }
-
-  return toUnlock;
-}
-
-/**
- * Check streak achievements (on-fire, unstoppable)
- */
-function checkStreakAchievements(
-  context: StreakContext,
-  unlockedIds: Set<string>,
-): string[] {
-  const toUnlock: string[] = [];
-  const streak = Math.max(context.currentStreak, context.longestStreak);
-
-  if (!unlockedIds.has("on-fire") && streak >= 7) {
-    toUnlock.push("on-fire");
-  }
-
-  if (!unlockedIds.has("unstoppable") && streak >= 30) {
-    toUnlock.push("unstoppable");
-  }
-
-  return toUnlock;
-}
-
-/**
- * Check weekly puzzle count achievement (weekly-warrior)
- */
-async function checkWeeklyPuzzleCountAchievement(
-  userId: string,
-  unlockedIds: Set<string>,
-): Promise<string[]> {
-  const toUnlock: string[] = [];
-
-  if (unlockedIds.has("weekly-warrior")) return toUnlock;
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { weeklyCorrectAttempts: true },
-  });
-
-  if (user && user.weeklyCorrectAttempts >= 100) {
-    toUnlock.push("weekly-warrior");
-  }
-
-  return toUnlock;
-}
-
-/**
- * Check lightning speed achievement (lightning-fast)
- */
-function checkLightningSpeedAchievement(
-  context: AttemptContext,
-  unlockedIds: Set<string>,
-): string[] {
-  const toUnlock: string[] = [];
-
-  if (
-    !unlockedIds.has("lightning-fast") &&
-    context.isCorrect &&
-    context.timeSpentMs < 1500
-  ) {
-    toUnlock.push("lightning-fast");
-  }
-
-  return toUnlock;
-}
-
-/**
- * Check speed streak achievement (speed-streak)
- */
-async function checkSpeedStreakAchievement(
-  userId: string,
-  context: AttemptContext,
-  unlockedIds: Set<string>,
-): Promise<string[]> {
-  const toUnlock: string[] = [];
-
-  if (unlockedIds.has("speed-streak")) return toUnlock;
-  if (!context.isCorrect || context.timeSpentMs >= 5000) return toUnlock;
-
-  // Get the last 10 attempts for this user
-  const recentAttempts = await prisma.attempt.findMany({
-    where: {
-      puzzleInSet: {
-        puzzleSet: { userId },
-      },
-    },
-    orderBy: { attemptedAt: "desc" },
-    take: 10,
-    select: { isCorrect: true, timeSpent: true },
-  });
-
-  // Check if all recent attempts are correct and under 5 seconds
-  if (
-    recentAttempts.length >= 10 &&
-    recentAttempts.every((a) => a.isCorrect && a.timeSpent < 5000)
-  ) {
-    toUnlock.push("speed-streak");
-  }
-
-  return toUnlock;
-}
-
-/**
- * Check first cycle complete achievement (cycle-complete)
- */
-async function checkFirstCycleCompleteAchievement(
-  userId: string,
-  unlockedIds: Set<string>,
-): Promise<string[]> {
-  const toUnlock: string[] = [];
-
-  if (unlockedIds.has("cycle-complete")) return toUnlock;
-
-  const completedCyclesCount = await prisma.cycle.count({
-    where: {
-      completedAt: { not: null },
-      puzzleSet: { userId },
-    },
-  });
-
-  if (completedCyclesCount >= 1) {
-    toUnlock.push("cycle-complete");
-  }
-
-  return toUnlock;
-}
-
-/**
- * Check cycles same set extended achievement (woodpecker-master)
- */
-async function checkCyclesSameSetExtendedAchievement(
-  userId: string,
-  context: CycleCompleteContext,
-  unlockedIds: Set<string>,
-): Promise<string[]> {
-  const toUnlock: string[] = [];
-
-  if (unlockedIds.has("woodpecker-master")) return toUnlock;
-
-  const completedCycles = await prisma.cycle.count({
-    where: {
-      puzzleSetId: context.puzzleSetId,
-      completedAt: { not: null },
-      puzzleSet: { userId },
-    },
-  });
-
-  if (completedCycles >= 10) {
-    toUnlock.push("woodpecker-master");
-  }
-
-  return toUnlock;
-}
-
-/**
- * Check cycle time improvement achievement (improvement-king)
- */
-async function checkCycleTimeImprovementAchievement(
-  userId: string,
-  context: CycleCompleteContext,
-  unlockedIds: Set<string>,
-): Promise<string[]> {
-  const toUnlock: string[] = [];
-
-  if (unlockedIds.has("improvement-king")) return toUnlock;
-
-  // Get first and latest completed cycles for this puzzle set
-  const cycles = await prisma.cycle.findMany({
-    where: {
-      puzzleSetId: context.puzzleSetId,
-      completedAt: { not: null },
-      totalTime: { not: null },
-      puzzleSet: { userId },
-    },
-    orderBy: { cycleNumber: "asc" },
-    select: { cycleNumber: true, totalTime: true },
-  });
-
-  if (cycles.length < 2) return toUnlock;
-
-  const firstCycle = cycles[0];
-  const latestCycle = cycles[cycles.length - 1];
-
-  if (!firstCycle.totalTime || !latestCycle.totalTime) return toUnlock;
-
-  const percentReduction =
-    ((firstCycle.totalTime - latestCycle.totalTime) / firstCycle.totalTime) *
-    100;
-
-  if (percentReduction >= 50) {
-    toUnlock.push("improvement-king");
-  }
-
-  return toUnlock;
-}
-
-/**
- * Check extended streak achievements (consistent-trainer, dedicated)
- */
-function checkStreakExtendedAchievements(
-  context: StreakContext,
-  unlockedIds: Set<string>,
-): string[] {
-  const toUnlock: string[] = [];
-  const streak = Math.max(context.currentStreak, context.longestStreak);
-
-  if (!unlockedIds.has("consistent-trainer") && streak >= 14) {
-    toUnlock.push("consistent-trainer");
-  }
-
-  if (!unlockedIds.has("dedicated") && streak >= 60) {
-    toUnlock.push("dedicated");
-  }
-
-  return toUnlock;
-}
-
-/**
- * Check cycle high accuracy achievement (sharp-shooter)
- */
-function checkCycleHighAccuracyAchievement(
-  context: CycleCompleteContext,
-  unlockedIds: Set<string>,
-): string[] {
-  const toUnlock: string[] = [];
-
-  if (
-    !unlockedIds.has("sharp-shooter") &&
-    context.totalPuzzles >= 50 &&
-    context.accuracy >= 95
-  ) {
-    toUnlock.push("sharp-shooter");
-  }
-
-  return toUnlock;
-}
-
-/**
- * Check consecutive correct achievement (flawless-streak)
- */
-async function checkConsecutiveCorrectAchievement(
-  userId: string,
-  context: AttemptContext,
-  unlockedIds: Set<string>,
-): Promise<string[]> {
-  const toUnlock: string[] = [];
-
-  if (unlockedIds.has("flawless-streak")) return toUnlock;
-  if (!context.isCorrect) return toUnlock;
-
-  // Get the last 25 attempts for this user
-  const recentAttempts = await prisma.attempt.findMany({
-    where: {
-      puzzleInSet: {
-        puzzleSet: { userId },
-      },
-    },
-    orderBy: { attemptedAt: "desc" },
-    take: 25,
-    select: { isCorrect: true },
-  });
-
-  // Check if all recent attempts are correct
-  if (recentAttempts.length >= 25 && recentAttempts.every((a) => a.isCorrect)) {
-    toUnlock.push("flawless-streak");
-  }
-
-  return toUnlock;
-}
-
-/**
- * Check perfect cycle strict achievement (no-mistakes)
- */
-function checkPerfectCycleStrictAchievement(
-  context: CycleCompleteContext,
-  unlockedIds: Set<string>,
-): string[] {
-  const toUnlock: string[] = [];
-
-  if (
-    !unlockedIds.has("no-mistakes") &&
-    context.totalPuzzles >= 20 &&
-    context.accuracy === 100 &&
-    context.correctPuzzles === context.totalPuzzles
-  ) {
-    toUnlock.push("no-mistakes");
-  }
-
-  return toUnlock;
-}
-
-/**
- * Helper to check theme accuracy using count queries instead of loading all records
- */
-async function checkThemeAccuracy(
-  userId: string,
-  theme: string,
-  minAttempts: number,
-): Promise<{ total: number; correct: number }> {
-  const [total, correct] = await Promise.all([
-    prisma.attempt.count({
-      where: {
-        puzzleInSet: {
-          puzzle: { themes: { has: theme } },
-          puzzleSet: { userId },
-        },
-      },
-    }),
-    prisma.attempt.count({
-      where: {
-        isCorrect: true,
-        puzzleInSet: {
-          puzzle: { themes: { has: theme } },
-          puzzleSet: { userId },
-        },
-      },
-    }),
-  ]);
-  return { total, correct };
-}
-
-/**
- * Check theme accuracy extended achievements (theme-master-pin, theme-master-skewer, mate-master)
- */
-async function checkThemeAccuracyExtendedAchievements(
-  userId: string,
-  context: AttemptContext,
-  unlockedIds: Set<string>,
-): Promise<string[]> {
-  const toUnlock: string[] = [];
-
-  // Check for pin theme
-  if (
-    !unlockedIds.has("theme-master-pin") &&
-    context.puzzleThemes.includes("pin")
-  ) {
-    const { total, correct } = await checkThemeAccuracy(userId, "pin", 20);
-    if (total >= 20 && (correct / total) * 100 >= 90) {
-      toUnlock.push("theme-master-pin");
-    }
-  }
-
-  // Check for skewer theme
-  if (
-    !unlockedIds.has("theme-master-skewer") &&
-    context.puzzleThemes.includes("skewer")
-  ) {
-    const { total, correct } = await checkThemeAccuracy(userId, "skewer", 20);
-    if (total >= 20 && (correct / total) * 100 >= 90) {
-      toUnlock.push("theme-master-skewer");
-    }
-  }
-
-  // Check for mate theme
-  if (
-    !unlockedIds.has("mate-master") &&
-    context.puzzleThemes.includes("mate")
-  ) {
-    const { total, correct } = await checkThemeAccuracy(userId, "mate", 30);
-    if (total >= 30 && (correct / total) * 100 >= 90) {
-      toUnlock.push("mate-master");
-    }
-  }
-
-  return toUnlock;
-}
-
-/**
- * Check overall accuracy achievement (tactical-prodigy)
- */
-async function checkOverallAccuracyAchievement(
-  userId: string,
-  unlockedIds: Set<string>,
-): Promise<string[]> {
-  const toUnlock: string[] = [];
-
-  if (unlockedIds.has("tactical-prodigy")) return toUnlock;
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { totalCorrectAttempts: true },
-  });
-
-  if (!user) return toUnlock;
-
-  // Count total attempts
-  const totalAttempts = await prisma.attempt.count({
-    where: {
-      puzzleInSet: {
-        puzzleSet: { userId },
-      },
-    },
-  });
-
-  if (totalAttempts >= 200) {
-    const accuracy = (user.totalCorrectAttempts / totalAttempts) * 100;
-    if (accuracy >= 85) {
-      toUnlock.push("tactical-prodigy");
-    }
-  }
-
-  return toUnlock;
-}
-
-/**
- * Check high rating count achievement (rating-climber)
- */
-async function checkHighRatingCountAchievement(
-  userId: string,
-  puzzleRating: number | undefined,
-  unlockedIds: Set<string>,
-): Promise<string[]> {
-  const toUnlock: string[] = [];
-
-  if (unlockedIds.has("rating-climber")) return toUnlock;
-
-  // Skip DB query if current puzzle isn't high-rated (can't unlock on this attempt)
-  if (puzzleRating === undefined || puzzleRating < 1800) return toUnlock;
-
-  // Count correct attempts on puzzles with rating >= 1800
-  const highRatingCount = await prisma.attempt.count({
-    where: {
-      isCorrect: true,
-      puzzleInSet: {
-        puzzle: { rating: { gte: 1800 } },
-        puzzleSet: { userId },
-      },
-    },
-  });
-
-  if (highRatingCount >= 50) {
-    toUnlock.push("rating-climber");
-  }
-
-  return toUnlock;
-}
-
-/**
- * Check multi-theme mastery achievement (versatile)
- * Requires 5 themes with >= 80% accuracy and >= 15 attempts each
- */
-async function checkMultiThemeMasteryAchievement(
-  userId: string,
-  unlockedIds: Set<string>,
-): Promise<string[]> {
-  const toUnlock: string[] = [];
-
-  if (unlockedIds.has("versatile")) return toUnlock;
-
-  // First check if user has enough total attempts (minimum 75 = 5 themes * 15 each)
-  const totalAttempts = await prisma.attempt.count({
-    where: {
-      puzzleInSet: {
-        puzzleSet: { userId },
-      },
-    },
-  });
-
-  // Early exit if not enough attempts to qualify
-  if (totalAttempts < 75) return toUnlock;
-
-  // Check common tactical themes for mastery
-  const themesToCheck = [
-    "fork",
-    "pin",
-    "skewer",
-    "discoveredAttack",
-    "doubleCheck",
-    "mate",
-    "mateIn1",
-    "mateIn2",
-    "sacrifice",
-    "deflection",
-    "decoy",
-    "interference",
-    "clearance",
-    "xRayAttack",
-    "zugzwang",
-    "quietMove",
-    "defensiveMove",
-    "attraction",
-  ];
-
-  let qualifyingThemes = 0;
-
-  for (const theme of themesToCheck) {
-    if (qualifyingThemes >= 5) break; // Already qualified
-
-    const { total, correct } = await checkThemeAccuracy(userId, theme, 15);
-    if (total >= 15) {
-      const accuracy = (correct / total) * 100;
-      if (accuracy >= 80) {
-        qualifyingThemes++;
-      }
-    }
-  }
-
-  if (qualifyingThemes >= 5) {
-    toUnlock.push("versatile");
-  }
-
-  return toUnlock;
-}
-
-/**
- * Check weekly leaderboard rank achievement (rising-star)
- */
-async function checkWeeklyLeaderboardRankAchievement(
-  userId: string,
-  unlockedIds: Set<string>,
-): Promise<string[]> {
-  const toUnlock: string[] = [];
-
-  if (unlockedIds.has("rising-star")) return toUnlock;
-
-  // Get all users on the leaderboard ordered by weekly correct attempts
-  const users = await prisma.user.findMany({
-    where: { showOnLeaderboard: true },
-    select: { id: true, weeklyCorrectAttempts: true },
-    orderBy: { weeklyCorrectAttempts: "desc" },
-    take: 100,
-  });
-
-  // Check if current user is in top 100
-  const userRank = users.findIndex((u) => u.id === userId);
-  if (userRank !== -1 && userRank < 100) {
-    toUnlock.push("rising-star");
-  }
-
-  return toUnlock;
-}
-
-/**
- * Check achievements after a puzzle attempt is recorded
- */
-export async function checkAchievementsAfterAttempt(
-  userId: string,
-  context: AttemptContext,
-): Promise<AchievementCheckResult> {
-  const unlockedIds = await getUserUnlockedAchievementIds(userId);
-  const toUnlock: string[] = [];
-
-  // Only check achievements for correct attempts (except time-of-day)
-  if (context.isCorrect) {
-    // Check puzzle count achievements (first-blood, century, half-thousand, millennium)
-    const puzzleCountAchievements = await checkPuzzleCountAchievements(
-      userId,
-      unlockedIds,
-    );
-    toUnlock.push(...puzzleCountAchievements);
-
-    // Check weekly puzzle count achievement (weekly-warrior)
-    const weeklyPuzzleCount = await checkWeeklyPuzzleCountAchievement(
-      userId,
-      unlockedIds,
-    );
-    toUnlock.push(...weeklyPuzzleCount);
-
-    // Check speed achievements (speed-demon, lightning-fast)
-    toUnlock.push(...checkSpeedAchievement(context, unlockedIds));
-    toUnlock.push(...checkLightningSpeedAchievement(context, unlockedIds));
-
-    // Check speed streak achievement (speed-streak)
-    const speedStreak = await checkSpeedStreakAchievement(
-      userId,
-      context,
-      unlockedIds,
-    );
-    toUnlock.push(...speedStreak);
-
-    // Check consecutive correct achievement (flawless-streak)
-    const consecutiveCorrect = await checkConsecutiveCorrectAchievement(
-      userId,
-      context,
-      unlockedIds,
-    );
-    toUnlock.push(...consecutiveCorrect);
-
-    // Check theme accuracy achievements (theme-master-fork, theme-master-pin, theme-master-skewer, mate-master)
-    const themeAchievements = await checkThemeAccuracyAchievements(
-      userId,
-      context,
-      unlockedIds,
-    );
-    toUnlock.push(...themeAchievements);
-
-    const themeAchievementsExtended =
-      await checkThemeAccuracyExtendedAchievements(
-        userId,
-        context,
-        unlockedIds,
-      );
-    toUnlock.push(...themeAchievementsExtended);
-
-    // Check overall accuracy achievement (tactical-prodigy)
-    const overallAccuracy = await checkOverallAccuracyAchievement(
-      userId,
-      unlockedIds,
-    );
-    toUnlock.push(...overallAccuracy);
-
-    // Check high rating count achievement (rating-climber)
-    const highRatingCount = await checkHighRatingCountAchievement(
-      userId,
-      context.puzzleRating,
-      unlockedIds,
-    );
-    toUnlock.push(...highRatingCount);
-
-    // Check multi-theme mastery achievement (versatile)
-    const multiThemeMastery = await checkMultiThemeMasteryAchievement(
-      userId,
-      unlockedIds,
-    );
-    toUnlock.push(...multiThemeMastery);
-
-    // Check weekly leaderboard rank achievement (rising-star)
-    const leaderboardRank = await checkWeeklyLeaderboardRankAchievement(
-      userId,
-      unlockedIds,
-    );
-    toUnlock.push(...leaderboardRank);
-  }
-
-  // Time-of-day achievements apply to any attempt
-  toUnlock.push(...checkTimeOfDayAchievements(context, unlockedIds));
-
-  // Unlock the achievements
-  const newlyUnlocked = await unlockAchievements(userId, toUnlock);
-
-  return { newlyUnlocked };
-}
-
-/**
- * Check achievements after a cycle is completed
- */
-export async function checkAchievementsAfterCycleComplete(
-  userId: string,
-  context: CycleCompleteContext,
-): Promise<AchievementCheckResult> {
-  const unlockedIds = await getUserUnlockedAchievementIds(userId);
-  const toUnlock: string[] = [];
-
-  // Check cycle accuracy achievement (perfectionist)
-  toUnlock.push(...checkCycleAccuracyAchievement(context, unlockedIds));
-
-  // Check cycles same set achievement (woodpecker-pro)
-  const cyclesSameSet = await checkCyclesSameSetAchievement(
-    userId,
-    context,
-    unlockedIds,
-  );
-  toUnlock.push(...cyclesSameSet);
-
-  // Check first cycle complete achievement (cycle-complete)
-  const firstCycleComplete = await checkFirstCycleCompleteAchievement(
-    userId,
-    unlockedIds,
-  );
-  toUnlock.push(...firstCycleComplete);
-
-  // Check cycles same set extended achievement (woodpecker-master)
-  const cyclesSameSetExtended = await checkCyclesSameSetExtendedAchievement(
-    userId,
-    context,
-    unlockedIds,
-  );
-  toUnlock.push(...cyclesSameSetExtended);
-
-  // Check cycle time improvement achievement (improvement-king)
-  const cycleTimeImprovement = await checkCycleTimeImprovementAchievement(
-    userId,
-    context,
-    unlockedIds,
-  );
-  toUnlock.push(...cycleTimeImprovement);
-
-  // Check cycle high accuracy achievement (sharp-shooter)
-  toUnlock.push(...checkCycleHighAccuracyAchievement(context, unlockedIds));
-
-  // Check perfect cycle strict achievement (no-mistakes)
-  toUnlock.push(...checkPerfectCycleStrictAchievement(context, unlockedIds));
-
-  // Unlock the achievements
-  const newlyUnlocked = await unlockAchievements(userId, toUnlock);
-
-  return { newlyUnlocked };
-}
-
-/**
- * Check achievements after streak is updated
- */
-export async function checkAchievementsAfterStreakUpdate(
-  userId: string,
-  context: StreakContext,
-): Promise<AchievementCheckResult> {
-  const unlockedIds = await getUserUnlockedAchievementIds(userId);
-  const toUnlock: string[] = [];
-
-  // Check streak achievements (on-fire, unstoppable)
-  toUnlock.push(...checkStreakAchievements(context, unlockedIds));
-
-  // Check extended streak achievements (consistent-trainer, dedicated)
-  toUnlock.push(...checkStreakExtendedAchievements(context, unlockedIds));
-
-  // Unlock the achievements
-  const newlyUnlocked = await unlockAchievements(userId, toUnlock);
-
-  return { newlyUnlocked };
-}
+// ---------------------------------------------------------------------------
+// getUserAchievements (unchanged - used by /api/user/achievements)
+// ---------------------------------------------------------------------------
 
 /**
  * Get all achievements with unlock status for a user

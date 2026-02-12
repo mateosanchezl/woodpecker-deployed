@@ -1,30 +1,37 @@
-import { auth } from '@clerk/nextjs/server'
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { leaderboardQuerySchema } from '@/lib/validations/leaderboard'
-import { getISOWeekStart } from '@/lib/leaderboard'
-import type { LeaderboardEntry, LeaderboardResponse } from '@/lib/validations/leaderboard'
+import { auth } from "@clerk/nextjs/server";
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { leaderboardQuerySchema } from "@/lib/validations/leaderboard";
+import { getISOWeekStart } from "@/lib/leaderboard";
+import { checkRisingStarAchievement } from "@/lib/achievements";
+import type {
+  LeaderboardEntry,
+  LeaderboardResponse,
+} from "@/lib/validations/leaderboard";
 
 export async function GET(request: NextRequest) {
   try {
-    const { userId: clerkId } = await auth()
+    const { userId: clerkId } = await auth();
 
     if (!clerkId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Parse and validate query params
-    const searchParams = Object.fromEntries(request.nextUrl.searchParams)
-    const parseResult = leaderboardQuerySchema.safeParse(searchParams)
+    const searchParams = Object.fromEntries(request.nextUrl.searchParams);
+    const parseResult = leaderboardQuerySchema.safeParse(searchParams);
 
     if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'Invalid query parameters', details: parseResult.error.flatten() },
-        { status: 400 }
-      )
+        {
+          error: "Invalid query parameters",
+          details: parseResult.error.flatten(),
+        },
+        { status: 400 },
+      );
     }
 
-    const { period, limit, offset } = parseResult.data
+    const { period, limit, offset } = parseResult.data;
 
     // Get current user
     const currentUser = await prisma.user.findUnique({
@@ -42,14 +49,14 @@ export async function GET(request: NextRequest) {
         weeklyXp: true,
         weeklyXpStartDate: true,
       },
-    })
+    });
 
     if (!currentUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const currentWeekStart = getISOWeekStart(new Date())
-    const isWeekly = period === 'weekly'
+    const currentWeekStart = getISOWeekStart(new Date());
+    const isWeekly = period === "weekly";
 
     // Build the where clause based on period (ranked by XP)
     const whereClause = isWeekly
@@ -61,10 +68,10 @@ export async function GET(request: NextRequest) {
       : {
           showOnLeaderboard: true,
           totalXp: { gt: 0 },
-        }
+        };
 
     // Get total count for pagination
-    const total = await prisma.user.count({ where: whereClause })
+    const total = await prisma.user.count({ where: whereClause });
 
     // Get leaderboard entries (ranked by XP)
     const users = await prisma.user.findMany({
@@ -79,25 +86,29 @@ export async function GET(request: NextRequest) {
         currentLevel: true,
         weeklyXp: true,
       },
-      orderBy: isWeekly ? { weeklyXp: 'desc' } : { totalXp: 'desc' },
+      orderBy: isWeekly ? { weeklyXp: "desc" } : { totalXp: "desc" },
       take: limit,
       skip: offset,
-    })
+    });
 
     // Transform to entries with rank
-    const entries: LeaderboardEntry[] = users.map((user: typeof users[number], index: number) => ({
-      rank: offset + index + 1,
-      userId: user.id,
-      name: user.name,
-      xp: isWeekly ? user.weeklyXp : user.totalXp,
-      level: user.currentLevel,
-      puzzlesSolved: isWeekly ? user.weeklyCorrectAttempts : user.totalCorrectAttempts,
-      estimatedRating: user.estimatedRating,
-      isCurrentUser: user.id === currentUser.id,
-    }))
+    const entries: LeaderboardEntry[] = users.map(
+      (user: (typeof users)[number], index: number) => ({
+        rank: offset + index + 1,
+        userId: user.id,
+        name: user.name,
+        xp: isWeekly ? user.weeklyXp : user.totalXp,
+        level: user.currentLevel,
+        puzzlesSolved: isWeekly
+          ? user.weeklyCorrectAttempts
+          : user.totalCorrectAttempts,
+        estimatedRating: user.estimatedRating,
+        isCurrentUser: user.id === currentUser.id,
+      }),
+    );
 
     // Calculate current user's rank if they're not in the current page
-    let currentUserData: LeaderboardResponse['currentUser'] = null
+    let currentUserData: LeaderboardResponse["currentUser"] = null;
 
     // Get current user's XP for this period
     const currentUserXp = isWeekly
@@ -105,7 +116,7 @@ export async function GET(request: NextRequest) {
         currentUser.weeklyXpStartDate >= currentWeekStart
         ? currentUser.weeklyXp
         : 0
-      : currentUser.totalXp
+      : currentUser.totalXp;
 
     // Get current user's puzzles solved for this period
     const currentUserPuzzles = isWeekly
@@ -113,20 +124,20 @@ export async function GET(request: NextRequest) {
         currentUser.weeklyCorrectStartDate >= currentWeekStart
         ? currentUser.weeklyCorrectAttempts
         : 0
-      : currentUser.totalCorrectAttempts
+      : currentUser.totalCorrectAttempts;
 
     if (currentUserXp > 0) {
       // Count users with higher XP to get rank
       const usersAhead = await prisma.user.count({
         where: {
           ...whereClause,
-          [isWeekly ? 'weeklyXp' : 'totalXp']: {
+          [isWeekly ? "weeklyXp" : "totalXp"]: {
             gt: currentUserXp,
           },
         },
-      })
+      });
 
-      const rank = usersAhead + 1
+      const rank = usersAhead + 1;
 
       currentUserData = {
         rank: currentUser.showOnLeaderboard ? rank : null,
@@ -140,12 +151,12 @@ export async function GET(request: NextRequest) {
           estimatedRating: currentUser.estimatedRating,
           isCurrentUser: true,
         },
-      }
+      };
     } else {
       currentUserData = {
         rank: null,
         entry: null,
-      }
+      };
     }
 
     const response: LeaderboardResponse = {
@@ -159,14 +170,18 @@ export async function GET(request: NextRequest) {
       currentUser: currentUserData,
       period,
       ...(isWeekly && { weekStartDate: currentWeekStart.toISOString() }),
-    }
+    };
 
-    return NextResponse.json(response)
+    // Check rising-star achievement in the background (fire-and-forget).
+    // This was moved out of the attempt flow to avoid loading 100 users per puzzle.
+    checkRisingStarAchievement(currentUser.id).catch(() => {});
+
+    return NextResponse.json(response);
   } catch (error) {
-    console.error('Error fetching leaderboard:', error)
+    console.error("Error fetching leaderboard:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch leaderboard' },
-      { status: 500 }
-    )
+      { error: "Failed to fetch leaderboard" },
+      { status: 500 },
+    );
   }
 }

@@ -18,7 +18,6 @@ import {
   Clock,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
 
 import { Chessboard } from "react-chessboard";
 
@@ -39,7 +38,28 @@ const staggerContainer = {
 import { FeaturesSection } from "@/components/landing/features-section";
 import { LandingNavbar } from "@/components/landing/navbar";
 
-export default function LandingPage() {
+type LandingPageProps = {
+  completedPuzzlesCount: number;
+};
+
+const formatLargeNumber = (value: number) => {
+  return new Intl.NumberFormat("en-US", {
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(value);
+};
+
+export default function LandingPage({
+  completedPuzzlesCount,
+}: LandingPageProps) {
+  const completedPuzzlesDisplay = formatLargeNumber(completedPuzzlesCount);
+
+  const stats = [
+    { label: "Puzzles Available", value: "1.5M+", icon: Target },
+    { label: "Avg. Rating Gain", value: "+150", icon: TrendingUp },
+    { label: "Completion Rate", value: "94%", icon: Trophy },
+  ];
+
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground overflow-x-hidden selection:bg-primary/20">
       <LandingNavbar />
@@ -321,15 +341,29 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Completed Puzzles Banner */}
+        <section className="border-y border-primary/20 bg-primary/10">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+            <div className="mx-auto max-w-3xl rounded-2xl border border-primary/30 bg-background/70 px-6 py-6 sm:px-10 sm:py-8 text-center shadow-sm">
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1 text-sm font-medium text-primary">
+                <Users className="h-4 w-4" />
+                Community Milestone
+              </div>
+              <div className="mt-4 text-4xl sm:text-5xl font-bold tracking-tight text-primary">
+                {completedPuzzlesDisplay}
+              </div>
+              <p className="mt-2 text-sm sm:text-base text-muted-foreground font-medium">
+                Puzzles completed by Peck users
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* Stats Strip */}
         <section className="border-y border-border bg-muted/30">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-2 md:grid-cols-3 divide-x divide-border/50">
-              {[
-                { label: "Puzzles Available", value: "1.5M+", icon: Target },
-                { label: "Avg. Rating Gain", value: "+150", icon: TrendingUp },
-                { label: "Completion Rate", value: "94%", icon: Trophy },
-              ].map((stat, i) => (
+              {stats.map((stat, i) => (
                 <div
                   key={i}
                   className="py-8 px-4 text-center group hover:bg-background/50 transition-colors"

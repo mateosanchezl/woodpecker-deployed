@@ -8,6 +8,12 @@ import {
   generateHowToSchema,
   generateSoftwareApplicationSchema,
 } from "@/lib/seo";
+import {
+  PUBLIC_STATS_REVALIDATE_SECONDS,
+  getPublicCompletedPuzzlesCount,
+} from "@/lib/public-stats";
+
+export const revalidate = PUBLIC_STATS_REVALIDATE_SECONDS;
 
 /**
  * Landing page metadata - Optimized for "woodpecker method" keywords
@@ -22,14 +28,16 @@ export const metadata: Metadata = {
   },
 };
 
-export default function Page() {
+export default async function Page() {
+  const completedPuzzlesCount = await getPublicCompletedPuzzlesCount();
+
   return (
     <>
       {/* 
         Structured Data for Rich Snippets
         These schemas help Google understand the page and display rich results
       */}
-      
+
       {/* FAQ Schema - Targets "what is woodpecker method" queries */}
       <script
         type="application/ld+json"
@@ -37,7 +45,7 @@ export default function Page() {
           __html: JSON.stringify(generateWoodpeckerFAQSchema()),
         }}
       />
-      
+
       {/* HowTo Schema - Targets "how to use woodpecker method" queries */}
       <script
         type="application/ld+json"
@@ -45,7 +53,7 @@ export default function Page() {
           __html: JSON.stringify(generateHowToSchema()),
         }}
       />
-      
+
       {/* SoftwareApplication Schema - Targets "woodpecker method app" queries */}
       <script
         type="application/ld+json"
@@ -53,8 +61,8 @@ export default function Page() {
           __html: JSON.stringify(generateSoftwareApplicationSchema()),
         }}
       />
-      
-      <LandingPage />
+
+      <LandingPage completedPuzzlesCount={completedPuzzlesCount} />
     </>
   );
 }

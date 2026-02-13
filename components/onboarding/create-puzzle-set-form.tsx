@@ -7,7 +7,19 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Loader2, ArrowRight } from 'lucide-react'
+import {
+  TRAINING_THEME_OPTIONS,
+  getTrainingThemeLabel,
+  type TrainingTheme,
+} from '@/lib/chess/training-themes'
 
 interface CreatePuzzleSetFormProps {
   userRating: number
@@ -17,6 +29,7 @@ interface CreatePuzzleSetFormProps {
     ratingRange: number
     size: number
     targetCycles: number
+    focusTheme: TrainingTheme | null
   }) => void
   isSubmitting?: boolean
 }
@@ -39,11 +52,13 @@ export function CreatePuzzleSetForm({
   onSubmit,
   isSubmitting,
 }: CreatePuzzleSetFormProps) {
+  const anyThemeValue = 'any-theme'
   const [name, setName] = useState('My Training Set')
   const [targetRating, setTargetRating] = useState(Math.max(800, userRating - 200))
   const [ratingRange, setRatingRange] = useState(200)
   const [size, setSize] = useState(150)
   const [targetCycles, setTargetCycles] = useState(5)
+  const [focusTheme, setFocusTheme] = useState<TrainingTheme | null>(null)
 
   const minRating = useMemo(() => Math.max(800, targetRating - ratingRange / 2), [targetRating, ratingRange])
   const maxRating = useMemo(() => Math.min(2600, targetRating + ratingRange / 2), [targetRating, ratingRange])
@@ -56,8 +71,9 @@ export function CreatePuzzleSetForm({
       ratingRange,
       size,
       targetCycles,
+      focusTheme,
     })
-  }, [name, targetRating, ratingRange, size, targetCycles, onSubmit])
+  }, [name, targetRating, ratingRange, size, targetCycles, focusTheme, onSubmit])
 
   const getDifficultyLabel = (): string => {
     const diff = userRating - targetRating
@@ -87,6 +103,32 @@ export function CreatePuzzleSetForm({
               placeholder="My Training Set"
               maxLength={100}
             />
+          </div>
+
+          {/* Theme Focus */}
+          <div className="space-y-3">
+            <Label htmlFor="theme-focus">Theme focus</Label>
+            <Select
+              value={focusTheme ?? anyThemeValue}
+              onValueChange={(value) => {
+                setFocusTheme(value === anyThemeValue ? null : (value as TrainingTheme))
+              }}
+            >
+              <SelectTrigger id="theme-focus" className="w-full">
+                <SelectValue placeholder="Any theme" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={anyThemeValue}>Any theme</SelectItem>
+                {TRAINING_THEME_OPTIONS.map((theme) => (
+                  <SelectItem key={theme.value} value={theme.value}>
+                    {theme.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Optional. Pick one tactical motif to build a focused set for weakness training.
+            </p>
           </div>
 
           {/* Target Rating */}
@@ -195,11 +237,17 @@ export function CreatePuzzleSetForm({
       {/* Summary */}
       <Card className="bg-muted/50">
         <CardContent className="pt-6">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Total training time estimate</span>
-            <span className="font-medium">
-              {Math.round((size * 0.5 * targetCycles) / 60)} - {Math.round((size * 1.5 * targetCycles) / 60)} hours
-            </span>
+          <div className="space-y-3 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Theme focus</span>
+              <span className="font-medium">{getTrainingThemeLabel(focusTheme)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Total training time estimate</span>
+              <span className="font-medium">
+                {Math.round((size * 0.5 * targetCycles) / 60)} - {Math.round((size * 1.5 * targetCycles) / 60)} hours
+              </span>
+            </div>
           </div>
         </CardContent>
       </Card>

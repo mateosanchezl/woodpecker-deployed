@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -9,24 +10,25 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { X, Sparkles, ExternalLink } from "lucide-react";
+import { X, Sparkles, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Update this object when you want to announce a new update
 // Increment the version to show the notification to users who dismissed the previous one
 export const CURRENT_UPDATE = {
-  version: "2.0.0",
-  title: "The Improvement Area – Level Up Your Weaknesses",
+  version: "2.1.0",
+  title: "Create Puzzle Sets by Theme",
   description:
-    "A breakthrough feature that transforms how you train. Focus intensely on your toughest puzzles with guided walkthroughs and spaced repetition—the secret to dramatic rating gains.",
+    "Build training sets around a single tactical theme—pins, forks, mates, sacrifices, and more. Drill one motif at a time for faster pattern recognition and sharper tactics.",
   features: [
-    "Improvement Area: Review your most-struggled puzzles in one focused zone",
-    "Discover your weakest themes and drill them with targeted practice",
-    "Step through solutions interactively or watch auto-play demonstrations",
-    "Spaced repetition ordering ensures optimal learning and retention",
+    "Choose a focus theme when creating a set (e.g. Pins, Forks, Mates, Sacrifices)",
+    "Puzzles are filtered to match your theme so every rep reinforces the same motif",
+    "Ideal for targeting weak spots or deepening a specific tactical skill",
+    "Available when creating a new set—pick “Any theme” or any of 15+ tactical themes",
+    "Reminder: the Improvement Area (Review in the sidebar) lets you revisit your toughest puzzles and strengthen weak themes with walkthroughs and spaced repetition.",
   ],
-  date: "2026-02-11",
-  learnMoreUrl: "/training/review",
+  date: "2026-02-13",
+  learnMoreUrl: "/training/new",
 };
 
 const STORAGE_KEY = "woodpecker-dismissed-update";
@@ -41,6 +43,7 @@ function useHasMounted() {
 }
 
 export function UpdateNotification() {
+  const router = useRouter();
   const hasMounted = useHasMounted();
   const [isDismissed, setIsDismissed] = useState(() => {
     // Initialize from localStorage (will be checked again on mount for SSR)
@@ -141,10 +144,10 @@ export function UpdateNotification() {
             variant="outline"
             size="sm"
             className="gap-2 border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/50"
-            onClick={() => window.open(CURRENT_UPDATE.learnMoreUrl, "_blank")}
+            onClick={() => router.push(CURRENT_UPDATE.learnMoreUrl!)}
           >
-            Learn more
-            <ExternalLink className="h-3 w-3" />
+            Create a themed set
+            <Plus className="h-3 w-3" />
           </Button>
         )}
       </CardContent>

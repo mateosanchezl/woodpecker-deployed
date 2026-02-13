@@ -25,11 +25,13 @@ import { useNavigationGuard } from '@/hooks/use-navigation-guard'
 import { getStreakMessage } from '@/lib/streak-milestones'
 import { LeaveTrainingModal } from '@/components/training/leave-training-modal'
 import { cn } from '@/lib/utils'
+import { getTrainingThemeLabel } from '@/lib/chess/training-themes'
 
 interface PuzzleSetData {
   id: string
   name: string
   size: number
+  focusTheme: string | null
   targetCycles: number
   targetRating: number
   isActive: boolean
@@ -375,6 +377,7 @@ function ContinueTrainingCard({
             <CardTitle className="text-xl">{set.name}</CardTitle>
             <CardDescription>
               {set.size} puzzles at ~{set.targetRating} rating
+              {set.focusTheme ? ` · ${getTrainingThemeLabel(set.focusTheme)}` : ''}
             </CardDescription>
           </div>
           <DropdownMenu>
@@ -468,6 +471,7 @@ function PuzzleSetCard({
             <CardTitle className="text-lg truncate">{set.name}</CardTitle>
             <CardDescription>
               {set.size} puzzles at ~{set.targetRating} rating
+              {set.focusTheme ? ` · ${getTrainingThemeLabel(set.focusTheme)}` : ''}
             </CardDescription>
           </div>
           <DropdownMenu>

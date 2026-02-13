@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { ensureUserExists } from '@/lib/ensure-user'
 import { quickStartRequestSchema } from '@/lib/validations/training'
+import { selectRandomPuzzlesForSet } from '@/lib/training/puzzle-selection'
 
 /**
  * POST /api/training/quick-start
@@ -54,12 +55,12 @@ export async function POST(request: NextRequest) {
     const minRating = Math.max(800, targetRating - Math.floor(ratingRange / 2))
     const maxRating = Math.min(2600, targetRating + Math.floor(ratingRange / 2))
 
-    const puzzles = await prisma.$queryRaw<{ id: string }[]>`
-      SELECT id FROM "Puzzle"
-      WHERE rating >= ${minRating} AND rating <= ${maxRating}
-      ORDER BY RANDOM()
-      LIMIT ${size}
-    `
+    const puzzles = await selectRandomPuzzlesForSet({
+      minRating,
+      maxRating,
+      size,
+      focusTheme: null,
+    })
 
     if (puzzles.length < size) {
       return NextResponse.json(
@@ -81,6 +82,7 @@ export async function POST(request: NextRequest) {
           maxRating,
           size,
           targetCycles,
+          focusTheme: null,
         },
       })
 
@@ -119,6 +121,7 @@ export async function POST(request: NextRequest) {
         minRating: puzzleSet.minRating,
         maxRating: puzzleSet.maxRating,
         targetCycles: puzzleSet.targetCycles,
+        focusTheme: puzzleSet.focusTheme,
         createdAt: puzzleSet.createdAt.toISOString(),
       },
       cycle: {

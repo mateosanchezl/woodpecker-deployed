@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
+import type { TrainingTheme } from '@/lib/chess/training-themes'
 
 interface UserData {
   user: {
@@ -37,6 +38,7 @@ export default function NewPuzzleSetPage() {
       ratingRange: number
       size: number
       targetCycles: number
+      focusTheme: TrainingTheme | null
     }) => {
       const res = await fetch('/api/training/puzzle-sets', {
         method: 'POST',
@@ -85,6 +87,7 @@ export default function NewPuzzleSetPage() {
     ratingRange: number
     size: number
     targetCycles: number
+    focusTheme: TrainingTheme | null
   }) => {
     createPuzzleSetMutation.mutate(data)
   }, [createPuzzleSetMutation])

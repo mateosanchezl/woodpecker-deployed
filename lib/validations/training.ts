@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { TRAINING_THEME_KEYS } from '@/lib/chess/training-themes'
 
 // UCI move pattern: e2e4 or e7e8q (with promotion)
 const uciMovePattern = /^[a-h][1-8][a-h][1-8][qrbn]?$/
@@ -187,6 +188,7 @@ export const createPuzzleSetSchema = z.object({
     .int()
     .min(1, 'Must complete at least 1 cycle')
     .max(10, 'Cannot exceed 10 cycles'),
+  focusTheme: z.enum(TRAINING_THEME_KEYS).nullable().optional(),
 })
 
 export type CreatePuzzleSetInput = z.infer<typeof createPuzzleSetSchema>
@@ -203,6 +205,7 @@ export const createPuzzleSetResponseSchema = z.object({
     minRating: z.number(),
     maxRating: z.number(),
     targetCycles: z.number(),
+    focusTheme: z.enum(TRAINING_THEME_KEYS).nullable(),
     createdAt: z.string(),
   }),
 })

@@ -32,7 +32,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const puzzleSet = await prisma.puzzleSet.findUnique({
       where: { id: setId },
       include: {
-        puzzles: true,
         cycles: {
           orderBy: { cycleNumber: 'desc' },
           take: 1,
@@ -73,7 +72,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       data: {
         puzzleSetId: setId,
         cycleNumber: nextCycleNumber,
-        totalPuzzles: puzzleSet.puzzles.length,
+        totalPuzzles: puzzleSet.size,
         startedAt: new Date(),
       },
     })

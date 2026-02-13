@@ -24,6 +24,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import Link from "next/link";
+import { getTrainingThemeLabel } from "@/lib/chess/training-themes";
 
 interface UserData {
   user: {
@@ -44,6 +45,7 @@ interface PuzzleSetsData {
     id: string;
     name: string;
     size: number;
+    focusTheme: string | null;
     targetCycles: number;
     targetRating: number;
     minRating: number;
@@ -247,6 +249,7 @@ function PuzzleSetCard({ set }: PuzzleSetCardProps) {
             <CardTitle className="text-lg">{set.name}</CardTitle>
             <CardDescription>
               {set.size} puzzles · {set.minRating}-{set.maxRating} rating
+              {set.focusTheme ? ` · ${getTrainingThemeLabel(set.focusTheme)}` : ""}
             </CardDescription>
           </div>
           {set.completedCycles >= set.targetCycles && (

@@ -93,7 +93,7 @@ model Puzzle {
 
   @@index([rating])
   @@index([popularity])
-  @@index([themes])
+  @@index([themes], type: Gin, map: "Puzzle_themes_gin_idx")
   @@index([difficulty])
   @@index([rating, popularity])
 }
@@ -109,6 +109,7 @@ model PuzzleSet {
   minRating    Int
   maxRating    Int
   size         Int
+  focusTheme   String?
 
   // Set generation metadata
   createdAt    DateTime    @default(now())

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { createPuzzleSetSchema } from '@/lib/validations/training'
+import { selectRandomPuzzlesForSet } from '@/lib/training/puzzle-selection'
 
 /**
  * GET /api/training/puzzle-sets
@@ -38,9 +39,6 @@ export async function GET() {
             },
           },
         },
-        _count: {
-          select: { puzzles: true },
-        },
       },
       orderBy: { createdAt: 'desc' },
     })
@@ -55,7 +53,8 @@ export async function GET() {
       return {
         id: set.id,
         name: set.name,
-        size: set._count.puzzles,
+        size: set.size,
+        focusTheme: set.focusTheme,
         targetCycles: set.targetCycles,
         targetRating: set.targetRating,
         minRating: set.minRating,
@@ -114,7 +113,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { name, targetRating, ratingRange, size, targetCycles } = validation.data
+    const { name, targetRating, ratingRange, size, targetCycles, focusTheme } = validation.data
 
     // Get the user's database ID from their Clerk ID
     const user = await prisma.user.findUnique({
@@ -129,20 +128,21 @@ export async function POST(request: NextRequest) {
     const minRating = Math.max(800, targetRating - Math.floor(ratingRange / 2))
     const maxRating = Math.min(2600, targetRating + Math.floor(ratingRange / 2))
 
-    // Select random puzzles within the rating range
-    // Using raw query for efficient random selection from large table
-    const puzzles = await prisma.$queryRaw<{ id: string }[]>`
-      SELECT id FROM "Puzzle"
-      WHERE rating >= ${minRating} AND rating <= ${maxRating}
-      ORDER BY RANDOM()
-      LIMIT ${size}
-    `
+    // Select random puzzles within the rating range and optional theme filter
+    const puzzles = await selectRandomPuzzlesForSet({
+      minRating,
+      maxRating,
+      size,
+      focusTheme,
+    })
 
     if (puzzles.length < size) {
       return NextResponse.json(
         {
           error: 'Not enough puzzles available',
-          details: `Found ${puzzles.length} puzzles in rating range ${minRating}-${maxRating}, but ${size} requested.`
+          details: focusTheme
+            ? `Found ${puzzles.length} puzzles for theme "${focusTheme}" in rating range ${minRating}-${maxRating}, but ${size} requested.`
+            : `Found ${puzzles.length} puzzles in rating range ${minRating}-${maxRating}, but ${size} requested.`
         },
         { status: 400 }
       )
@@ -160,6 +160,7 @@ export async function POST(request: NextRequest) {
           maxRating,
           size,
           targetCycles,
+          focusTheme: focusTheme ?? null,
         },
       })
 
@@ -182,18 +183,22 @@ export async function POST(request: NextRequest) {
       return set
     })
 
-    return NextResponse.json({
-      puzzleSet: {
-        id: puzzleSet.id,
-        name: puzzleSet.name,
-        size: puzzleSet.size,
-        targetRating: puzzleSet.targetRating,
-        minRating: puzzleSet.minRating,
-        maxRating: puzzleSet.maxRating,
-        targetCycles: puzzleSet.targetCycles,
-        createdAt: puzzleSet.createdAt.toISOString(),
+    return NextResponse.json(
+      {
+        puzzleSet: {
+          id: puzzleSet.id,
+          name: puzzleSet.name,
+          size: puzzleSet.size,
+          targetRating: puzzleSet.targetRating,
+          minRating: puzzleSet.minRating,
+          maxRating: puzzleSet.maxRating,
+          targetCycles: puzzleSet.targetCycles,
+          focusTheme: puzzleSet.focusTheme,
+          createdAt: puzzleSet.createdAt.toISOString(),
+        },
       },
-    })
+      { status: 201 }
+    )
   } catch (error) {
     console.error('Error creating puzzle set:', error)
     return NextResponse.json(

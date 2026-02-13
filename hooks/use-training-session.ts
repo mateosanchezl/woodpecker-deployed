@@ -8,8 +8,6 @@ import type {
   AttemptResponse,
   CreateCycleResponse,
 } from '@/lib/validations/training'
-import type { XpData } from '@/hooks/use-xp'
-import { getLevelProgress, getLevelTitle } from '@/lib/xp'
 
 interface UseTrainingSessionOptions {
   puzzleSetId: string
@@ -29,6 +27,14 @@ type PuzzleResponse = NextPuzzleResponse & {
     puzzle: NextPuzzleResponse['puzzle']
     puzzleInSet: NextPuzzleResponse['puzzleInSet']
   } | null
+}
+
+type UserCacheData = {
+  user: {
+    totalXp?: number
+    currentLevel?: number
+    weeklyXp?: number
+  } & Record<string, unknown>
 }
 
 interface UseTrainingSessionReturn {
@@ -85,6 +91,7 @@ export function useTrainingSession(
 ): UseTrainingSessionReturn {
   const { puzzleSetId, cycleId } = options
   const queryClient = useQueryClient()
+  const nextPuzzleQueryKey = ['next-puzzle', puzzleSetId, cycleId] as const
 
   // Track transitioning state (between recording attempt and showing next puzzle)
   const [isTransitioning, setIsTransitioning] = useState(false)
@@ -145,7 +152,7 @@ export function useTrainingSession(
       wasSkipped: boolean
       movesPlayed: string[]
     },
-    { previousData: PuzzleResponse | undefined }
+    { previousData: PuzzleResponse | undefined; usedPrefetchedNext: boolean }
   >({
     mutationFn: async ({ puzzleInSetId, timeSpent, isCorrect, wasSkipped, movesPlayed }) => {
       if (!cycleId) {
@@ -176,10 +183,11 @@ export function useTrainingSession(
       setIsTransitioning(true)
 
       // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ['next-puzzle', puzzleSetId, cycleId] })
+      await queryClient.cancelQueries({ queryKey: nextPuzzleQueryKey })
 
       // Snapshot the previous value
-      const previousData = queryClient.getQueryData<PuzzleResponse>(['next-puzzle', puzzleSetId, cycleId])
+      const previousData = queryClient.getQueryData<PuzzleResponse>(nextPuzzleQueryKey)
+      const usedPrefetchedNext = !!(prefetchedRef.current && previousData)
 
       // If we have prefetched data, optimistically update to it
       if (prefetchedRef.current && previousData) {
@@ -194,31 +202,44 @@ export function useTrainingSession(
           isCycleComplete: false,
           prefetchedNext: null, // Will be fetched with the real request
         }
-        queryClient.setQueryData(['next-puzzle', puzzleSetId, cycleId], optimisticData)
+        queryClient.setQueryData(nextPuzzleQueryKey, optimisticData)
         // Clear the prefetch ref since we used it
         prefetchedRef.current = null
       }
 
-      return { previousData }
+      return { previousData, usedPrefetchedNext }
     },
-    onSuccess: (data) => {
+    onSuccess: (data, _variables, context) => {
       // Optimistically update XP cache for instant sidebar refresh
       if (data.xp) {
-        queryClient.setQueryData<XpData>(['xp'], (oldData) => ({
-          totalXp: data.xp!.newTotal,
-          currentLevel: data.xp!.newLevel,
-          weeklyXp: oldData?.weeklyXp ?? 0,
-          levelProgress: getLevelProgress(data.xp!.newTotal),
-          levelTitle: getLevelTitle(data.xp!.newLevel),
-        }))
+        const xp = data.xp
+        queryClient.setQueryData<UserCacheData>(['user'], (oldData) => {
+          if (!oldData?.user) {
+            return oldData
+          }
+
+          return {
+            ...oldData,
+            user: {
+              ...oldData.user,
+              totalXp: xp.newTotal,
+              currentLevel: xp.newLevel,
+              weeklyXp:
+                (typeof oldData.user.weeklyXp === 'number' ? oldData.user.weeklyXp : 0) +
+                xp.gained,
+            },
+          }
+        })
       }
 
-      // Refetch to get the real data and next prefetch
-      queryClient.invalidateQueries({ queryKey: ['next-puzzle', puzzleSetId, cycleId] })
+      // Only refetch next puzzle when optimistic prefetch wasn't available,
+      // or when cycle completion needs server-confirmed state.
+      if (data.isLastPuzzle || !context?.usedPrefetchedNext) {
+        queryClient.invalidateQueries({ queryKey: nextPuzzleQueryKey })
+      }
 
       // Full invalidation at end of cycle to ensure accuracy
       if (data.isLastPuzzle) {
-        queryClient.invalidateQueries({ queryKey: ['xp'] })
         queryClient.invalidateQueries({ queryKey: ['user'] })
       }
 
@@ -237,7 +258,7 @@ export function useTrainingSession(
     onError: (error, _variables, context) => {
       // Rollback on error
       if (context?.previousData) {
-        queryClient.setQueryData(['next-puzzle', puzzleSetId, cycleId], context.previousData)
+        queryClient.setQueryData(nextPuzzleQueryKey, context.previousData)
       }
       // Clear transitioning on error
       setIsTransitioning(false)

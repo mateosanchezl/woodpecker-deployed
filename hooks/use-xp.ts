@@ -33,16 +33,17 @@ export interface XpData {
  * Hook for fetching the current user's XP and level data.
  */
 export function useXp() {
-  return useQuery<XpData>({
-    queryKey: ['xp'],
+  return useQuery<UserData, Error, XpData>({
+    queryKey: ['user'],
     queryFn: async () => {
       const res = await fetch('/api/user')
       if (!res.ok) {
         const error = await res.json()
         throw new Error(error.error || 'Failed to fetch XP data')
       }
-
-      const data: UserData = await res.json()
+      return res.json()
+    },
+    select: (data) => {
       const { totalXp, currentLevel, weeklyXp } = data.user
 
       return {

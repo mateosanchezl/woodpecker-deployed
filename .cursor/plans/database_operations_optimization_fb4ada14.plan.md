@@ -3,14 +3,14 @@ name: Database Operations Optimization
 overview: Drastically reduce Prisma database operations by overhauling the achievement engine (the single biggest offender at 15-50+ queries per puzzle attempt), eliminating redundant user lookups, fixing duplicate client-side API calls, and optimizing heavy data-loading routes.
 todos:
   - id: achievement-engine
-    content: "Replace achievement engine with single CTE query (2-3 DB ops total). Rising-star moved to leaderboard. Weekly XP bug fix in attempt context."
+    content: Replace achievement engine with single CTE query (2-3 DB ops total). Rising-star moved to leaderboard. Weekly XP bug fix in attempt context.
     status: completed
   - id: attempt-route
     content: "Optimize attempt recording route: parallelize pre-checks, remove full puzzle list load, pass user data to achievements"
     status: completed
   - id: client-duplicates
     content: "Fix client-side: merge useXp into ['user'] cache, increase stale times, replace next-puzzle invalidation with setQueryData"
-    status: pending
+    status: completed
   - id: heavy-routes
     content: "Optimize heavy routes: next-puzzle (load 2 not all), progress (aggregation), review (DB-level filtering)"
     status: pending
@@ -45,13 +45,11 @@ flowchart TD
 
 ---
 
-## Priority 1: Achievement Engine -- Replace with Single Raw SQL Query (Biggest Win) — **IMPLEMENTED**
+## Priority 1: Achievement Engine -- Replace with Single Raw SQL Query (Biggest Win)
 
 **Files:** `[lib/achievements/engine.ts](lib/achievements/engine.ts)`, `[lib/achievements/index.ts](lib/achievements/index.ts)`
 
-**Status:** Done. Engine uses `checkAllAchievements()` with 2-3 DB ops (unlocked IDs, single CTE, createMany). Rising-star checked in leaderboard route. Weekly XP in achievement context fixed to respect weekly reset.
-
-**Original problem:** Every puzzle attempt fires 15-50+ individual DB queries across 3 separate check functions (`checkAchievementsAfterAttempt`, `checkAchievementsAfterCycleComplete`, `checkAchievementsAfterStreakUpdate`), each loading unlocked IDs independently, each querying the user table independently, with a 17-theme loop that fires 34 count queries.
+**Current problem:** Every puzzle attempt fires 15-50+ individual DB queries across 3 separate check functions (`checkAchievementsAfterAttempt`, `checkAchievementsAfterCycleComplete`, `checkAchievementsAfterStreakUpdate`), each loading unlocked IDs independently, each querying the user table independently, with a 17-theme loop that fires 34 count queries.
 
 ### New Architecture: 3 queries total (down from 15-50+)
 

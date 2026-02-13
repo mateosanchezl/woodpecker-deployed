@@ -14,6 +14,22 @@ import {
 
 export function ThemeToggle() {
   const { setTheme } = useTheme()
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Defer Radix dropdown until after mount to avoid hydration mismatch:
+  // Radix generates IDs that can differ between server and client.
+  if (!mounted) {
+    return (
+      <Button variant="ghost" size="icon" aria-label="Toggle theme">
+        <Sun className="h-[1.2rem] w-[1.2rem]" />
+        <span className="sr-only">Toggle theme</span>
+      </Button>
+    )
+  }
 
   return (
     <DropdownMenu>

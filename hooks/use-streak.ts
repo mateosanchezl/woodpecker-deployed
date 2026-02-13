@@ -17,6 +17,6 @@ export function useStreak() {
       }
       return res.json()
     },
-    staleTime: 60000, // 1 minute - streaks don't change frequently within a session
+    staleTime: 300000, // 5 minutes - streak only changes once per day
   })
 }

@@ -21,6 +21,6 @@ export function useProgressData(puzzleSetId: string | null) {
       return res.json()
     },
     enabled: !!puzzleSetId,
-    staleTime: 30000, // 30 seconds - progress data doesn't change frequently
+    staleTime: 120000, // 2 minutes - progress only changes after attempts
   })
 }

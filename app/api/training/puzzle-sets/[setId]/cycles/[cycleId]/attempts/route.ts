@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { attemptSchema } from "@/lib/validations/training";
 import { calculateStreakUpdate, getTodayUTC } from "@/lib/streak";
 import { getISOWeekStart, isSameISOWeek } from "@/lib/leaderboard";
 import {
   checkAllAchievements,
-  type UnlockedAchievement,
+  checkFastAchievements,
   type AchievementContext,
 } from "@/lib/achievements";
 import {
@@ -16,6 +17,10 @@ import {
   getLevelFromXp,
   type XpGainResult,
 } from "@/lib/xp";
+import {
+  buildTrainingSessionPayload,
+} from "@/lib/training/session";
+import { withRouteMetrics } from "@/lib/metrics/request-metrics";
 
 interface RouteContext {
   params: Promise<{ setId: string; cycleId: string }>;
@@ -23,425 +28,491 @@ interface RouteContext {
 
 /**
  * POST /api/training/puzzle-sets/[setId]/cycles/[cycleId]/attempts
- * Records a puzzle attempt.
+ * Records a puzzle attempt and returns updated session state.
  */
 export async function POST(request: NextRequest, context: RouteContext) {
-  try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  return withRouteMetrics("training.attempts.post", async () => {
+    try {
+      const { userId: clerkId } = await auth();
+      if (!clerkId) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
 
-    const { setId, cycleId } = await context.params;
+      const { setId, cycleId } = await context.params;
 
-    // Parse and validate request body
-    const body = await request.json();
-    const validation = attemptSchema.safeParse(body);
-    if (!validation.success) {
-      return NextResponse.json(
-        { error: "Invalid request body", details: validation.error.message },
-        { status: 400 },
-      );
-    }
+      const body = await request.json();
+      const validation = attemptSchema.safeParse(body);
+      if (!validation.success) {
+        return NextResponse.json(
+          { error: "Invalid request body", details: validation.error.message },
+          { status: 400 },
+        );
+      }
 
-    const { puzzleInSetId, timeSpent, isCorrect, wasSkipped, movesPlayed } =
-      validation.data;
+      const { puzzleInSetId, timeSpent, isCorrect, wasSkipped, movesPlayed } =
+        validation.data;
+      const now = new Date();
 
-    // Get the user (select only fields needed for this route)
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-      select: {
-        id: true,
-        totalCorrectAttempts: true,
-        weeklyCorrectAttempts: true,
-        weeklyCorrectStartDate: true,
-        totalXp: true,
-        weeklyXp: true,
-        weeklyXpStartDate: true,
-        currentStreak: true,
-        longestStreak: true,
-        lastTrainedDate: true,
-      },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    // Run all pre-checks in parallel (4 queries, 1 DB round trip)
-    const [puzzleInSet, cycle, existingAttempt, puzzleSetOwnership] =
-      await Promise.all([
-        prisma.puzzleInSet.findUnique({
-          where: { id: puzzleInSetId },
-          include: {
-            puzzle: {
-              select: { themes: true, rating: true },
-            },
-            attempts: {
-              orderBy: { attemptedAt: "desc" as const },
-              take: 1,
-              select: { isCorrect: true, timeSpent: true },
+      const result = await prisma.$transaction(async (tx) => {
+        const cycleWithUser = await tx.cycle.findFirst({
+          where: {
+            id: cycleId,
+            puzzleSetId: setId,
+            puzzleSet: {
+              user: { clerkId },
             },
           },
-        }),
-        prisma.cycle.findUnique({
+          select: {
+            id: true,
+            puzzleSetId: true,
+            cycleNumber: true,
+            totalPuzzles: true,
+            solvedCorrect: true,
+            solvedIncorrect: true,
+            skipped: true,
+            totalTime: true,
+            completedAt: true,
+            nextPosition: true,
+            attemptedCount: true,
+            puzzleSet: {
+              select: {
+                id: true,
+                user: {
+                  select: {
+                    id: true,
+                    totalCorrectAttempts: true,
+                    weeklyCorrectAttempts: true,
+                    weeklyCorrectStartDate: true,
+                    totalXp: true,
+                    weeklyXp: true,
+                    weeklyXpStartDate: true,
+                    currentStreak: true,
+                    longestStreak: true,
+                    lastTrainedDate: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        if (!cycleWithUser) {
+          return { status: "not_found" as const };
+        }
+
+        if (
+          cycleWithUser.completedAt !== null ||
+          cycleWithUser.nextPosition > cycleWithUser.totalPuzzles
+        ) {
+          return { status: "cycle_complete" as const };
+        }
+
+        const expectedPuzzleInSet = await tx.puzzleInSet.findUnique({
+          where: {
+            puzzleSetId_position: {
+              puzzleSetId: setId,
+              position: cycleWithUser.nextPosition,
+            },
+          },
+          select: {
+            id: true,
+            position: true,
+            totalAttempts: true,
+            correctAttempts: true,
+            averageTime: true,
+            lastAttemptIsCorrect: true,
+            lastAttemptTime: true,
+            puzzle: {
+              select: {
+                id: true,
+                fen: true,
+                moves: true,
+                rating: true,
+                themes: true,
+              },
+            },
+          },
+        });
+
+        if (!expectedPuzzleInSet) {
+          return { status: "expected_puzzle_missing" as const };
+        }
+
+        if (expectedPuzzleInSet.id !== puzzleInSetId) {
+          return {
+            status: "stale_attempt" as const,
+            expectedPuzzleInSetId: expectedPuzzleInSet.id,
+          };
+        }
+
+        let attempt;
+        try {
+          attempt = await tx.attempt.create({
+            data: {
+              cycleId,
+              puzzleInSetId,
+              timeSpent,
+              isCorrect,
+              wasSkipped,
+              movesPlayed,
+            },
+            select: {
+              id: true,
+              timeSpent: true,
+              isCorrect: true,
+              wasSkipped: true,
+            },
+          });
+        } catch (error) {
+          if (
+            error instanceof Prisma.PrismaClientKnownRequestError &&
+            error.code === "P2002"
+          ) {
+            return { status: "duplicate_attempt" as const };
+          }
+          throw error;
+        }
+
+        const newTotalAttempts = expectedPuzzleInSet.totalAttempts + 1;
+        const newCorrectAttempts = isCorrect
+          ? expectedPuzzleInSet.correctAttempts + 1
+          : expectedPuzzleInSet.correctAttempts;
+        const currentTotalTime =
+          (expectedPuzzleInSet.averageTime ?? 0) *
+          expectedPuzzleInSet.totalAttempts;
+        const newAverageTime = (currentTotalTime + timeSpent) / newTotalAttempts;
+
+        await tx.puzzleInSet.update({
+          where: { id: expectedPuzzleInSet.id },
+          data: {
+            totalAttempts: newTotalAttempts,
+            correctAttempts: newCorrectAttempts,
+            averageTime: newAverageTime,
+            lastAttemptIsCorrect: isCorrect,
+            lastAttemptTime: timeSpent,
+            lastAttemptAt: now,
+          },
+        });
+
+        const nextAttemptedCount = cycleWithUser.attemptedCount + 1;
+        const isLastPuzzle = nextAttemptedCount >= cycleWithUser.totalPuzzles;
+        const nextPosition = Math.min(
+          cycleWithUser.totalPuzzles + 1,
+          cycleWithUser.nextPosition + 1,
+        );
+
+        const updatedCycle = await tx.cycle.update({
           where: { id: cycleId },
-        }),
-        prisma.attempt.findFirst({
-          where: { cycleId, puzzleInSetId },
-        }),
-        prisma.puzzleSet.findFirst({
-          where: { id: setId, userId: user.id },
-          select: { id: true },
-        }),
-      ]);
+          data: {
+            solvedCorrect: isCorrect ? { increment: 1 } : undefined,
+            solvedIncorrect:
+              !wasSkipped && !isCorrect ? { increment: 1 } : undefined,
+            skipped: wasSkipped ? { increment: 1 } : undefined,
+            totalTime: (cycleWithUser.totalTime ?? 0) + timeSpent,
+            attemptedCount: nextAttemptedCount,
+            nextPosition,
+            completedAt: isLastPuzzle ? now : undefined,
+          },
+          select: {
+            id: true,
+            cycleNumber: true,
+            totalPuzzles: true,
+            solvedCorrect: true,
+            solvedIncorrect: true,
+            skipped: true,
+            totalTime: true,
+            attemptedCount: true,
+            nextPosition: true,
+            completedAt: true,
+            puzzleSetId: true,
+          },
+        });
 
-    // Validate puzzle set ownership (covers both "not found" and "not owned")
-    if (!puzzleSetOwnership) {
-      return NextResponse.json(
-        { error: "Puzzle set not found" },
-        { status: 404 },
-      );
-    }
+        const user = cycleWithUser.puzzleSet.user;
+        const streakResult = calculateStreakUpdate(
+          user.lastTrainedDate,
+          user.currentStreak,
+          user.longestStreak,
+          now,
+        );
 
-    // Validate cycle
-    if (!cycle) {
-      return NextResponse.json({ error: "Cycle not found" }, { status: 404 });
-    }
+        const userUpdateData: {
+          currentStreak?: number;
+          longestStreak?: number;
+          lastTrainedDate?: Date;
+          streakUpdatedAt?: Date;
+          totalCorrectAttempts?: { increment: number };
+          weeklyCorrectAttempts?: number | { increment: number };
+          weeklyCorrectStartDate?: Date;
+          totalXp?: number;
+          currentLevel?: number;
+          weeklyXp?: number | { increment: number };
+          weeklyXpStartDate?: Date;
+        } = {};
 
-    if (cycle.puzzleSetId !== setId) {
-      return NextResponse.json(
-        { error: "Cycle does not belong to this puzzle set" },
-        { status: 400 },
-      );
-    }
+        if (streakResult.streakIncremented) {
+          userUpdateData.currentStreak = streakResult.newStreak;
+          userUpdateData.longestStreak = streakResult.newLongestStreak;
+          userUpdateData.lastTrainedDate = getTodayUTC();
+          userUpdateData.streakUpdatedAt = now;
+        }
 
-    // Validate puzzleInSet
-    if (!puzzleInSet) {
-      return NextResponse.json(
-        { error: "Puzzle not found in set" },
-        { status: 404 },
-      );
-    }
+        if (isCorrect) {
+          userUpdateData.totalCorrectAttempts = { increment: 1 };
 
-    if (puzzleInSet.puzzleSetId !== setId) {
-      return NextResponse.json(
-        { error: "Puzzle does not belong to this set" },
-        { status: 400 },
-      );
-    }
+          const currentWeekStart = getISOWeekStart(now);
+          const needsWeeklyReset =
+            !user.weeklyCorrectStartDate ||
+            !isSameISOWeek(user.weeklyCorrectStartDate, now);
 
-    // Reject duplicate attempts
-    if (existingAttempt) {
-      return NextResponse.json(
-        { error: "Attempt already recorded for this puzzle in this cycle" },
-        { status: 400 },
-      );
-    }
+          userUpdateData.weeklyCorrectAttempts = needsWeeklyReset
+            ? 1
+            : { increment: 1 };
+          userUpdateData.weeklyCorrectStartDate = currentWeekStart;
+        }
 
-    // Use a transaction to update all related records atomically
-    const result = await prisma.$transaction(async (tx) => {
-      // Create the attempt
-      const attempt = await tx.attempt.create({
-        data: {
-          cycleId,
-          puzzleInSetId,
-          timeSpent,
+        const previousAttempt =
+          expectedPuzzleInSet.lastAttemptIsCorrect !== null &&
+          expectedPuzzleInSet.lastAttemptTime !== null
+            ? {
+                isCorrect: expectedPuzzleInSet.lastAttemptIsCorrect,
+                timeSpentMs: expectedPuzzleInSet.lastAttemptTime,
+              }
+            : undefined;
+
+        const puzzleXpResult = calculatePuzzleAttemptXp({
           isCorrect,
-          wasSkipped,
-          movesPlayed,
-        },
-      });
+          timeSpentMs: timeSpent,
+          puzzleRating: expectedPuzzleInSet.puzzle.rating,
+          currentStreak: streakResult.streakIncremented
+            ? streakResult.newStreak
+            : user.currentStreak,
+          isFirstAttempt: expectedPuzzleInSet.totalAttempts === 0,
+          previousAttempt,
+          currentTotalXp: user.totalXp,
+        });
 
-      // Update PuzzleInSet aggregate stats
-      const newTotalAttempts = puzzleInSet.totalAttempts + 1;
-      const newCorrectAttempts = isCorrect
-        ? puzzleInSet.correctAttempts + 1
-        : puzzleInSet.correctAttempts;
+        let cycleXpResult: XpGainResult | null = null;
+        if (isLastPuzzle) {
+          cycleXpResult = calculateCycleCompleteXp({
+            solvedCorrect: updatedCycle.solvedCorrect,
+            totalPuzzles: updatedCycle.totalPuzzles,
+            currentTotalXp: puzzleXpResult.newTotalXp,
+          });
+        }
 
-      // Calculate new average time
-      const currentTotal =
-        (puzzleInSet.averageTime || 0) * puzzleInSet.totalAttempts;
-      const newAverageTime = (currentTotal + timeSpent) / newTotalAttempts;
+        const xpGains = cycleXpResult
+          ? combineXpGains([puzzleXpResult, cycleXpResult])
+          : puzzleXpResult;
 
-      await tx.puzzleInSet.update({
-        where: { id: puzzleInSetId },
-        data: {
-          totalAttempts: newTotalAttempts,
-          correctAttempts: newCorrectAttempts,
-          averageTime: newAverageTime,
-        },
-      });
+        if (xpGains.totalXp > 0) {
+          userUpdateData.totalXp = xpGains.newTotalXp;
+          userUpdateData.currentLevel = getLevelFromXp(xpGains.newTotalXp);
 
-      // Update cycle stats
-      const cycleUpdateData: {
-        solvedCorrect?: { increment: number };
-        solvedIncorrect?: { increment: number };
-        skipped?: { increment: number };
-        totalTime?: number;
-        completedAt?: Date;
-      } = {};
+          const currentWeekStart = getISOWeekStart(now);
+          const needsWeeklyXpReset =
+            !user.weeklyXpStartDate ||
+            !isSameISOWeek(user.weeklyXpStartDate, now);
 
-      if (wasSkipped) {
-        cycleUpdateData.skipped = { increment: 1 };
-      } else if (isCorrect) {
-        cycleUpdateData.solvedCorrect = { increment: 1 };
-      } else {
-        cycleUpdateData.solvedIncorrect = { increment: 1 };
-      }
+          userUpdateData.weeklyXp = needsWeeklyXpReset
+            ? xpGains.totalXp
+            : { increment: xpGains.totalXp };
+          userUpdateData.weeklyXpStartDate = currentWeekStart;
+        }
 
-      // Update total time
-      const newTotalTime = (cycle.totalTime || 0) + timeSpent;
-      cycleUpdateData.totalTime = newTotalTime;
+        if (Object.keys(userUpdateData).length > 0) {
+          await tx.user.update({
+            where: { id: user.id },
+            data: userUpdateData,
+          });
+        }
 
-      // Check if this is the last puzzle
-      const totalAttempts =
-        cycle.solvedCorrect + cycle.solvedIncorrect + cycle.skipped + 1; // +1 for current attempt
+        await tx.puzzleSet.update({
+          where: { id: cycleWithUser.puzzleSet.id },
+          data: { lastTrainedAt: now },
+        });
 
-      const isLastPuzzle = totalAttempts >= cycle.totalPuzzles;
-      if (isLastPuzzle) {
-        cycleUpdateData.completedAt = new Date();
-      }
+        const upcomingPuzzles = isLastPuzzle
+          ? []
+          : await tx.puzzleInSet.findMany({
+              where: {
+                puzzleSetId: setId,
+                position: { gte: updatedCycle.nextPosition },
+              },
+              orderBy: { position: "asc" },
+              take: 2,
+              select: {
+                id: true,
+                position: true,
+                totalAttempts: true,
+                correctAttempts: true,
+                averageTime: true,
+                puzzle: {
+                  select: {
+                    id: true,
+                    fen: true,
+                    moves: true,
+                    rating: true,
+                    themes: true,
+                  },
+                },
+              },
+            });
 
-      const updatedCycle = await tx.cycle.update({
-        where: { id: cycleId },
-        data: cycleUpdateData,
-      });
+        const session = buildTrainingSessionPayload(updatedCycle, upcomingPuzzles);
 
-      // Update user's streak
-      const streakResult = calculateStreakUpdate(
-        user.lastTrainedDate,
-        user.currentStreak,
-        user.longestStreak,
-      );
-
-      // Build user update data
-      const userUpdateData: {
-        currentStreak?: number;
-        longestStreak?: number;
-        lastTrainedDate?: Date;
-        streakUpdatedAt?: Date;
-        totalCorrectAttempts?: { increment: number };
-        weeklyCorrectAttempts?: number | { increment: number };
-        weeklyCorrectStartDate?: Date;
-        totalXp?: number;
-        currentLevel?: number;
-        weeklyXp?: number | { increment: number };
-        weeklyXpStartDate?: Date;
-      } = {};
-
-      // Only update streak if it changed (i.e., first attempt of the day)
-      if (streakResult.streakIncremented) {
-        userUpdateData.currentStreak = streakResult.newStreak;
-        userUpdateData.longestStreak = streakResult.newLongestStreak;
-        userUpdateData.lastTrainedDate = getTodayUTC();
-        userUpdateData.streakUpdatedAt = new Date();
-      }
-
-      // Update leaderboard stats if correct attempt
-      if (isCorrect) {
-        userUpdateData.totalCorrectAttempts = { increment: 1 };
-
-        const currentWeekStart = getISOWeekStart(new Date());
-        const needsWeeklyReset =
+        const needsWeeklyResetForAch =
           !user.weeklyCorrectStartDate ||
-          !isSameISOWeek(user.weeklyCorrectStartDate, new Date());
+          !isSameISOWeek(user.weeklyCorrectStartDate, now);
+        const postTxTotalCorrect = isCorrect
+          ? user.totalCorrectAttempts + 1
+          : user.totalCorrectAttempts;
+        const postTxWeeklyCorrect = !isCorrect
+          ? needsWeeklyResetForAch
+            ? 0
+            : user.weeklyCorrectAttempts
+          : needsWeeklyResetForAch
+            ? 1
+            : user.weeklyCorrectAttempts + 1;
+        const needsWeeklyXpResetForAch =
+          !user.weeklyXpStartDate || !isSameISOWeek(user.weeklyXpStartDate, now);
+        const postTxWeeklyXp =
+          xpGains.totalXp === 0
+            ? needsWeeklyXpResetForAch
+              ? 0
+              : user.weeklyXp
+            : needsWeeklyXpResetForAch
+              ? xpGains.totalXp
+              : user.weeklyXp + xpGains.totalXp;
 
-        if (needsWeeklyReset) {
-          userUpdateData.weeklyCorrectAttempts = 1;
-        } else {
-          userUpdateData.weeklyCorrectAttempts = { increment: 1 };
-        }
-        userUpdateData.weeklyCorrectStartDate = currentWeekStart;
-      }
-
-      // Calculate XP for this puzzle attempt
-      const previousAttempt = puzzleInSet.attempts[0];
-      const puzzleXpResult = calculatePuzzleAttemptXp({
-        isCorrect,
-        timeSpentMs: timeSpent,
-        puzzleRating: puzzleInSet.puzzle.rating,
-        currentStreak: streakResult.streakIncremented
-          ? streakResult.newStreak
-          : user.currentStreak,
-        isFirstAttempt: puzzleInSet.totalAttempts === 0,
-        previousAttempt: previousAttempt
-          ? {
-              isCorrect: previousAttempt.isCorrect,
-              timeSpentMs: previousAttempt.timeSpent,
-            }
-          : undefined,
-        currentTotalXp: user.totalXp,
+        return {
+          status: "ok" as const,
+          attempt,
+          updatedCycle,
+          isLastPuzzle,
+          streakResult,
+          xpGains,
+          session,
+          achievementContext: {
+            userId: user.id,
+            attempt: {
+              isCorrect,
+              timeSpentMs: timeSpent,
+              attemptedAt: now,
+              puzzleThemes: expectedPuzzleInSet.puzzle.themes,
+              puzzleRating: expectedPuzzleInSet.puzzle.rating,
+            },
+            user: {
+              totalCorrectAttempts: postTxTotalCorrect,
+              weeklyCorrectAttempts: postTxWeeklyCorrect,
+              totalXp: xpGains.newTotalXp,
+              weeklyXp: postTxWeeklyXp,
+            },
+            cycleComplete: isLastPuzzle
+              ? {
+                  puzzleSetId: setId,
+                  cycleNumber: updatedCycle.cycleNumber,
+                  accuracy:
+                    (updatedCycle.solvedCorrect / updatedCycle.totalPuzzles) *
+                    100,
+                  totalPuzzles: updatedCycle.totalPuzzles,
+                  correctPuzzles: updatedCycle.solvedCorrect,
+                }
+              : undefined,
+            streak: streakResult.streakIncremented
+              ? {
+                  currentStreak: streakResult.newStreak,
+                  longestStreak: streakResult.newLongestStreak,
+                }
+              : undefined,
+          } satisfies AchievementContext,
+        };
       });
 
-      // Calculate cycle completion XP if this is the last puzzle
-      let cycleXpResult: XpGainResult | null = null;
-      if (isLastPuzzle) {
-        const updatedCorrect = isCorrect
-          ? updatedCycle.solvedCorrect
-          : updatedCycle.solvedCorrect;
-        cycleXpResult = calculateCycleCompleteXp({
-          solvedCorrect: updatedCorrect,
-          totalPuzzles: updatedCycle.totalPuzzles,
-          currentTotalXp: puzzleXpResult.newTotalXp,
+      if (result.status === "not_found") {
+        return NextResponse.json({ error: "Cycle not found" }, { status: 404 });
+      }
+
+      if (result.status === "cycle_complete") {
+        return NextResponse.json(
+          { error: "Cycle already complete. Refresh session state." },
+          { status: 409 },
+        );
+      }
+
+      if (result.status === "expected_puzzle_missing") {
+        return NextResponse.json(
+          { error: "Expected puzzle not found for current cycle position." },
+          { status: 409 },
+        );
+      }
+
+      if (result.status === "stale_attempt") {
+        return NextResponse.json(
+          {
+            error: "Attempt is out of date. Refresh session state.",
+            expectedPuzzleInSetId: result.expectedPuzzleInSetId,
+          },
+          { status: 409 },
+        );
+      }
+
+      if (result.status === "duplicate_attempt") {
+        return NextResponse.json(
+          { error: "Attempt already recorded for this puzzle in this cycle." },
+          { status: 409 },
+        );
+      }
+
+      const {
+        newlyUnlocked: immediateUnlocks,
+      } = await checkFastAchievements(result.achievementContext);
+
+      if (result.isLastPuzzle) {
+        checkAllAchievements(result.achievementContext).catch((error) => {
+          console.error("Deferred heavy achievement check failed:", error);
         });
       }
 
-      // Combine XP gains
-      const xpGains = cycleXpResult
-        ? combineXpGains([puzzleXpResult, cycleXpResult])
-        : puzzleXpResult;
-
-      // Update XP if any was earned
-      if (xpGains.totalXp > 0) {
-        userUpdateData.totalXp = xpGains.newTotalXp;
-        userUpdateData.currentLevel = getLevelFromXp(xpGains.newTotalXp);
-
-        // Update weekly XP
-        const currentWeekStart = getISOWeekStart(new Date());
-        const needsWeeklyXpReset =
-          !user.weeklyXpStartDate ||
-          !isSameISOWeek(user.weeklyXpStartDate, new Date());
-
-        if (needsWeeklyXpReset) {
-          userUpdateData.weeklyXp = xpGains.totalXp;
-        } else {
-          userUpdateData.weeklyXp = { increment: xpGains.totalXp };
-        }
-        userUpdateData.weeklyXpStartDate = currentWeekStart;
-      }
-
-      // Update user if there are any changes
-      if (Object.keys(userUpdateData).length > 0) {
-        await tx.user.update({
-          where: { id: user.id },
-          data: userUpdateData,
-        });
-      }
-
-      return {
-        attempt,
-        updatedCycle,
-        isLastPuzzle,
-        streakResult,
-        xpGains,
-      };
-    });
-
-    // Check achievements (outside transaction for performance)
-    // Build post-transaction user counters for achievement context
-    const postTxTotalCorrect = isCorrect
-      ? user.totalCorrectAttempts + 1
-      : user.totalCorrectAttempts;
-
-    const currentWeekStartForAch = getISOWeekStart(new Date());
-    const needsWeeklyResetForAch =
-      !user.weeklyCorrectStartDate ||
-      !isSameISOWeek(user.weeklyCorrectStartDate, new Date());
-    const postTxWeeklyCorrect = !isCorrect
-      ? needsWeeklyResetForAch
-        ? 0
-        : user.weeklyCorrectAttempts
-      : needsWeeklyResetForAch
-        ? 1
-        : user.weeklyCorrectAttempts + 1;
-
-    const needsWeeklyXpResetForAch =
-      !user.weeklyXpStartDate ||
-      !isSameISOWeek(user.weeklyXpStartDate, new Date());
-    const postTxWeeklyXp =
-      result.xpGains.totalXp === 0
-        ? needsWeeklyXpResetForAch
-          ? 0
-          : user.weeklyXp
-        : needsWeeklyXpResetForAch
-          ? result.xpGains.totalXp
-          : user.weeklyXp + result.xpGains.totalXp;
-
-    const achievementCtx: AchievementContext = {
-      userId: user.id,
-      attempt: {
-        isCorrect,
-        timeSpentMs: timeSpent,
-        attemptedAt: new Date(),
-        puzzleThemes: puzzleInSet.puzzle.themes,
-        puzzleRating: puzzleInSet.puzzle.rating,
-      },
-      user: {
-        totalCorrectAttempts: postTxTotalCorrect,
-        weeklyCorrectAttempts: postTxWeeklyCorrect,
-        totalXp: result.xpGains.newTotalXp,
-        weeklyXp: postTxWeeklyXp,
-      },
-    };
-
-    // Add cycle-complete context if this was the last puzzle
-    if (result.isLastPuzzle) {
-      const cycleAccuracy =
-        (result.updatedCycle.solvedCorrect / result.updatedCycle.totalPuzzles) *
-        100;
-      achievementCtx.cycleComplete = {
-        puzzleSetId: setId,
-        cycleNumber: cycle.cycleNumber,
-        accuracy: cycleAccuracy,
-        totalPuzzles: result.updatedCycle.totalPuzzles,
-        correctPuzzles: result.updatedCycle.solvedCorrect,
-      };
+      return NextResponse.json({
+        attempt: result.attempt,
+        cycleStats: {
+          solvedCorrect: result.updatedCycle.solvedCorrect,
+          solvedIncorrect: result.updatedCycle.solvedIncorrect,
+          skipped: result.updatedCycle.skipped,
+          totalTime: result.updatedCycle.totalTime,
+        },
+        isLastPuzzle: result.isLastPuzzle,
+        streak: {
+          current: result.streakResult.newStreak,
+          longest: result.streakResult.newLongestStreak,
+          incremented: result.streakResult.streakIncremented,
+          broken: result.streakResult.streakBroken,
+          isNewRecord: result.streakResult.isNewRecord,
+        },
+        xp: {
+          gained: result.xpGains.totalXp,
+          breakdown: result.xpGains.breakdown,
+          newTotal: result.xpGains.newTotalXp,
+          previousLevel: result.xpGains.previousLevel,
+          newLevel: result.xpGains.newLevel,
+          leveledUp: result.xpGains.leveledUp,
+        },
+        session: result.session,
+        unlockedAchievements: immediateUnlocks.map((achievement) => ({
+          id: achievement.id,
+          name: achievement.name,
+          description: achievement.description,
+          icon: achievement.icon,
+          unlockedAt: achievement.unlockedAt.toISOString(),
+        })),
+      });
+    } catch (error) {
+      console.error("Error recording attempt:", error);
+      return NextResponse.json(
+        { error: "Internal server error" },
+        { status: 500 },
+      );
     }
-
-    // Add streak context if streak was updated
-    if (result.streakResult.streakIncremented) {
-      achievementCtx.streak = {
-        currentStreak: result.streakResult.newStreak,
-        longestStreak: result.streakResult.newLongestStreak,
-      };
-    }
-
-    const { newlyUnlocked: allUnlockedAchievements } =
-      await checkAllAchievements(achievementCtx);
-
-    return NextResponse.json({
-      attempt: {
-        id: result.attempt.id,
-        timeSpent: result.attempt.timeSpent,
-        isCorrect: result.attempt.isCorrect,
-        wasSkipped: result.attempt.wasSkipped,
-      },
-      cycleStats: {
-        solvedCorrect: result.updatedCycle.solvedCorrect,
-        solvedIncorrect: result.updatedCycle.solvedIncorrect,
-        skipped: result.updatedCycle.skipped,
-        totalTime: result.updatedCycle.totalTime,
-      },
-      isLastPuzzle: result.isLastPuzzle,
-      streak: {
-        current: result.streakResult.newStreak,
-        longest: result.streakResult.newLongestStreak,
-        incremented: result.streakResult.streakIncremented,
-        broken: result.streakResult.streakBroken,
-        isNewRecord: result.streakResult.isNewRecord,
-      },
-      xp: {
-        gained: result.xpGains.totalXp,
-        breakdown: result.xpGains.breakdown,
-        newTotal: result.xpGains.newTotalXp,
-        previousLevel: result.xpGains.previousLevel,
-        newLevel: result.xpGains.newLevel,
-        leveledUp: result.xpGains.leveledUp,
-      },
-      unlockedAchievements: allUnlockedAchievements.map((a) => ({
-        id: a.id,
-        name: a.name,
-        description: a.description,
-        icon: a.icon,
-        unlockedAt: a.unlockedAt.toISOString(),
-      })),
-    });
-  } catch (error) {
-    console.error("Error recording attempt:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
-  }
+  });
 }

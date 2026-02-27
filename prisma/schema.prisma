@@ -114,6 +114,7 @@ model PuzzleSet {
   // Set generation metadata
   createdAt    DateTime    @default(now())
   generatedAt  DateTime    @default(now())
+  lastTrainedAt DateTime?
 
   // Training configuration
   targetCycles Int         @default(5)
@@ -125,6 +126,7 @@ model PuzzleSet {
   cycles       Cycle[]
 
   @@index([userId, isActive])
+  @@index([userId, lastTrainedAt])
   @@index([createdAt])
 }
 
@@ -143,6 +145,9 @@ model PuzzleInSet {
   totalAttempts   Int       @default(0)
   correctAttempts Int       @default(0)
   averageTime     Float?
+  lastAttemptIsCorrect Boolean?
+  lastAttemptTime  Int?
+  lastAttemptAt    DateTime?
 
   // Relations
   attempts        Attempt[]
@@ -169,6 +174,8 @@ model Cycle {
   solvedCorrect   Int       @default(0)
   solvedIncorrect Int       @default(0)
   skipped         Int       @default(0)
+  attemptedCount  Int       @default(0)
+  nextPosition    Int       @default(1)
 
   // Relations
   attempts        Attempt[]
@@ -199,6 +206,7 @@ model Attempt {
   @@index([cycleId])
   @@index([puzzleInSetId])
   @@index([attemptedAt])
+  @@unique([cycleId, puzzleInSetId])
 }
 
 model Achievement {

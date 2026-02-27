@@ -52,6 +52,9 @@ export async function GET() {
         showOnLeaderboard: user.showOnLeaderboard,
         puzzleSetCount: user._count.puzzleSets,
         createdAt: user.createdAt.toISOString(),
+        currentStreak: user.currentStreak,
+        longestStreak: user.longestStreak,
+        lastTrainedDate: user.lastTrainedDate?.toISOString() ?? null,
         // XP & Levelling
         totalXp: user.totalXp,
         currentLevel: user.currentLevel,

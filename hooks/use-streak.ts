@@ -2,21 +2,42 @@
 
 import { useQuery } from '@tanstack/react-query'
 import type { StreakData } from '@/lib/streak'
+import { formatStreakResponse } from '@/lib/streak'
+
+interface UserData {
+  user: {
+    currentStreak: number
+    longestStreak: number
+    lastTrainedDate: string | null
+  }
+}
 
 /**
  * Hook for fetching the current user's streak data.
+ * Uses the shared /api/user cache key to avoid redundant requests.
  */
 export function useStreak() {
-  return useQuery<StreakData>({
-    queryKey: ['streak'],
+  return useQuery<UserData, Error, StreakData>({
+    queryKey: ['user'],
     queryFn: async () => {
-      const res = await fetch('/api/user/streak')
+      const res = await fetch('/api/user')
       if (!res.ok) {
         const error = await res.json()
-        throw new Error(error.error || 'Failed to fetch streak')
+        throw new Error(error.error || 'Failed to fetch user')
       }
       return res.json()
     },
-    staleTime: 300000, // 5 minutes - streak only changes once per day
+    select: (data) => {
+      const lastTrainedDate = data.user.lastTrainedDate
+        ? new Date(data.user.lastTrainedDate)
+        : null
+
+      return formatStreakResponse(
+        data.user.currentStreak,
+        data.user.longestStreak,
+        lastTrainedDate
+      )
+    },
+    staleTime: 60000,
   })
 }

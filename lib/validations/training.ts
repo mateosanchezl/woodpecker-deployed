@@ -54,7 +54,7 @@ export type NextPuzzleQueryParams = z.infer<typeof nextPuzzleQuerySchema>
 /**
  * Response schema for next puzzle endpoint.
  */
-export const nextPuzzleResponseSchema = z.object({
+const sessionPuzzleSchema = z.object({
   puzzle: z.object({
     id: z.string(),
     fen: z.string(),
@@ -69,15 +69,43 @@ export const nextPuzzleResponseSchema = z.object({
     correctAttempts: z.number(),
     averageTime: z.number().nullable(),
   }),
+})
+
+export const trainingSessionSchema = z.object({
+  current: sessionPuzzleSchema.nullable(),
+  prefetchedNext: sessionPuzzleSchema.nullable(),
   progress: z.object({
     currentPosition: z.number(),
     totalPuzzles: z.number(),
     completedInCycle: z.number(),
     cycleNumber: z.number(),
   }),
+  isCycleComplete: z.boolean(),
+  cycleStats: z.object({
+    solvedCorrect: z.number(),
+    solvedIncorrect: z.number(),
+    skipped: z.number(),
+    totalTime: z.number().nullable(),
+  }),
+})
+
+export const nextPuzzleResponseSchema = z.object({
+  puzzle: sessionPuzzleSchema.shape.puzzle.nullable(),
+  puzzleInSet: sessionPuzzleSchema.shape.puzzleInSet.nullable(),
+  progress: trainingSessionSchema.shape.progress,
+  isCycleComplete: z.boolean(),
+  cycleStats: trainingSessionSchema.shape.cycleStats.optional(),
+  prefetchedNext: sessionPuzzleSchema.nullable().optional(),
 })
 
 export type NextPuzzleResponse = z.infer<typeof nextPuzzleResponseSchema>
+export type TrainingSession = z.infer<typeof trainingSessionSchema>
+
+export const trainingSessionResponseSchema = z.object({
+  session: trainingSessionSchema,
+})
+
+export type TrainingSessionResponse = z.infer<typeof trainingSessionResponseSchema>
 
 /**
  * Response schema for recording an attempt.
@@ -96,6 +124,7 @@ export const attemptResponseSchema = z.object({
     totalTime: z.number().nullable(),
   }),
   isLastPuzzle: z.boolean(),
+  session: trainingSessionSchema.optional(),
   streak: z
     .object({
       current: z.number(),
@@ -146,6 +175,7 @@ export const createCycleResponseSchema = z.object({
     totalPuzzles: z.number(),
     startedAt: z.string(),
   }),
+  session: trainingSessionSchema.optional(),
 })
 
 export type CreateCycleResponse = z.infer<typeof createCycleResponseSchema>

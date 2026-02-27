@@ -11,27 +11,20 @@ export async function DELETE(
   { params }: { params: Promise<{ setId: string }> }
 ) {
   try {
-    const { userId } = await auth()
-    if (!userId) {
+    const { userId: clerkId } = await auth()
+    if (!clerkId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { setId } = await params
 
-    // Get the user's database ID from their Clerk ID
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
     // Verify the puzzle set exists and belongs to this user
     const puzzleSet = await prisma.puzzleSet.findFirst({
       where: {
         id: setId,
-        userId: user.id,
+        user: {
+          clerkId,
+        },
       },
     })
 

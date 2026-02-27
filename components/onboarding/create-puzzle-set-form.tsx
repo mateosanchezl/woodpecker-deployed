@@ -34,13 +34,6 @@ interface CreatePuzzleSetFormProps {
   isSubmitting?: boolean
 }
 
-const SIZE_PRESETS = [
-  { value: 100, label: '100', description: 'Quick set (~30 min/cycle)' },
-  { value: 150, label: '150', description: 'Standard (~45 min/cycle)' },
-  { value: 200, label: '200', description: 'Extended (~1 hr/cycle)' },
-  { value: 300, label: '300', description: 'Intensive (~1.5 hr/cycle)' },
-]
-
 const CYCLE_PRESETS = [
   { value: 3, label: '3 cycles', description: 'Minimum effective' },
   { value: 5, label: '5 cycles', description: 'Recommended' },
@@ -176,31 +169,20 @@ export function CreatePuzzleSetForm({
 
           {/* Set Size */}
           <div className="space-y-4">
-            <Label>Set size</Label>
-            <RadioGroup
-              value={size.toString()}
-              onValueChange={(value) => setSize(parseInt(value))}
-              className="grid grid-cols-2 gap-4"
-            >
-              {SIZE_PRESETS.map((preset) => (
-                <div key={preset.value}>
-                  <RadioGroupItem
-                    value={preset.value.toString()}
-                    id={`size-${preset.value}`}
-                    className="peer sr-only"
-                  />
-                  <Label
-                    htmlFor={`size-${preset.value}`}
-                    className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary cursor-pointer transition-colors"
-                  >
-                    <span className="text-lg font-semibold">{preset.label}</span>
-                    <span className="text-xs text-muted-foreground text-center mt-1">
-                      {preset.description}
-                    </span>
-                  </Label>
-                </div>
-              ))}
-            </RadioGroup>
+            <div className="flex items-center justify-between">
+              <Label>Set size</Label>
+              <span className="text-sm font-medium tabular-nums">{size} puzzles</span>
+            </div>
+            <Slider
+              value={[size]}
+              onValueChange={([value]) => setSize(value)}
+              min={50}
+              max={500}
+              step={1}
+            />
+            <p className="text-xs text-muted-foreground">
+              Flexible size from 50 to 500 puzzles.
+            </p>
           </div>
 
           {/* Target Cycles */}

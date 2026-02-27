@@ -16,18 +16,17 @@ import { cn } from "@/lib/utils";
 // Update this object when you want to announce a new update
 // Increment the version to show the notification to users who dismissed the previous one
 export const CURRENT_UPDATE = {
-  version: "2.1.0",
-  title: "Create Puzzle Sets by Theme",
+  version: "2.2.0",
+  title: "Flexible Puzzle Set Sizes",
   description:
-    "Build training sets around a single tactical theme—pins, forks, mates, sacrifices, and more. Drill one motif at a time for faster pattern recognition and sharper tactics.",
+    "You can now choose a flexible puzzle count when creating a set, starting at 50 puzzles. Build smaller speed sets or larger grind sets based on your training goals.",
   features: [
-    "Choose a focus theme when creating a set (e.g. Pins, Forks, Mates, Sacrifices)",
-    "Puzzles are filtered to match your theme so every rep reinforces the same motif",
-    "Ideal for targeting weak spots or deepening a specific tactical skill",
-    "Available when creating a new set—pick “Any theme” or any of 15+ tactical themes",
-    "Reminder: the Improvement Area (Review in the sidebar) lets you revisit your toughest puzzles and strengthen weak themes with walkthroughs and spaced repetition.",
+    "Set size now supports a flexible range from 50 to 500 puzzles",
+    "Use the slider to dial in the exact size you want",
+    "Great for quick 50-puzzle reps, standard sessions, or larger long-cycle sets",
+    "Works with themed and non-themed sets when creating new training sets",
   ],
-  date: "2026-02-13",
+  date: "2026-02-27",
   learnMoreUrl: "/training/new",
 };
 
@@ -146,7 +145,7 @@ export function UpdateNotification() {
             className="gap-2 border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/50"
             onClick={() => router.push(CURRENT_UPDATE.learnMoreUrl!)}
           >
-            Create a themed set
+            Create a custom-size set
             <Plus className="h-3 w-3" />
           </Button>
         )}

@@ -204,7 +204,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         const updatedCycle = await tx.cycle.update({
           where: { id: cycleId },
           data: {
-            solvedCorrect: isCorrect ? { increment: 1 } : undefined,
+            solvedCorrect: !wasSkipped && isCorrect ? { increment: 1 } : undefined,
             solvedIncorrect:
               !wasSkipped && !isCorrect ? { increment: 1 } : undefined,
             skipped: wasSkipped ? { increment: 1 } : undefined,
@@ -464,15 +464,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
         );
       }
 
-      const {
-        newlyUnlocked: immediateUnlocks,
-      } = await checkFastAchievements(result.achievementContext);
-
-      if (result.isLastPuzzle) {
-        checkAllAchievements(result.achievementContext).catch((error) => {
-          console.error("Deferred heavy achievement check failed:", error);
-        });
-      }
+      const { newlyUnlocked } = result.isLastPuzzle
+        ? await checkAllAchievements(result.achievementContext)
+        : await checkFastAchievements(result.achievementContext);
 
       return NextResponse.json({
         attempt: result.attempt,
@@ -499,7 +493,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           leveledUp: result.xpGains.leveledUp,
         },
         session: result.session,
-        unlockedAchievements: immediateUnlocks.map((achievement) => ({
+        unlockedAchievements: newlyUnlocked.map((achievement) => ({
           id: achievement.id,
           name: achievement.name,
           description: achievement.description,

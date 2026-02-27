@@ -19,7 +19,13 @@ export const attemptSchema = z.object({
   movesPlayed: z.array(
     z.string().regex(uciMovePattern, 'Invalid UCI move format')
   ),
-})
+}).refine(
+  (data) => !(data.isCorrect && data.wasSkipped),
+  {
+    message: 'Skipped attempts cannot be marked correct',
+    path: ['isCorrect'],
+  }
+)
 
 export type AttemptInput = z.infer<typeof attemptSchema>
 

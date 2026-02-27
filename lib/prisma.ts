@@ -11,12 +11,6 @@ const adapter = new PrismaPg(pool);
 function createPrismaClient() {
   return new PrismaClient({ adapter }).$extends({
     query: {
-      $allModels: {
-        async $allOperations({ args, query }) {
-          incrementPrismaOperationCount();
-          return query(args);
-        },
-      },
       async $allOperations({ args, query }) {
         incrementPrismaOperationCount();
         return query(args);

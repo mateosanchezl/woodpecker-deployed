@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   MessageSquare,
   RefreshCcw,
+  ScrollText,
   Settings,
   Trophy,
   Users,
@@ -58,6 +59,11 @@ const data = {
       title: "Achievements",
       url: "/achievements",
       icon: Award,
+    },
+    {
+      title: "Changelog",
+      url: "/changelog",
+      icon: ScrollText,
     },
     {
       title: "Leaderboard",

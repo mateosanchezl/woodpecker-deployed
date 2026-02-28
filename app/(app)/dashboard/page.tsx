@@ -132,7 +132,7 @@ export default function DashboardPage() {
           <UpdateNotification />
 
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">
                 Dashboard
@@ -143,14 +143,19 @@ export default function DashboardPage() {
                   : "Welcome back"}
               </p>
             </div>
-            <Button
-              variant="outline"
-              className="gap-2"
-              onClick={() => router.push("/training/new")}
-            >
-              <Plus className="h-4 w-4" />
-              New Set
-            </Button>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button asChild variant="outline">
+                <Link href="/changelog">Changelog</Link>
+              </Button>
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => router.push("/training/new")}
+              >
+                <Plus className="h-4 w-4" />
+                New Set
+              </Button>
+            </div>
           </div>
 
           {/* XP and Streak Cards */}

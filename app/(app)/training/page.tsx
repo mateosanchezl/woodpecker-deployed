@@ -256,6 +256,16 @@ function TrainingPageInner({
           isCycleComplete={trainingSession.isCycleComplete}
           cycleStats={trainingSession.cycleStats || undefined}
           onStartNextCycle={handleStartNextCycle}
+          bugReportContext={{
+            puzzleSetId: selectedSetId,
+            cycleId: activeCycleId,
+            cycleNumber: trainingSession.progress?.cycleNumber ?? null,
+            puzzleInSetId: trainingSession.puzzleData?.puzzleInSet.id ?? null,
+            puzzleId: trainingSession.puzzleData?.puzzle.id ?? null,
+            puzzlePosition: trainingSession.puzzleData?.puzzleInSet.position ?? null,
+            isCycleComplete: trainingSession.isCycleComplete,
+            sessionError: trainingSession.error?.message ?? null,
+          }}
         />
         <LeaveTrainingModal
           open={showModal}

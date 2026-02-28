@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect } from 'react'
 import { PuzzleBoard } from './puzzle-board'
-import { PuzzleStatus, PuzzleProgressBar } from './puzzle-status'
+import { PuzzleStatus } from './puzzle-status'
+import {
+  TrainingBugReport,
+  type TrainingBugReportContext,
+} from './training-bug-report'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -41,6 +45,7 @@ interface TrainingSessionProps {
     totalTime: number | null
   }
   onStartNextCycle?: () => void
+  bugReportContext: TrainingBugReportContext
 }
 
 /**
@@ -59,13 +64,14 @@ export function TrainingSession({
   isCycleComplete,
   cycleStats,
   onStartNextCycle,
+  bugReportContext,
 }: TrainingSessionProps) {
   // Timer hook
   const timer = usePuzzleTimer()
 
   // Handle keyboard shortcuts at session level
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = () => {
       // Global shortcuts could be added here
     }
 
@@ -104,6 +110,7 @@ export function TrainingSession({
       <TrainingSessionError
         message={error.message}
         onRetry={onRetry}
+        bugReportContext={bugReportContext}
       />
     )
   }
@@ -161,6 +168,8 @@ export function TrainingSession({
             Skip Puzzle
         </Button>
 
+        <TrainingBugReport context={bugReportContext} />
+
         {/* Puzzle metadata (themes) */}
         {puzzleData.puzzle.themes.length > 0 && (
           <div className="flex flex-wrap gap-1.5 justify-center lg:justify-start">
@@ -208,9 +217,11 @@ function TrainingSessionSkeleton() {
 function TrainingSessionError({
   message,
   onRetry,
+  bugReportContext,
 }: {
   message: string
   onRetry: () => void
+  bugReportContext: TrainingBugReportContext
 }) {
   return (
     <Card className="w-full max-w-md mx-auto">
@@ -224,6 +235,7 @@ function TrainingSessionError({
           <RefreshCw className="mr-2 h-4 w-4" />
           Try again
         </Button>
+        <TrainingBugReport context={bugReportContext} className="max-w-sm" />
       </CardContent>
     </Card>
   )

@@ -27,15 +27,17 @@ export function formatChangelogDate(date: string) {
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
     version: "2.3.0",
-    title: "New Changelog and Faster Training Flow",
+    title: "Faster Training Flow, New Changelog, and Bug Reports",
     description:
-      "Updates now live in a real changelog, and training moves faster thanks to hot-path optimizations that cut down the delay between puzzles.",
+      "Updates now live in a real changelog, training moves faster thanks to hot-path optimizations, and active sessions now include a lightweight issue reporter for faster bug fixes.",
     features: [
       "A new /changelog page shows the latest release plus a running history of past updates",
       "The dashboard notification now links directly to the full update history",
       "A persistent Changelog action in the dashboard header keeps release notes easy to reach",
       "The app sidebar now includes a Changelog link for fast access from anywhere in the product",
       "Training now uses a canonical session endpoint with prefetched next puzzles, reducing extra round-trips while you work through a cycle",
+      "A subtle Report an issue action now appears in the training sidebar and error state so bugs can be reported without leaving the session",
+      "Bug reports automatically include current session context and are sent straight to the admin inbox for faster triage",
     ],
     date: "2026-02-28",
     learnMoreUrl: "/changelog",

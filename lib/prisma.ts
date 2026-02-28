@@ -1,14 +1,27 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import { PrismaClient } from '@prisma/client';
+import { incrementPrismaOperationCount } from '@/lib/metrics/request-metrics';
 
 const connectionString = process.env.DATABASE_URL!;
 
 const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
+function createPrismaClient() {
+  return new PrismaClient({ adapter }).$extends({
+    query: {
+      async $allOperations({ args, query }) {
+        incrementPrismaOperationCount();
+        return query(args);
+      },
+    },
+  });
+}
 
-export const prisma = globalForPrisma.prisma || new PrismaClient({ adapter });
+type ExtendedPrismaClient = ReturnType<typeof createPrismaClient>;
+const globalForPrisma = global as unknown as { prisma?: ExtendedPrismaClient };
+
+export const prisma = globalForPrisma.prisma || createPrismaClient();
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;

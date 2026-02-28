@@ -154,7 +154,7 @@ function TrainingPageInner({
   })
 
   // Create cycle mutation
-  const createCycleMutation = useCreateCycle(selectedSetId || '')
+  const createCycleMutation = useCreateCycle()
 
   // Training session hook
   const trainingSession = useTrainingSession({
@@ -180,7 +180,7 @@ function TrainingPageInner({
 
     try {
       setSelectedSetId(setId)
-      const result = await createCycleMutation.mutateAsync()
+      const result = await createCycleMutation.mutateAsync(setId)
       setActiveCycleId(result.cycle.id)
     } catch (error) {
       console.error('Failed to start cycle:', error)
@@ -239,11 +239,11 @@ function TrainingPageInner({
       <div className="py-4">
         <TrainingSession
           puzzleData={trainingSession.puzzleData ? {
-            id: trainingSession.puzzleData.id,
-            position: trainingSession.puzzleData.position,
-            totalAttempts: trainingSession.puzzleData.totalAttempts,
-            correctAttempts: trainingSession.puzzleData.correctAttempts,
-            averageTime: trainingSession.puzzleData.averageTime,
+            id: trainingSession.puzzleData.puzzleInSet.id,
+            position: trainingSession.puzzleData.puzzleInSet.position,
+            totalAttempts: trainingSession.puzzleData.puzzleInSet.totalAttempts,
+            correctAttempts: trainingSession.puzzleData.puzzleInSet.correctAttempts,
+            averageTime: trainingSession.puzzleData.puzzleInSet.averageTime,
             puzzle: trainingSession.puzzleData.puzzle,
           } : null}
           progress={trainingSession.progress}
@@ -256,6 +256,16 @@ function TrainingPageInner({
           isCycleComplete={trainingSession.isCycleComplete}
           cycleStats={trainingSession.cycleStats || undefined}
           onStartNextCycle={handleStartNextCycle}
+          bugReportContext={{
+            puzzleSetId: selectedSetId,
+            cycleId: activeCycleId,
+            cycleNumber: trainingSession.progress?.cycleNumber ?? null,
+            puzzleInSetId: trainingSession.puzzleData?.puzzleInSet.id ?? null,
+            puzzleId: trainingSession.puzzleData?.puzzle.id ?? null,
+            puzzlePosition: trainingSession.puzzleData?.puzzleInSet.position ?? null,
+            isCycleComplete: trainingSession.isCycleComplete,
+            sessionError: trainingSession.error?.message ?? null,
+          }}
         />
         <LeaveTrainingModal
           open={showModal}

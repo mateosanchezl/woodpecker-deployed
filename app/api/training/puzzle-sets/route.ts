@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { createPuzzleSetSchema } from '@/lib/validations/training'
 import { selectRandomPuzzlesForSet } from '@/lib/training/puzzle-selection'
@@ -10,45 +11,31 @@ import { selectRandomPuzzlesForSet } from '@/lib/training/puzzle-selection'
  */
 export async function GET() {
   try {
-    const { userId } = await auth()
-    if (!userId) {
+    const { userId: clerkId } = await auth()
+    if (!clerkId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get the user's database ID from their Clerk ID
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
-    // Get all puzzle sets with their latest cycle and last activity
+    // Get all puzzle sets with their latest cycle.
     const puzzleSets = await prisma.puzzleSet.findMany({
-      where: { userId: user.id },
+      where: {
+        user: {
+          clerkId,
+        },
+      },
       include: {
         cycles: {
           orderBy: { cycleNumber: 'desc' },
           take: 1,
-          include: {
-            attempts: {
-              orderBy: { attemptedAt: 'desc' },
-              take: 1,
-              select: { attemptedAt: true },
-            },
-          },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }],
     })
 
-    // Sort by last activity (most recent first)
     const setsWithActivity = puzzleSets.map(set => {
       const latestCycle = set.cycles[0]
       const isCurrentCycleComplete = latestCycle?.completedAt !== null
-      const lastAttempt = latestCycle?.attempts?.[0]?.attemptedAt
-      const lastTrainedAt = lastAttempt || latestCycle?.startedAt || null
+      const lastTrainedAt = set.lastTrainedAt || latestCycle?.startedAt || null
 
       return {
         id: set.id,
@@ -98,8 +85,8 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth()
-    if (!userId) {
+    const { userId: clerkId } = await auth()
+    if (!clerkId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -114,15 +101,6 @@ export async function POST(request: NextRequest) {
     }
 
     const { name, targetRating, ratingRange, size, targetCycles, focusTheme } = validation.data
-
-    // Get the user's database ID from their Clerk ID
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     // Calculate rating bounds
     const minRating = Math.max(800, targetRating - Math.floor(ratingRange / 2))
@@ -153,7 +131,9 @@ export async function POST(request: NextRequest) {
       // Create the puzzle set
       const set = await tx.puzzleSet.create({
         data: {
-          userId: user.id,
+          user: {
+            connect: { clerkId },
+          },
           name,
           targetRating,
           minRating,
@@ -173,12 +153,13 @@ export async function POST(request: NextRequest) {
         })),
       })
 
-      if (!user.hasCompletedOnboarding) {
-        await tx.user.update({
-          where: { id: user.id },
-          data: { hasCompletedOnboarding: true },
-        })
-      }
+      await tx.user.updateMany({
+        where: {
+          clerkId,
+          hasCompletedOnboarding: false,
+        },
+        data: { hasCompletedOnboarding: true },
+      })
 
       return set
     })
@@ -200,6 +181,13 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     )
   } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2025'
+    ) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
     console.error('Error creating puzzle set:', error)
     return NextResponse.json(
       { error: 'Internal server error' },

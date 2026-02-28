@@ -10,25 +10,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { X, Sparkles, Plus } from "lucide-react";
+import { ArrowRight, Sparkles, X } from "lucide-react";
+import { LATEST_CHANGELOG_ENTRY, formatChangelogDate } from "@/lib/changelog";
 import { cn } from "@/lib/utils";
-
-// Update this object when you want to announce a new update
-// Increment the version to show the notification to users who dismissed the previous one
-export const CURRENT_UPDATE = {
-  version: "2.2.0",
-  title: "Flexible Puzzle Set Sizes",
-  description:
-    "You can now choose a flexible puzzle count when creating a set, starting at 50 puzzles. Build smaller speed sets or larger grind sets based on your training goals.",
-  features: [
-    "Set size now supports a flexible range from 50 to 500 puzzles",
-    "Use the slider to dial in the exact size you want",
-    "Great for quick 50-puzzle reps, standard sessions, or larger long-cycle sets",
-    "Works with themed and non-themed sets when creating new training sets",
-  ],
-  date: "2026-02-27",
-  learnMoreUrl: "/training/new",
-};
 
 const STORAGE_KEY = "woodpecker-dismissed-update";
 
@@ -48,7 +32,7 @@ export function UpdateNotification() {
     // Initialize from localStorage (will be checked again on mount for SSR)
     if (typeof window !== "undefined") {
       const dismissedVersion = localStorage.getItem(STORAGE_KEY);
-      return dismissedVersion === CURRENT_UPDATE.version;
+      return dismissedVersion === LATEST_CHANGELOG_ENTRY.version;
     }
     return true; // Default to hidden during SSR
   });
@@ -57,7 +41,7 @@ export function UpdateNotification() {
   useEffect(() => {
     // Check if this update was already dismissed
     const dismissedVersion = localStorage.getItem(STORAGE_KEY);
-    const shouldShow = dismissedVersion !== CURRENT_UPDATE.version;
+    const shouldShow = dismissedVersion !== LATEST_CHANGELOG_ENTRY.version;
 
     if (shouldShow) {
       // Small delay for smooth entrance animation
@@ -71,7 +55,7 @@ export function UpdateNotification() {
     // Wait for animation to complete before hiding
     setTimeout(() => {
       setIsDismissed(true);
-      localStorage.setItem(STORAGE_KEY, CURRENT_UPDATE.version);
+      localStorage.setItem(STORAGE_KEY, LATEST_CHANGELOG_ENTRY.version);
     }, 300);
   };
 
@@ -96,14 +80,10 @@ export function UpdateNotification() {
             </div>
             <div>
               <CardTitle className="text-lg text-blue-900 dark:text-blue-100">
-                {CURRENT_UPDATE.title}
+                {LATEST_CHANGELOG_ENTRY.title}
               </CardTitle>
               <CardDescription className="text-blue-700/70 dark:text-blue-300/70">
-                {new Date(CURRENT_UPDATE.date).toLocaleDateString("en-US", {
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
-                })}
+                {formatChangelogDate(LATEST_CHANGELOG_ENTRY.date)}
               </CardDescription>
             </div>
           </div>
@@ -121,12 +101,12 @@ export function UpdateNotification() {
 
       <CardContent className="space-y-4">
         <p className="text-sm text-blue-800 dark:text-blue-200">
-          {CURRENT_UPDATE.description}
+          {LATEST_CHANGELOG_ENTRY.description}
         </p>
 
-        {CURRENT_UPDATE.features.length > 0 && (
+        {LATEST_CHANGELOG_ENTRY.features.length > 0 && (
           <ul className="space-y-2">
-            {CURRENT_UPDATE.features.map((feature, index) => (
+            {LATEST_CHANGELOG_ENTRY.features.map((feature, index) => (
               <li
                 key={index}
                 className="flex items-start gap-2 text-sm text-blue-700 dark:text-blue-300"
@@ -138,17 +118,30 @@ export function UpdateNotification() {
           </ul>
         )}
 
-        {CURRENT_UPDATE.learnMoreUrl && (
+        <div className="flex flex-col gap-2 sm:flex-row">
+          {LATEST_CHANGELOG_ENTRY.learnMoreUrl &&
+            LATEST_CHANGELOG_ENTRY.actionLabel && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/50"
+                onClick={() => router.push(LATEST_CHANGELOG_ENTRY.learnMoreUrl!)}
+              >
+                {LATEST_CHANGELOG_ENTRY.actionLabel}
+                <ArrowRight className="h-3 w-3" />
+              </Button>
+            )}
+
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
-            className="gap-2 border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/50"
-            onClick={() => router.push(CURRENT_UPDATE.learnMoreUrl!)}
+            className="gap-2 justify-start px-0 text-blue-700 hover:bg-transparent hover:text-blue-900 dark:text-blue-300 dark:hover:bg-transparent dark:hover:text-blue-100"
+            onClick={() => router.push("/changelog")}
           >
-            Create a custom-size set
-            <Plus className="h-3 w-3" />
+            View all updates
+            <ArrowRight className="h-3 w-3" />
           </Button>
-        )}
+        </div>
       </CardContent>
     </Card>
   );

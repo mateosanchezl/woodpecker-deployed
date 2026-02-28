@@ -12,6 +12,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import {
   ACHIEVEMENT_DEFINITIONS,
   type AchievementDefinition,
@@ -116,30 +117,6 @@ interface CteResult {
 // IDs for each category, for early-exit logic
 // ---------------------------------------------------------------------------
 
-/** Category A: achievements that only need context data (zero DB queries) */
-const CATEGORY_A_IDS = new Set([
-  // From attempt context
-  "speed-demon",
-  "lightning-fast",
-  "early-bird",
-  "night-owl",
-  // From user counters
-  "first-blood",
-  "century",
-  "half-thousand",
-  "millennium",
-  "weekly-warrior",
-  // From cycle-complete context
-  "perfectionist",
-  "sharp-shooter",
-  "no-mistakes",
-  // From streak context
-  "on-fire",
-  "unstoppable",
-  "consistent-trainer",
-  "dedicated",
-]);
-
 /** Category B: achievements that need the CTE query */
 const CATEGORY_B_IDS = new Set([
   "theme-master-fork",
@@ -156,6 +133,10 @@ const CATEGORY_B_IDS = new Set([
   "woodpecker-master",
   "improvement-king",
 ]);
+
+const ACHIEVEMENT_MAP = new Map(
+  ACHIEVEMENT_DEFINITIONS.map((definition) => [definition.id, definition]),
+);
 
 // ---------------------------------------------------------------------------
 // Main entry point
@@ -276,6 +257,42 @@ SELECT json_build_object(
   return { newlyUnlocked };
 }
 
+/**
+ * Check context-only achievements with a single insert/upsert query.
+ * This avoids the pre-read query in the hot attempt path.
+ */
+export async function checkFastAchievements(
+  ctx: AchievementContext,
+): Promise<AchievementCheckResult> {
+  const candidateIds = Array.from(new Set(collectCategoryAAchievementIds(ctx)));
+  if (candidateIds.length === 0) {
+    return { newlyUnlocked: [] };
+  }
+
+  const now = new Date();
+  const values = Prisma.join(
+    candidateIds.map(
+      (achievementId) =>
+        Prisma.sql`(${ctx.userId}, ${achievementId}, ${now})`,
+    ),
+  );
+
+  const inserted = await prisma.$queryRaw<Array<{ achievementId: string }>>`
+    INSERT INTO "UserAchievement" ("userId", "achievementId", "unlockedAt")
+    VALUES ${values}
+    ON CONFLICT ("userId", "achievementId") DO NOTHING
+    RETURNING "achievementId";
+  `;
+
+  const newlyUnlocked = inserted
+    .map((row) => toUnlockedAchievement(row.achievementId, now))
+    .filter((achievement): achievement is UnlockedAchievement =>
+      achievement !== null,
+    );
+
+  return { newlyUnlocked };
+}
+
 // ---------------------------------------------------------------------------
 // Category A evaluators (pure logic, zero DB)
 // ---------------------------------------------------------------------------
@@ -285,26 +302,36 @@ function checkCategoryA(
   unlockedIds: Set<string>,
   toUnlock: string[],
 ): void {
+  const categoryAIds = collectCategoryAAchievementIds(ctx);
+  for (const achievementId of categoryAIds) {
+    if (!unlockedIds.has(achievementId)) {
+      toUnlock.push(achievementId);
+    }
+  }
+}
+
+function collectCategoryAAchievementIds(ctx: AchievementContext): string[] {
   const { attempt, user, cycleComplete, streak } = ctx;
+  const candidateIds: string[] = [];
 
   // -- Attempt-context achievements -------------------------------------------
   if (attempt) {
     // Time-of-day (applies to any attempt, correct or not)
     const hour = attempt.attemptedAt.getHours();
-    if (!unlockedIds.has("early-bird") && hour < 7) {
-      toUnlock.push("early-bird");
+    if (hour < 7) {
+      candidateIds.push("early-bird");
     }
-    if (!unlockedIds.has("night-owl") && hour >= 0 && hour < 5) {
-      toUnlock.push("night-owl");
+    if (hour >= 0 && hour < 5) {
+      candidateIds.push("night-owl");
     }
 
     // Speed achievements (correct attempts only)
     if (attempt.isCorrect) {
-      if (!unlockedIds.has("speed-demon") && attempt.timeSpentMs < 3000) {
-        toUnlock.push("speed-demon");
+      if (attempt.timeSpentMs < 3000) {
+        candidateIds.push("speed-demon");
       }
-      if (!unlockedIds.has("lightning-fast") && attempt.timeSpentMs < 1500) {
-        toUnlock.push("lightning-fast");
+      if (attempt.timeSpentMs < 1500) {
+        candidateIds.push("lightning-fast");
       }
     }
   }
@@ -312,48 +339,44 @@ function checkCategoryA(
   // -- User counter achievements (correct attempts only) ----------------------
   if (attempt?.isCorrect || !attempt) {
     const tc = user.totalCorrectAttempts;
-    if (!unlockedIds.has("first-blood") && tc >= 1) toUnlock.push("first-blood");
-    if (!unlockedIds.has("century") && tc >= 100) toUnlock.push("century");
-    if (!unlockedIds.has("half-thousand") && tc >= 500)
-      toUnlock.push("half-thousand");
-    if (!unlockedIds.has("millennium") && tc >= 1000)
-      toUnlock.push("millennium");
+    if (tc >= 1) candidateIds.push("first-blood");
+    if (tc >= 100) candidateIds.push("century");
+    if (tc >= 500) candidateIds.push("half-thousand");
+    if (tc >= 1000) candidateIds.push("millennium");
 
-    if (!unlockedIds.has("weekly-warrior") && user.weeklyCorrectAttempts >= 100)
-      toUnlock.push("weekly-warrior");
+    if (user.weeklyCorrectAttempts >= 100) candidateIds.push("weekly-warrior");
   }
 
   // -- Cycle-complete achievements --------------------------------------------
   if (cycleComplete) {
-    if (!unlockedIds.has("perfectionist") && cycleComplete.accuracy === 100) {
-      toUnlock.push("perfectionist");
+    if (cycleComplete.accuracy === 100) {
+      candidateIds.push("perfectionist");
     }
     if (
-      !unlockedIds.has("sharp-shooter") &&
       cycleComplete.totalPuzzles >= 50 &&
       cycleComplete.accuracy >= 95
     ) {
-      toUnlock.push("sharp-shooter");
+      candidateIds.push("sharp-shooter");
     }
     if (
-      !unlockedIds.has("no-mistakes") &&
       cycleComplete.totalPuzzles >= 20 &&
       cycleComplete.accuracy === 100 &&
       cycleComplete.correctPuzzles === cycleComplete.totalPuzzles
     ) {
-      toUnlock.push("no-mistakes");
+      candidateIds.push("no-mistakes");
     }
   }
 
   // -- Streak achievements ----------------------------------------------------
   if (streak) {
     const s = Math.max(streak.currentStreak, streak.longestStreak);
-    if (!unlockedIds.has("on-fire") && s >= 7) toUnlock.push("on-fire");
-    if (!unlockedIds.has("unstoppable") && s >= 30) toUnlock.push("unstoppable");
-    if (!unlockedIds.has("consistent-trainer") && s >= 14)
-      toUnlock.push("consistent-trainer");
-    if (!unlockedIds.has("dedicated") && s >= 60) toUnlock.push("dedicated");
+    if (s >= 7) candidateIds.push("on-fire");
+    if (s >= 30) candidateIds.push("unstoppable");
+    if (s >= 14) candidateIds.push("consistent-trainer");
+    if (s >= 60) candidateIds.push("dedicated");
   }
+
+  return candidateIds;
 }
 
 // ---------------------------------------------------------------------------
@@ -409,7 +432,7 @@ function checkCategoryB(
   }
 
   // -- Speed streak (last 10 correct & < 5 s each) ---------------------------
-  if (!unlockedIds.has("speed-streak") && ctx.attempt?.isCorrect && ctx.attempt.timeSpentMs < 5000) {
+  if (!unlockedIds.has("speed-streak")) {
     const recent = (cte.recent_attempts ?? [])
       .filter((a) => a.rn <= 10)
       .sort((a, b) => a.rn - b.rn);
@@ -422,7 +445,7 @@ function checkCategoryB(
   }
 
   // -- Flawless streak (last 25 all correct) ----------------------------------
-  if (!unlockedIds.has("flawless-streak") && ctx.attempt?.isCorrect) {
+  if (!unlockedIds.has("flawless-streak")) {
     const recent = cte.recent_attempts ?? [];
     if (recent.length >= 25 && recent.every((a) => a.isCorrect)) {
       toUnlock.push("flawless-streak");
@@ -443,10 +466,7 @@ function checkCategoryB(
 
   // -- Rating climber (50+ correct on puzzles rated >= 1800) ------------------
   if (!unlockedIds.has("rating-climber")) {
-    const shouldCheck =
-      ctx.attempt?.puzzleRating !== undefined &&
-      ctx.attempt.puzzleRating >= 1800;
-    if (shouldCheck && (cte.high_rating_correct ?? 0) >= 50) {
+    if ((cte.high_rating_correct ?? 0) >= 50) {
       toUnlock.push("rating-climber");
     }
   }
@@ -529,6 +549,22 @@ export async function checkRisingStarAchievement(
 // Helpers
 // ---------------------------------------------------------------------------
 
+function toUnlockedAchievement(
+  achievementId: string,
+  unlockedAt: Date,
+): UnlockedAchievement | null {
+  const definition = ACHIEVEMENT_MAP.get(achievementId);
+  if (!definition) return null;
+
+  return {
+    id: definition.id,
+    name: definition.name,
+    description: definition.description,
+    icon: definition.icon,
+    unlockedAt,
+  };
+}
+
 /**
  * Save newly unlocked achievements and return their details.
  */
@@ -536,12 +572,13 @@ async function saveUnlocked(
   userId: string,
   achievementIds: string[],
 ): Promise<UnlockedAchievement[]> {
-  if (achievementIds.length === 0) return [];
+  const uniqueIds = Array.from(new Set(achievementIds));
+  if (uniqueIds.length === 0) return [];
 
   const now = new Date();
 
   await prisma.userAchievement.createMany({
-    data: achievementIds.map((achievementId) => ({
+    data: uniqueIds.map((achievementId) => ({
       userId,
       achievementId,
       unlockedAt: now,
@@ -549,16 +586,11 @@ async function saveUnlocked(
     skipDuplicates: true,
   });
 
-  return achievementIds.map((id) => {
-    const def = ACHIEVEMENT_DEFINITIONS.find((a) => a.id === id)!;
-    return {
-      id: def.id,
-      name: def.name,
-      description: def.description,
-      icon: def.icon,
-      unlockedAt: now,
-    };
-  });
+  return uniqueIds
+    .map((achievementId) => toUnlockedAchievement(achievementId, now))
+    .filter((achievement): achievement is UnlockedAchievement =>
+      achievement !== null,
+    );
 }
 
 // ---------------------------------------------------------------------------

@@ -4,29 +4,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import type {
-  NextPuzzleResponse,
   AttemptResponse,
   CreateCycleResponse,
+  TrainingSession,
+  TrainingSessionResponse,
 } from '@/lib/validations/training'
+
+interface ApiError extends Error {
+  status?: number
+}
 
 interface UseTrainingSessionOptions {
   puzzleSetId: string
   cycleId: string | null
-}
-
-// Extended response type including cycle completion data and prefetched puzzle
-type PuzzleResponse = NextPuzzleResponse & {
-  isCycleComplete: boolean
-  cycleStats?: {
-    solvedCorrect: number
-    solvedIncorrect: number
-    skipped: number
-    totalTime: number | null
-  }
-  prefetchedNext?: {
-    puzzle: NextPuzzleResponse['puzzle']
-    puzzleInSet: NextPuzzleResponse['puzzleInSet']
-  } | null
 }
 
 type UserCacheData = {
@@ -38,25 +28,13 @@ type UserCacheData = {
 }
 
 interface UseTrainingSessionReturn {
-  // Data
-  puzzleData: NextPuzzleResponse['puzzleInSet'] & {
-    puzzle: NextPuzzleResponse['puzzle']
-  } | null
-  progress: NextPuzzleResponse['progress'] | null
+  puzzleData: TrainingSession['current']
+  progress: TrainingSession['progress'] | null
   isCycleComplete: boolean
-  cycleStats: {
-    solvedCorrect: number
-    solvedIncorrect: number
-    skipped: number
-    totalTime: number | null
-  } | null
-
-  // Loading and error states
+  cycleStats: TrainingSession['cycleStats'] | null
   isLoading: boolean
-  isTransitioning: boolean // true during puzzle transition (after attempt recorded, before next puzzle ready)
+  isTransitioning: boolean
   error: Error | null
-
-  // Actions
   recordAttempt: (
     puzzleInSetId: string,
     isCorrect: boolean,
@@ -67,84 +45,74 @@ interface UseTrainingSessionReturn {
   refetch: () => void
 }
 
-/**
- * Fetch puzzle helper function
- */
-async function fetchNextPuzzle(puzzleSetId: string, cycleId: string): Promise<PuzzleResponse> {
+async function fetchTrainingSession(
+  puzzleSetId: string,
+  cycleId: string
+): Promise<TrainingSession> {
   const res = await fetch(
-    `/api/training/puzzle-sets/${puzzleSetId}/next-puzzle?cycleId=${cycleId}`
+    `/api/training/puzzle-sets/${puzzleSetId}/cycles/${cycleId}/session`
   )
   if (!res.ok) {
-    const error = await res.json()
-    throw new Error(error.error || 'Failed to fetch puzzle')
+    const error = (await res.json()) as { error?: string }
+    const apiError = new Error(
+      error.error || 'Failed to fetch training session'
+    ) as ApiError
+    apiError.status = res.status
+    throw apiError
   }
-  return res.json()
+
+  const data = (await res.json()) as TrainingSessionResponse
+  return data.session
 }
 
-/**
- * Hook for managing a training session with puzzle prefetching.
- * Prefetches the next puzzle while the user is solving the current one
- * to eliminate wait time between puzzles.
- */
 export function useTrainingSession(
   options: UseTrainingSessionOptions
 ): UseTrainingSessionReturn {
   const { puzzleSetId, cycleId } = options
   const queryClient = useQueryClient()
-  const nextPuzzleQueryKey = ['next-puzzle', puzzleSetId, cycleId] as const
+  const sessionQueryKey = ['training-session', puzzleSetId, cycleId] as const
 
-  // Track transitioning state (between recording attempt and showing next puzzle)
   const [isTransitioning, setIsTransitioning] = useState(false)
-
-  // Track the current puzzle ID to detect when we've moved to the next puzzle
   const currentPuzzleIdRef = useRef<string | null>(null)
+  const prefetchedRef = useRef<TrainingSession['prefetchedNext'] | null>(null)
 
-  // Query for fetching the next puzzle
-  const {
-    data,
-    isLoading,
-    error,
-    refetch,
-    isFetching,
-  } = useQuery<PuzzleResponse>({
-    queryKey: ['next-puzzle', puzzleSetId, cycleId],
+  const { data, isLoading, error, refetch, isFetching } = useQuery<TrainingSession>({
+    queryKey: sessionQueryKey,
     queryFn: async () => {
       if (!cycleId) {
         throw new Error('No active cycle')
       }
-      return fetchNextPuzzle(puzzleSetId, cycleId)
+      return fetchTrainingSession(puzzleSetId, cycleId)
     },
     enabled: !!cycleId,
-    staleTime: 0, // Always fetch fresh data
+    staleTime: 0,
     refetchOnWindowFocus: false,
   })
 
-  // When puzzle data changes, clear transitioning state
+  const currentPuzzleId = data?.current?.puzzleInSet.id ?? null
+  const isCycleComplete = data?.isCycleComplete ?? false
+  const prefetchedNext = data?.prefetchedNext ?? null
+
   useEffect(() => {
-    if (data?.puzzleInSet?.id && data.puzzleInSet.id !== currentPuzzleIdRef.current) {
-      currentPuzzleIdRef.current = data.puzzleInSet.id
+    if (currentPuzzleId && currentPuzzleId !== currentPuzzleIdRef.current) {
+      currentPuzzleIdRef.current = currentPuzzleId
       setIsTransitioning(false)
     }
-    // Also clear transitioning when cycle completes
-    if (data?.isCycleComplete) {
+
+    if (isCycleComplete) {
       setIsTransitioning(false)
     }
-  }, [data?.puzzleInSet?.id, data?.isCycleComplete])
+  }, [currentPuzzleId, isCycleComplete])
 
-  // Store prefetched puzzle for instant transitions
-  const prefetchedRef = useRef<PuzzleResponse['prefetchedNext'] | null>(null)
-
-  // Update prefetched ref when data changes
   useEffect(() => {
-    if (data?.prefetchedNext) {
-      prefetchedRef.current = data.prefetchedNext
+    if (prefetchedNext) {
+      prefetchedRef.current = prefetchedNext
     }
-  }, [data?.prefetchedNext])
+  }, [prefetchedNext])
 
-  // Mutation for recording attempts
   const attemptMutation = useMutation<
     AttemptResponse,
-    Error,
+    ApiError,
     {
       puzzleInSetId: string
       timeSpent: number
@@ -152,12 +120,13 @@ export function useTrainingSession(
       wasSkipped: boolean
       movesPlayed: string[]
     },
-    { previousData: PuzzleResponse | undefined; usedPrefetchedNext: boolean }
+    { previousData: TrainingSession | undefined; usedPrefetchedNext: boolean }
   >({
     mutationFn: async ({ puzzleInSetId, timeSpent, isCorrect, wasSkipped, movesPlayed }) => {
       if (!cycleId) {
         throw new Error('No active cycle')
       }
+
       const res = await fetch(
         `/api/training/puzzle-sets/${puzzleSetId}/cycles/${cycleId}/attempts`,
         {
@@ -172,47 +141,46 @@ export function useTrainingSession(
           }),
         }
       )
+
       if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to record attempt')
+        const error = (await res.json()) as { error?: string }
+        const apiError = new Error(error.error || 'Failed to record attempt') as ApiError
+        apiError.status = res.status
+        throw apiError
       }
+
       return res.json()
     },
     onMutate: async () => {
-      // Set transitioning state when mutation starts
       setIsTransitioning(true)
 
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: nextPuzzleQueryKey })
+      await queryClient.cancelQueries({ queryKey: sessionQueryKey })
 
-      // Snapshot the previous value
-      const previousData = queryClient.getQueryData<PuzzleResponse>(nextPuzzleQueryKey)
+      const previousData = queryClient.getQueryData<TrainingSession>(sessionQueryKey)
       const usedPrefetchedNext = !!(prefetchedRef.current && previousData)
 
-      // If we have prefetched data, optimistically update to it
-      if (prefetchedRef.current && previousData) {
-        const optimisticData: PuzzleResponse = {
-          puzzle: prefetchedRef.current.puzzle,
-          puzzleInSet: prefetchedRef.current.puzzleInSet,
+      if (prefetchedRef.current && previousData && !previousData.isCycleComplete) {
+        const optimisticData: TrainingSession = {
+          current: prefetchedRef.current,
+          prefetchedNext: null,
           progress: {
             ...previousData.progress,
             currentPosition: prefetchedRef.current.puzzleInSet.position,
             completedInCycle: previousData.progress.completedInCycle + 1,
           },
           isCycleComplete: false,
-          prefetchedNext: null, // Will be fetched with the real request
+          cycleStats: previousData.cycleStats,
         }
-        queryClient.setQueryData(nextPuzzleQueryKey, optimisticData)
-        // Clear the prefetch ref since we used it
+
+        queryClient.setQueryData(sessionQueryKey, optimisticData)
         prefetchedRef.current = null
       }
 
       return { previousData, usedPrefetchedNext }
     },
-    onSuccess: (data, _variables, context) => {
-      // Optimistically update XP cache for instant sidebar refresh
-      if (data.xp) {
-        const xp = data.xp
+    onSuccess: (response, _variables, context) => {
+      if (response.xp) {
+        const xp = response.xp
         queryClient.setQueryData<UserCacheData>(['user'], (oldData) => {
           if (!oldData?.user) {
             return oldData
@@ -232,41 +200,39 @@ export function useTrainingSession(
         })
       }
 
-      // Only refetch next puzzle when optimistic prefetch wasn't available,
-      // or when cycle completion needs server-confirmed state.
-      if (data.isLastPuzzle || !context?.usedPrefetchedNext) {
-        queryClient.invalidateQueries({ queryKey: nextPuzzleQueryKey })
+      if (response.session) {
+        queryClient.setQueryData(sessionQueryKey, response.session)
+      } else if (response.isLastPuzzle || !context?.usedPrefetchedNext) {
+        queryClient.invalidateQueries({ queryKey: sessionQueryKey })
       }
 
-      // Full invalidation at end of cycle to ensure accuracy
-      if (data.isLastPuzzle) {
+      if (response.isLastPuzzle) {
         queryClient.invalidateQueries({ queryKey: ['user'] })
       }
 
-      // Show achievement unlock toasts
-      if (data.unlockedAchievements && data.unlockedAchievements.length > 0) {
-        // Dynamically import to avoid circular dependencies
+      if (response.unlockedAchievements && response.unlockedAchievements.length > 0) {
         import('@/components/achievements/achievement-unlock-toast').then(
           ({ showAchievementUnlockToasts }) => {
-            showAchievementUnlockToasts(data.unlockedAchievements!)
+            showAchievementUnlockToasts(response.unlockedAchievements!)
           }
         )
-        // Invalidate achievements cache so the achievements page updates
         queryClient.invalidateQueries({ queryKey: ['achievements'] })
       }
     },
-    onError: (error, _variables, context) => {
-      // Rollback on error
+    onError: (mutationError, _variables, context) => {
       if (context?.previousData) {
-        queryClient.setQueryData(nextPuzzleQueryKey, context.previousData)
+        queryClient.setQueryData(sessionQueryKey, context.previousData)
       }
-      // Clear transitioning on error
+
+      if (mutationError.status === 409) {
+        queryClient.invalidateQueries({ queryKey: sessionQueryKey })
+      }
+
       setIsTransitioning(false)
-      toast.error('Failed to record attempt. Please try again.')
+      toast.error(mutationError.message || 'Failed to record attempt. Please try again.')
     },
   })
 
-  // Record a puzzle attempt (correct or incorrect)
   const recordAttempt = useCallback(
     async (
       puzzleInSetId: string,
@@ -285,7 +251,6 @@ export function useTrainingSession(
     [attemptMutation]
   )
 
-  // Record a skip
   const recordSkip = useCallback(
     async (puzzleInSetId: string, timeSpent: number) => {
       await attemptMutation.mutateAsync({
@@ -299,20 +264,12 @@ export function useTrainingSession(
     [attemptMutation]
   )
 
-  // Derive puzzle data
-  const puzzleData = data?.puzzle && data?.puzzleInSet
-    ? {
-        ...data.puzzleInSet,
-        puzzle: data.puzzle,
-      }
-    : null
-
   return {
-    puzzleData,
-    progress: data?.progress || null,
-    isCycleComplete: data?.isCycleComplete || false,
-    cycleStats: data?.cycleStats || null,
-    isLoading: isLoading,
+    puzzleData: data?.current ?? null,
+    progress: data?.progress ?? null,
+    isCycleComplete: data?.isCycleComplete ?? false,
+    cycleStats: data?.cycleStats ?? null,
+    isLoading,
     isTransitioning: isTransitioning || attemptMutation.isPending || isFetching,
     error: error || attemptMutation.error,
     recordAttempt,
@@ -321,30 +278,32 @@ export function useTrainingSession(
   }
 }
 
-/**
- * Hook for creating a new training cycle.
- */
-export function useCreateCycle(puzzleSetId: string) {
+export function useCreateCycle() {
   const queryClient = useQueryClient()
 
-  return useMutation<CreateCycleResponse, Error>({
-    mutationFn: async () => {
-      const res = await fetch(
-        `/api/training/puzzle-sets/${puzzleSetId}/cycles`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        }
-      )
+  return useMutation<CreateCycleResponse, Error, string>({
+    mutationFn: async (puzzleSetId) => {
+      const res = await fetch(`/api/training/puzzle-sets/${puzzleSetId}/cycles`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
       if (!res.ok) {
         const error = await res.json()
         throw new Error(error.error || 'Failed to create cycle')
       }
       return res.json()
     },
-    onSuccess: () => {
-      // Invalidate puzzle set data to refresh cycle list
+    onSuccess: (data, puzzleSetId) => {
       queryClient.invalidateQueries({ queryKey: ['puzzle-set', puzzleSetId] })
+      queryClient.invalidateQueries({ queryKey: ['puzzle-sets'] })
+
+      if (data.session) {
+        queryClient.setQueryData(
+          ['training-session', puzzleSetId, data.cycle.id],
+          data.session
+        )
+      }
+
       toast.success('New cycle started!')
     },
     onError: (error) => {
@@ -353,9 +312,6 @@ export function useCreateCycle(puzzleSetId: string) {
   })
 }
 
-/**
- * Hook for fetching puzzle set cycles.
- */
 export function usePuzzleSetCycles(puzzleSetId: string) {
   return useQuery<{
     cycles: Array<{

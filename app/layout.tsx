@@ -1,12 +1,5 @@
 import { type Metadata, type Viewport } from "next";
-import {
-  ClerkProvider,
-  SignInButton,
-  SignUpButton,
-  SignedIn,
-  SignedOut,
-  UserButton,
-} from "@clerk/nextjs";
+import { ClerkProvider } from "@clerk/nextjs";
 import { Geist, Geist_Mono, Lora } from "next/font/google";
 import { QueryProvider } from "./providers/query-provider";
 import { ThemeProvider } from "./providers/theme-provider";
@@ -18,8 +11,7 @@ import {
   generateWebApplicationSchema,
 } from "@/lib/seo";
 import "./globals.css";
-import { Analytics } from '@vercel/analytics/next';
-
+import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -52,14 +44,7 @@ export const metadata: Metadata = {
     apple: [
       { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
     ],
-    other: [
-      {
-        rel: "mask-icon",
-        url: "/android-chrome-512x512.png",
-      },
-    ],
   },
-  manifest: "/site.webmanifest",
   other: {
     "msapplication-TileColor": "#ffffff",
   },

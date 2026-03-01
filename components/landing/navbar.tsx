@@ -3,16 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import {
-  useScroll,
-  useMotionValueEvent,
-  motion,
-  AnimatePresence,
-} from "framer-motion";
+import { useScroll, useMotionValueEvent, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { SignedIn, SignedOut } from "@clerk/nextjs";
-import { Menu, X } from "lucide-react";
+import { Menu } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -65,6 +60,7 @@ export function LandingNavbar() {
                 src="/darklogo.png"
                 alt="Peck Logo"
                 fill
+                sizes="32px"
                 className="object-contain"
               />
             </div>

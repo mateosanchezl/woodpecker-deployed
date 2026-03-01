@@ -86,8 +86,8 @@ export const DEFAULT_METADATA: Metadata = {
     images: [
       {
         url: "/og-image.png",
-        width: 1200,
-        height: 630,
+        width: 1024,
+        height: 1024,
         alt: "Peck - Woodpecker Method Chess Training App",
         type: "image/png",
       },
@@ -171,6 +171,7 @@ export function generatePageMetadata({
   openGraph,
 }: PageMetadataOptions): Metadata {
   const url = `${SITE_CONFIG.url}${path}`;
+  const resolvedImages = openGraph?.images ?? DEFAULT_METADATA.openGraph?.images;
 
   return {
     title,
@@ -180,18 +181,30 @@ export function generatePageMetadata({
       canonical: url,
     },
     openGraph: {
+      ...(DEFAULT_METADATA.openGraph ?? {}),
       title,
       description,
       url,
       type: openGraph?.type ?? "website",
-      images: openGraph?.images ?? DEFAULT_METADATA.openGraph?.images,
+      images: resolvedImages,
     },
     twitter: {
+      ...(DEFAULT_METADATA.twitter ?? {}),
       title,
       description,
       card: "summary_large_image",
+      images: resolvedImages,
     },
-    robots: noIndex ? { index: false, follow: false } : DEFAULT_METADATA.robots,
+    robots: noIndex
+      ? {
+          index: false,
+          follow: false,
+          googleBot: {
+            index: false,
+            follow: false,
+          },
+        }
+      : DEFAULT_METADATA.robots,
   };
 }
 

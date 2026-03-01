@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { Prisma } from "@prisma/client";
+import { Resend } from "resend";
 import { prisma } from "@/lib/prisma";
 import { attemptSchema } from "@/lib/validations/training";
 import { calculateStreakUpdate, getTodayUTC } from "@/lib/streak";
@@ -24,6 +25,92 @@ import { withRouteMetrics } from "@/lib/metrics/request-metrics";
 
 interface RouteContext {
   params: Promise<{ setId: string; cycleId: string }>;
+}
+
+const DUPLICATE_ATTEMPT_ERROR =
+  "Attempt already recorded for this puzzle in this cycle.";
+
+interface DuplicateAttemptAlertParams {
+  clerkId: string;
+  userId: string;
+  userEmail: string;
+  setId: string;
+  cycleId: string;
+  cycleNumber: number;
+  puzzleInSetId: string;
+  puzzleId: string;
+  puzzlePosition: number;
+  timeSpent: number;
+  isCorrect: boolean;
+  wasSkipped: boolean;
+  movesPlayedCount: number;
+  request: NextRequest;
+}
+
+async function sendDuplicateAttemptAlert({
+  clerkId,
+  userId,
+  userEmail,
+  setId,
+  cycleId,
+  cycleNumber,
+  puzzleInSetId,
+  puzzleId,
+  puzzlePosition,
+  timeSpent,
+  isCorrect,
+  wasSkipped,
+  movesPlayedCount,
+  request,
+}: DuplicateAttemptAlertParams) {
+  if (!process.env.RESEND_API_KEY || !process.env.ADMIN_EMAIL) {
+    return;
+  }
+
+  try {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const submittedAt = new Date().toISOString();
+    const { error } = await resend.emails.send({
+      from: "Peck <onboarding@resend.dev>",
+      to: [process.env.ADMIN_EMAIL],
+      subject: `Training alert - duplicate attempt conflict - set ${setId}`,
+      text: [
+        "Training alert",
+        "",
+        "Error",
+        DUPLICATE_ATTEMPT_ERROR,
+        "",
+        "User identity",
+        `Clerk ID: ${clerkId}`,
+        `User ID: ${userId}`,
+        `Email: ${userEmail}`,
+        "",
+        "Training context",
+        `Puzzle set ID: ${setId}`,
+        `Cycle ID: ${cycleId}`,
+        `Cycle number: ${cycleNumber}`,
+        `Puzzle-in-set ID: ${puzzleInSetId}`,
+        `Puzzle ID: ${puzzleId}`,
+        `Puzzle position: ${puzzlePosition}`,
+        `Time spent: ${timeSpent}`,
+        `Attempt marked correct: ${isCorrect ? "yes" : "no"}`,
+        `Attempt marked skipped: ${wasSkipped ? "yes" : "no"}`,
+        `Moves played count: ${movesPlayedCount}`,
+        "",
+        "Request metadata",
+        `API URL: ${request.nextUrl.toString()}`,
+        `Referrer: ${request.headers.get("referer") ?? "n/a"}`,
+        `User agent: ${request.headers.get("user-agent") ?? "n/a"}`,
+        `Submitted at: ${submittedAt}`,
+      ].join("\n"),
+    });
+
+    if (error) {
+      console.error("Error sending duplicate attempt alert:", error);
+    }
+  } catch (error) {
+    console.error("Error sending duplicate attempt alert:", error);
+  }
 }
 
 /**
@@ -80,6 +167,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
                 user: {
                   select: {
                     id: true,
+                    email: true,
                     totalCorrectAttempts: true,
                     weeklyCorrectAttempts: true,
                     weeklyCorrectStartDate: true,
@@ -168,7 +256,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
             error instanceof Prisma.PrismaClientKnownRequestError &&
             error.code === "P2002"
           ) {
-            return { status: "duplicate_attempt" as const };
+            return {
+              status: "duplicate_attempt" as const,
+              cycleNumber: cycleWithUser.cycleNumber,
+              puzzleInSetId: expectedPuzzleInSet.id,
+              puzzleId: expectedPuzzleInSet.puzzle.id,
+              puzzlePosition: expectedPuzzleInSet.position,
+              userId: cycleWithUser.puzzleSet.user.id,
+              userEmail: cycleWithUser.puzzleSet.user.email,
+            };
           }
           throw error;
         }
@@ -458,8 +554,25 @@ export async function POST(request: NextRequest, context: RouteContext) {
       }
 
       if (result.status === "duplicate_attempt") {
+        await sendDuplicateAttemptAlert({
+          clerkId,
+          userId: result.userId,
+          userEmail: result.userEmail,
+          setId,
+          cycleId,
+          cycleNumber: result.cycleNumber,
+          puzzleInSetId: result.puzzleInSetId,
+          puzzleId: result.puzzleId,
+          puzzlePosition: result.puzzlePosition,
+          timeSpent,
+          isCorrect,
+          wasSkipped,
+          movesPlayedCount: movesPlayed.length,
+          request,
+        });
+
         return NextResponse.json(
-          { error: "Attempt already recorded for this puzzle in this cycle." },
+          { error: DUPLICATE_ATTEMPT_ERROR },
           { status: 409 },
         );
       }

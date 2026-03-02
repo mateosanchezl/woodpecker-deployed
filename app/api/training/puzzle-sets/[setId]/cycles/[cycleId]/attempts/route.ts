@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { Prisma } from "@prisma/client";
+import { Resend } from "resend";
 import { prisma } from "@/lib/prisma";
 import { attemptSchema } from "@/lib/validations/training";
 import { calculateStreakUpdate, getTodayUTC } from "@/lib/streak";
@@ -22,8 +23,108 @@ import {
 } from "@/lib/training/session";
 import { withRouteMetrics } from "@/lib/metrics/request-metrics";
 
+const resend = new Resend(process.env.RESEND_API_KEY);
+const DUPLICATE_ATTEMPT_ERROR =
+  "Attempt already recorded for this puzzle in this cycle.";
+
 interface RouteContext {
   params: Promise<{ setId: string; cycleId: string }>;
+}
+
+function formatAlertValue(value: string | number | boolean | null) {
+  if (value === null) return "n/a";
+  if (typeof value === "boolean") return value ? "yes" : "no";
+  return String(value);
+}
+
+function buildDuplicateAttemptAlertText(params: {
+  clerkId: string;
+  userId: string;
+  userEmail: string | null;
+  setId: string;
+  cycleId: string;
+  cycleNumber: number;
+  puzzleInSetId: string;
+  puzzleId: string;
+  puzzlePosition: number;
+  timeSpent: number;
+  isCorrect: boolean;
+  wasSkipped: boolean;
+  movesPlayedCount: number;
+  apiUrl: string;
+  referrer: string | null;
+  userAgent: string | null;
+  submittedAt: string;
+}) {
+  return [
+    "Training alert",
+    "",
+    "Error",
+    DUPLICATE_ATTEMPT_ERROR,
+    "",
+    "User identity",
+    `Clerk ID: ${params.clerkId}`,
+    `User ID: ${params.userId}`,
+    `Email: ${formatAlertValue(params.userEmail)}`,
+    "",
+    "Training context",
+    `Puzzle set ID: ${params.setId}`,
+    `Cycle ID: ${params.cycleId}`,
+    `Cycle number: ${params.cycleNumber}`,
+    `Puzzle-in-set ID: ${params.puzzleInSetId}`,
+    `Puzzle ID: ${params.puzzleId}`,
+    `Puzzle position: ${params.puzzlePosition}`,
+    `Time spent: ${params.timeSpent}`,
+    `Attempt marked correct: ${formatAlertValue(params.isCorrect)}`,
+    `Attempt marked skipped: ${formatAlertValue(params.wasSkipped)}`,
+    `Moves played count: ${params.movesPlayedCount}`,
+    "",
+    "Request metadata",
+    `API URL: ${params.apiUrl}`,
+    `Referrer: ${formatAlertValue(params.referrer)}`,
+    `User agent: ${formatAlertValue(params.userAgent)}`,
+    `Submitted at: ${params.submittedAt}`,
+  ].join("\n");
+}
+
+async function sendDuplicateAttemptAlert(params: {
+  clerkId: string;
+  userId: string;
+  userEmail: string | null;
+  setId: string;
+  cycleId: string;
+  cycleNumber: number;
+  puzzleInSetId: string;
+  puzzleId: string;
+  puzzlePosition: number;
+  timeSpent: number;
+  isCorrect: boolean;
+  wasSkipped: boolean;
+  movesPlayedCount: number;
+  apiUrl: string;
+  referrer: string | null;
+  userAgent: string | null;
+  submittedAt: string;
+}) {
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (!process.env.RESEND_API_KEY || !adminEmail) {
+    return;
+  }
+
+  try {
+    const { error } = await resend.emails.send({
+      from: "Peck <onboarding@resend.dev>",
+      to: [adminEmail],
+      subject: `Training alert - duplicate attempt - set ${params.setId} - cycle ${params.cycleId}`,
+      text: buildDuplicateAttemptAlertText(params),
+    });
+
+    if (error) {
+      console.error("Error sending duplicate attempt alert:", error);
+    }
+  } catch (error) {
+    console.error("Error sending duplicate attempt alert:", error);
+  }
 }
 
 /**
@@ -80,6 +181,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
                 user: {
                   select: {
                     id: true,
+                    email: true,
                     totalCorrectAttempts: true,
                     weeklyCorrectAttempts: true,
                     weeklyCorrectStartDate: true,
@@ -168,7 +270,17 @@ export async function POST(request: NextRequest, context: RouteContext) {
             error instanceof Prisma.PrismaClientKnownRequestError &&
             error.code === "P2002"
           ) {
-            return { status: "duplicate_attempt" as const };
+            return {
+              status: "duplicate_attempt" as const,
+              alertContext: {
+                userId: cycleWithUser.puzzleSet.user.id,
+                userEmail: cycleWithUser.puzzleSet.user.email,
+                cycleNumber: cycleWithUser.cycleNumber,
+                puzzleInSetId: expectedPuzzleInSet.id,
+                puzzleId: expectedPuzzleInSet.puzzle.id,
+                puzzlePosition: expectedPuzzleInSet.position,
+              },
+            };
           }
           throw error;
         }
@@ -458,8 +570,28 @@ export async function POST(request: NextRequest, context: RouteContext) {
       }
 
       if (result.status === "duplicate_attempt") {
+        await sendDuplicateAttemptAlert({
+          clerkId,
+          userId: result.alertContext.userId,
+          userEmail: result.alertContext.userEmail,
+          setId,
+          cycleId,
+          cycleNumber: result.alertContext.cycleNumber,
+          puzzleInSetId: result.alertContext.puzzleInSetId,
+          puzzleId: result.alertContext.puzzleId,
+          puzzlePosition: result.alertContext.puzzlePosition,
+          timeSpent,
+          isCorrect,
+          wasSkipped,
+          movesPlayedCount: movesPlayed.length,
+          apiUrl: request.url,
+          referrer: request.headers.get("referer"),
+          userAgent: request.headers.get("user-agent"),
+          submittedAt: now.toISOString(),
+        });
+
         return NextResponse.json(
-          { error: "Attempt already recorded for this puzzle in this cycle." },
+          { error: DUPLICATE_ATTEMPT_ERROR },
           { status: 409 },
         );
       }

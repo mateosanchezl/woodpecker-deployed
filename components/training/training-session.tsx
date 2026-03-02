@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { PuzzleBoard } from './puzzle-board'
 import { PuzzleStatus } from './puzzle-status'
 import {
@@ -23,8 +23,10 @@ interface TrainingSessionProps {
 
   // Loading and error states
   isLoading: boolean
+  isSubmittingAttempt?: boolean
   isTransitioning?: boolean // True during puzzle transition
   error: Error | null
+  canAdvanceToNext?: boolean
 
   // Callbacks
   onPuzzleComplete: (
@@ -34,6 +36,7 @@ interface TrainingSessionProps {
     movesPlayed: string[]
   ) => void
   onSkip: (puzzleInSetId: string, timeSpent: number) => void
+  onAdvanceToNextPuzzle?: () => void
   onRetry: () => void
 
   // Cycle completion
@@ -45,6 +48,7 @@ interface TrainingSessionProps {
     totalTime: number | null
   }
   onStartNextCycle?: () => void
+  puzzleRenderKey?: number
   bugReportContext: TrainingBugReportContext
 }
 
@@ -56,18 +60,28 @@ export function TrainingSession({
   puzzleData,
   progress,
   isLoading,
+  isSubmittingAttempt = false,
   isTransitioning,
   error,
+  canAdvanceToNext = false,
   onPuzzleComplete,
   onSkip,
+  onAdvanceToNextPuzzle,
   onRetry,
   isCycleComplete,
   cycleStats,
   onStartNextCycle,
+  puzzleRenderKey = 0,
   bugReportContext,
 }: TrainingSessionProps) {
   // Timer hook
   const timer = usePuzzleTimer()
+  const [isReviewingFailedPuzzle, setIsReviewingFailedPuzzle] = useState(false)
+  const resetTimerRef = useRef(timer.reset)
+
+  useEffect(() => {
+    resetTimerRef.current = timer.reset
+  }, [timer.reset])
 
   // Handle keyboard shortcuts at session level
   useEffect(() => {
@@ -78,6 +92,12 @@ export function TrainingSession({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
+
+  useEffect(() => {
+    if (puzzleData?.id) {
+      resetTimerRef.current()
+    }
+  }, [puzzleData?.id])
 
   // Handle puzzle completion
   const handleComplete = useCallback(
@@ -140,12 +160,16 @@ export function TrainingSession({
       {/* Left Column: Board */}
       <div className="flex-1 w-full flex justify-center lg:justify-end">
         <PuzzleBoard
-          key={puzzleData.id}
+          key={`${puzzleData.id}:${puzzleRenderKey}`}
           fen={puzzleData.puzzle.fen}
           moves={puzzleData.puzzle.moves}
           onComplete={handleComplete}
           onSkip={handleSkip}
+          onAdvanceToNextPuzzle={onAdvanceToNextPuzzle}
+          onReviewModeChange={setIsReviewingFailedPuzzle}
           disabled={isTransitioning}
+          isSubmittingAttempt={isSubmittingAttempt}
+          canAdvanceToNext={canAdvanceToNext}
           timer={timer}
         />
       </div>
@@ -156,17 +180,20 @@ export function TrainingSession({
           timeMs={timer.timeMs}
           progress={progress}
           puzzleRating={puzzleData.puzzle.rating}
+          isPausedForReview={isReviewingFailedPuzzle}
         />
-        
-        <Button 
-            variant="ghost" 
+
+        {!isReviewingFailedPuzzle && (
+          <Button
+            variant="ghost"
             onClick={() => handleSkip(timer.getTime())}
-            disabled={isTransitioning}
+            disabled={isTransitioning || isSubmittingAttempt}
             className="w-full text-muted-foreground hover:text-foreground"
-        >
+          >
             <SkipForward className="mr-2 h-4 w-4" />
             Skip Puzzle
-        </Button>
+          </Button>
+        )}
 
         <TrainingBugReport context={bugReportContext} />
 

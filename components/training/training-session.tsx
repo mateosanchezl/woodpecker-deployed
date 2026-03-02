@@ -10,7 +10,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { AlertCircle, RefreshCw, CheckCircle2, SkipForward, Sparkles } from 'lucide-react'
+import { AlertCircle, RefreshCw, CheckCircle2, ExternalLink, SkipForward, Sparkles } from 'lucide-react'
 import type { TrainingProgress, PuzzleInSetData } from '@/lib/chess/types'
 import { usePuzzleTimer } from '@/hooks/use-puzzle-timer'
 import { useXp } from '@/hooks/use-xp'
@@ -97,7 +97,7 @@ export function TrainingSession({
     if (puzzleData?.id) {
       resetTimerRef.current()
     }
-  }, [puzzleData?.id])
+  }, [puzzleData?.id, puzzleRenderKey])
 
   // Handle puzzle completion
   const handleComplete = useCallback(
@@ -155,6 +155,8 @@ export function TrainingSession({
     )
   }
 
+  const lichessPuzzleUrl = `https://lichess.org/training/${encodeURIComponent(puzzleData.puzzle.id)}`
+
   return (
     <div className="flex flex-col lg:flex-row items-start justify-center gap-8 w-full max-w-7xl mx-auto p-4">
       {/* Left Column: Board */}
@@ -194,6 +196,17 @@ export function TrainingSession({
             Skip Puzzle
           </Button>
         )}
+
+        <Button asChild variant="outline" className="w-full">
+          <a
+            href={lichessPuzzleUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <ExternalLink className="h-4 w-4" />
+            View in Lichess
+          </a>
+        </Button>
 
         <TrainingBugReport context={bugReportContext} />
 

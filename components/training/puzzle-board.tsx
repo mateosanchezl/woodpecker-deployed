@@ -9,10 +9,21 @@ import { usePuzzleTimer } from '@/hooks/use-puzzle-timer'
 import type { Square, PuzzleStatus } from '@/lib/chess/types'
 import { ANIMATION_DURATION } from '@/lib/chess/types'
 import { parseUciMove, parseSolutionMoves } from '@/lib/chess/puzzle-engine'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { PromotionDialog } from './promotion-dialog'
 import { PuzzleFeedback } from './puzzle-feedback'
-import { ChevronLeft, ChevronRight, Loader2, SkipForward } from 'lucide-react'
+import {
+  AlertCircle,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  CircleDot,
+  Clock3,
+  Eye,
+  Loader2,
+  SkipForward,
+} from 'lucide-react'
 
 interface PuzzleBoardProps {
   fen: string
@@ -427,7 +438,7 @@ export function PuzzleBoard({
         )}
       </div>
 
-      <div className="text-lg font-medium text-muted-foreground">
+      <div className="flex min-h-10 items-center justify-center text-lg font-medium">
         <StatusText
           mode={mode}
           status={status}
@@ -495,30 +506,108 @@ function StatusText({
 }) {
   if (mode === 'failedReview') {
     if (isSubmittingAttempt) {
-      return <span className="text-amber-600">Saving result...</span>
+      return (
+        <StatusBadge
+          icon={Loader2}
+          label="Saving result"
+          tone="warning"
+          iconClassName="animate-spin"
+        />
+      )
     }
 
     if (isReviewComplete) {
-      return <span className="text-green-600">Solution complete</span>
+      return (
+        <StatusBadge
+          icon={CheckCircle2}
+          label="Solution Complete"
+          tone="success"
+        />
+      )
     }
 
-    return <span className="text-amber-600">Review the line you missed</span>
+    return (
+      <StatusBadge
+        icon={Eye}
+        label="Review The Missed Line"
+        tone="warning"
+      />
+    )
   }
 
   switch (status) {
     case 'loading':
-      return <span>Loading puzzle...</span>
+      return (
+        <StatusBadge
+          icon={Loader2}
+          label="Loading Puzzle"
+          tone="neutral"
+          iconClassName="animate-spin"
+        />
+      )
     case 'opponent_turn':
-      return <span className="animate-pulse">Opponent moving...</span>
+      return (
+        <StatusBadge
+          icon={Clock3}
+          label="Opponent Moving"
+          tone="info"
+          iconClassName="animate-pulse"
+        />
+      )
     case 'player_turn':
-      return <span>Your move</span>
+      return <StatusBadge icon={CircleDot} label="Your Move" tone="neutral" />
     case 'correct':
-      return <span className="text-green-600">Correct!</span>
+      return <StatusBadge icon={CheckCircle2} label="Correct" tone="success" />
     case 'incorrect':
-      return <span className="text-red-600">Incorrect</span>
+      return <StatusBadge icon={AlertCircle} label="Incorrect" tone="danger" />
     case 'complete':
-      return <span className="text-green-600">Puzzle complete!</span>
+      return (
+        <StatusBadge
+          icon={CheckCircle2}
+          label="Puzzle Complete"
+          tone="success"
+        />
+      )
     default:
       return null
   }
+}
+
+function StatusBadge({
+  icon: Icon,
+  label,
+  tone,
+  iconClassName,
+}: {
+  icon: typeof Loader2
+  label: string
+  tone: 'neutral' | 'info' | 'success' | 'warning' | 'danger'
+  iconClassName?: string
+}) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium tracking-tight shadow-sm transition-colors',
+        tone === 'neutral' && 'border-border bg-background text-foreground/80',
+        tone === 'info' && 'border-sky-200/80 bg-sky-50 text-sky-700',
+        tone === 'success' && 'border-emerald-200/80 bg-emerald-50 text-emerald-700',
+        tone === 'warning' && 'border-amber-200/80 bg-amber-50 text-amber-700',
+        tone === 'danger' && 'border-rose-200/80 bg-rose-50 text-rose-700'
+      )}
+    >
+      <span
+        className={cn(
+          'flex h-5 w-5 items-center justify-center rounded-full border bg-white/90',
+          tone === 'neutral' && 'border-border/80 text-foreground/70',
+          tone === 'info' && 'border-sky-200/80 text-sky-700',
+          tone === 'success' && 'border-emerald-200/80 text-emerald-700',
+          tone === 'warning' && 'border-amber-200/80 text-amber-700',
+          tone === 'danger' && 'border-rose-200/80 text-rose-700'
+        )}
+      >
+        <Icon className={cn('h-3 w-3', iconClassName)} />
+      </span>
+      <span>{label}</span>
+    </span>
+  )
 }

@@ -9,7 +9,10 @@ import {
 } from './training-bug-report'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import { AlertCircle, RefreshCw, CheckCircle2, ExternalLink, SkipForward, Sparkles } from 'lucide-react'
 import type { TrainingProgress, PuzzleInSetData } from '@/lib/chess/types'
 import { usePuzzleTimer } from '@/hooks/use-puzzle-timer'
@@ -77,6 +80,7 @@ export function TrainingSession({
   // Timer hook
   const timer = usePuzzleTimer()
   const [isReviewingFailedPuzzle, setIsReviewingFailedPuzzle] = useState(false)
+  const [showPuzzleThemes, setShowPuzzleThemes] = useState(true)
   const resetTimerRef = useRef(timer.reset)
 
   useEffect(() => {
@@ -210,17 +214,43 @@ export function TrainingSession({
 
         <TrainingBugReport context={bugReportContext} />
 
-        {/* Puzzle metadata (themes) */}
+        {/* Puzzle metadata visibility */}
         {puzzleData.puzzle.themes.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 justify-center lg:justify-start">
-            {puzzleData.puzzle.themes.slice(0, 5).map(theme => (
-              <span
-                key={theme}
-                className="text-xs px-2 py-0.5 bg-muted rounded-full text-muted-foreground"
-              >
-                {formatTheme(theme)}
-              </span>
-            ))}
+          <div className="rounded-lg border bg-card p-3 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="space-y-0.5">
+                <Label
+                  htmlFor="puzzle-theme-visibility"
+                  className="flex items-center gap-2 text-sm font-medium"
+                >
+                  <span>Show puzzle themes</span>
+                  <Badge variant="secondary" className="uppercase tracking-wide">
+                    New
+                  </Badge>
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Hide theme labels to avoid tactical hints.
+                </p>
+              </div>
+              <Switch
+                id="puzzle-theme-visibility"
+                checked={showPuzzleThemes}
+                onCheckedChange={setShowPuzzleThemes}
+              />
+            </div>
+
+            {showPuzzleThemes && (
+              <div className="flex flex-wrap gap-1.5 justify-center lg:justify-start">
+                {puzzleData.puzzle.themes.slice(0, 5).map(theme => (
+                  <span
+                    key={theme}
+                    className="text-xs px-2 py-0.5 bg-muted rounded-full text-muted-foreground"
+                  >
+                    {formatTheme(theme)}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

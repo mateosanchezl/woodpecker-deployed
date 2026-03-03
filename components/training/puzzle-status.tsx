@@ -11,12 +11,18 @@ interface PuzzleStatusProps {
   timeMs: number
   progress: TrainingProgress
   puzzleRating?: number
+  isPausedForReview?: boolean
 }
 
 /**
  * Status display showing timer, cycle number, and progress.
  */
-export function PuzzleStatus({ timeMs, progress, puzzleRating }: PuzzleStatusProps) {
+export function PuzzleStatus({
+  timeMs,
+  progress,
+  puzzleRating,
+  isPausedForReview = false,
+}: PuzzleStatusProps) {
   const [isTimerVisible, setIsTimerVisible] = useState(true)
 
   const percentComplete = Math.round(
@@ -34,7 +40,14 @@ export function PuzzleStatus({ timeMs, progress, puzzleRating }: PuzzleStatusPro
                 <div className="font-mono text-3xl tabular-nums font-medium">
                   {formatTime(timeMs)}
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">Time</div>
+                <div className="mt-1 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                  <span>Time</span>
+                  {isPausedForReview && (
+                    <span className="rounded-full bg-muted px-2 py-0.5 font-medium">
+                      Paused
+                    </span>
+                  )}
+                </div>
               </>
             ) : (
               <div className="text-3xl font-medium text-muted-foreground">—</div>

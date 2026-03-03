@@ -3,7 +3,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { Chess } from 'chess.js'
 import type {
-  PuzzleState,
   PuzzleStatus,
   BoardOrientation,
   Square,
@@ -13,7 +12,6 @@ import {
   ANIMATION_DURATION,
   OPPONENT_MOVE_DELAY,
   FEEDBACK_DISPLAY_TIME,
-  NEXT_PUZZLE_DELAY,
 } from '@/lib/chess/types'
 import {
   parseUciMove,
@@ -39,6 +37,7 @@ interface UseChessPuzzleReturn {
   position: string
   orientation: BoardOrientation
   status: PuzzleStatus
+  currentMoveIndex: number
   lastMove: { from: Square; to: Square } | null
   movesPlayed: string[]
   isPlayerTurn: boolean
@@ -70,6 +69,11 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
 
   // Track initialization to prevent race conditions
   const initIdRef = useRef(0)
+  const onCorrectMoveRef = useRef(onCorrectMove)
+  const onIncorrectMoveRef = useRef(onIncorrectMove)
+  const onPuzzleCompleteRef = useRef(onPuzzleComplete)
+  const onReadyRef = useRef(onReady)
+  const movesPlayedRef = useRef<string[]>([])
 
   // State
   const [position, setPosition] = useState(fen)
@@ -86,6 +90,13 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
 
   // Derived state
   const isPlayerTurn = status === 'player_turn'
+
+  useEffect(() => {
+    onCorrectMoveRef.current = onCorrectMove
+    onIncorrectMoveRef.current = onIncorrectMove
+    onPuzzleCompleteRef.current = onPuzzleComplete
+    onReadyRef.current = onReady
+  }, [onCorrectMove, onIncorrectMove, onPuzzleComplete, onReady])
 
   // Initialize puzzle
   const initialize = useCallback(async () => {
@@ -106,6 +117,7 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
       setCurrentMoveIndex(0)
       setLastMove(null)
       setMovesPlayed([])
+      movesPlayedRef.current = []
       setPromotionState({ isOpen: false, from: null, to: null, color: 'w' })
 
       // Brief delay before showing opponent's first move
@@ -142,15 +154,15 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
 
           // Ready for player
           setStatus('player_turn')
-          onReady?.()
+          onReadyRef.current?.()
         } else {
           console.error('Failed to play first move:', moves[0], 'FEN:', fen)
           setStatus('player_turn')
-          onReady?.()
+          onReadyRef.current?.()
         }
       } else {
         setStatus('player_turn')
-        onReady?.()
+        onReadyRef.current?.()
       }
     } catch (error) {
       console.error('Failed to initialize puzzle:', error)
@@ -159,14 +171,14 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
         setStatus('player_turn')
       }
     }
-  }, [fen, solutionMoves, onReady])
+  }, [fen, solutionMoves])
 
   // Play opponent's next move
   const playOpponentMove = useCallback(async (moveIndex: number) => {
     if (moveIndex >= solutionMovesArray.length) {
       // Puzzle complete!
       setStatus('complete')
-      onPuzzleComplete?.(true, movesPlayed)
+      onPuzzleCompleteRef.current?.(true, [...movesPlayedRef.current])
       return
     }
 
@@ -192,7 +204,7 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
       // Check if puzzle is complete
       if (moveIndex + 1 >= solutionMovesArray.length) {
         setStatus('complete')
-        onPuzzleComplete?.(true, [...movesPlayed])
+        onPuzzleCompleteRef.current?.(true, [...movesPlayedRef.current])
       } else {
         setStatus('player_turn')
       }
@@ -200,7 +212,7 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
       console.error('Failed to play opponent move:', moveUci)
       setStatus('player_turn')
     }
-  }, [solutionMovesArray, movesPlayed, onPuzzleComplete])
+  }, [solutionMovesArray])
 
   // Handle player move (internal, after promotion is resolved)
   const executePlayerMove = useCallback(async (
@@ -232,18 +244,16 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
     if (!isCorrect) {
       // Wrong move - show feedback and fail
       setStatus('incorrect')
-      onIncorrectMove?.()
+      onIncorrectMoveRef.current?.()
 
       await sleep(FEEDBACK_DISPLAY_TIME)
 
       // Record the incorrect move
       const incorrectMoveUci = toUciMove(from, to, promotion)
-      const finalMoves = [...movesPlayed, incorrectMoveUci]
+      const finalMoves = [...movesPlayedRef.current, incorrectMoveUci]
+      movesPlayedRef.current = finalMoves
       setMovesPlayed(finalMoves)
-
-      await sleep(NEXT_PUZZLE_DELAY - FEEDBACK_DISPLAY_TIME)
-
-      onPuzzleComplete?.(false, finalMoves)
+      onPuzzleCompleteRef.current?.(false, finalMoves)
       return false
     }
 
@@ -262,12 +272,13 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
 
     // Update state
     const moveUci = toUciMove(from, to, promotion)
-    const newMovesPlayed = [...movesPlayed, moveUci]
+    const newMovesPlayed = [...movesPlayedRef.current, moveUci]
+    movesPlayedRef.current = newMovesPlayed
     setMovesPlayed(newMovesPlayed)
     setPosition(chessRef.current.fen())
     setLastMove({ from, to })
     setStatus('correct')
-    onCorrectMove?.()
+    onCorrectMoveRef.current?.()
 
     await sleep(FEEDBACK_DISPLAY_TIME)
 
@@ -281,10 +292,6 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
     status,
     currentMoveIndex,
     solutionMovesArray,
-    movesPlayed,
-    onCorrectMove,
-    onIncorrectMove,
-    onPuzzleComplete,
     playOpponentMove,
   ])
 
@@ -350,13 +357,18 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
 
   // Initialize on mount or when puzzle changes
   useEffect(() => {
-    initialize()
-  }, [fen, solutionMoves]) // eslint-disable-line react-hooks/exhaustive-deps
+    const timeoutId = window.setTimeout(() => {
+      void initialize()
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [initialize])
 
   return {
     position,
     orientation,
     status,
+    currentMoveIndex,
     lastMove,
     movesPlayed,
     isPlayerTurn,

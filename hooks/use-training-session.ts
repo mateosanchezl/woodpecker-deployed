@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useState, useEffect, useRef } from 'react'
+import { useCallback, useState, useEffect, useRef, useMemo } from 'react'
 import { toast } from 'sonner'
 import type {
   AttemptResponse,
@@ -33,8 +33,11 @@ interface UseTrainingSessionReturn {
   isCycleComplete: boolean
   cycleStats: TrainingSession['cycleStats'] | null
   isLoading: boolean
+  isSubmittingAttempt: boolean
   isTransitioning: boolean
+  hasPendingAdvance: boolean
   error: Error | null
+  puzzleRenderKey: number
   recordAttempt: (
     puzzleInSetId: string,
     isCorrect: boolean,
@@ -42,6 +45,7 @@ interface UseTrainingSessionReturn {
     movesPlayed: string[]
   ) => Promise<void>
   recordSkip: (puzzleInSetId: string, timeSpent: number) => Promise<void>
+  advancePendingSession: () => void
   refetch: () => void
 }
 
@@ -70,9 +74,15 @@ export function useTrainingSession(
 ): UseTrainingSessionReturn {
   const { puzzleSetId, cycleId } = options
   const queryClient = useQueryClient()
-  const sessionQueryKey = ['training-session', puzzleSetId, cycleId] as const
+  const sessionQueryKey = useMemo(
+    () => ['training-session', puzzleSetId, cycleId] as const,
+    [puzzleSetId, cycleId]
+  )
 
+  const [pendingAdvanceSession, setPendingAdvanceSession] = useState<TrainingSession | null>(null)
+  const [isSubmittingAttempt, setIsSubmittingAttempt] = useState(false)
   const [isTransitioning, setIsTransitioning] = useState(false)
+  const [puzzleRenderKey, setPuzzleRenderKey] = useState(0)
   const currentPuzzleIdRef = useRef<string | null>(null)
   const prefetchedRef = useRef<TrainingSession['prefetchedNext'] | null>(null)
 
@@ -94,6 +104,14 @@ export function useTrainingSession(
   const prefetchedNext = data?.prefetchedNext ?? null
 
   useEffect(() => {
+    setPendingAdvanceSession(null)
+    setIsSubmittingAttempt(false)
+    setIsTransitioning(false)
+    currentPuzzleIdRef.current = null
+    prefetchedRef.current = null
+  }, [puzzleSetId, cycleId])
+
+  useEffect(() => {
     if (currentPuzzleId && currentPuzzleId !== currentPuzzleIdRef.current) {
       currentPuzzleIdRef.current = currentPuzzleId
       setIsTransitioning(false)
@@ -105,9 +123,7 @@ export function useTrainingSession(
   }, [currentPuzzleId, isCycleComplete])
 
   useEffect(() => {
-    if (prefetchedNext) {
-      prefetchedRef.current = prefetchedNext
-    }
+    prefetchedRef.current = prefetchedNext
   }, [prefetchedNext])
 
   const attemptMutation = useMutation<
@@ -120,7 +136,11 @@ export function useTrainingSession(
       wasSkipped: boolean
       movesPlayed: string[]
     },
-    { previousData: TrainingSession | undefined; usedPrefetchedNext: boolean }
+    {
+      previousData: TrainingSession | undefined
+      usedPrefetchedNext: boolean
+      isFailedAttempt: boolean
+    }
   >({
     mutationFn: async ({ puzzleInSetId, timeSpent, isCorrect, wasSkipped, movesPlayed }) => {
       if (!cycleId) {
@@ -151,15 +171,27 @@ export function useTrainingSession(
 
       return res.json()
     },
-    onMutate: async () => {
-      setIsTransitioning(true)
+    onMutate: async (variables) => {
+      const isFailedAttempt = !variables.isCorrect && !variables.wasSkipped
+      setPendingAdvanceSession(null)
+      setIsSubmittingAttempt(true)
 
       await queryClient.cancelQueries({ queryKey: sessionQueryKey })
 
       const previousData = queryClient.getQueryData<TrainingSession>(sessionQueryKey)
-      const usedPrefetchedNext = !!(prefetchedRef.current && previousData)
+      let usedPrefetchedNext = false
 
-      if (prefetchedRef.current && previousData && !previousData.isCycleComplete) {
+      if (!isFailedAttempt) {
+        setIsTransitioning(true)
+      }
+
+      if (
+        !isFailedAttempt &&
+        prefetchedRef.current &&
+        previousData &&
+        !previousData.isCycleComplete
+      ) {
+        usedPrefetchedNext = true
         const optimisticData: TrainingSession = {
           current: prefetchedRef.current,
           prefetchedNext: null,
@@ -176,9 +208,11 @@ export function useTrainingSession(
         prefetchedRef.current = null
       }
 
-      return { previousData, usedPrefetchedNext }
+      return { previousData, usedPrefetchedNext, isFailedAttempt }
     },
     onSuccess: (response, _variables, context) => {
+      setIsSubmittingAttempt(false)
+
       if (response.xp) {
         const xp = response.xp
         queryClient.setQueryData<UserCacheData>(['user'], (oldData) => {
@@ -200,7 +234,15 @@ export function useTrainingSession(
         })
       }
 
-      if (response.session) {
+      if (context?.isFailedAttempt) {
+        if (response.session) {
+          setPendingAdvanceSession(response.session)
+        } else {
+          queryClient.invalidateQueries({ queryKey: sessionQueryKey })
+        }
+
+        setIsTransitioning(false)
+      } else if (response.session) {
         queryClient.setQueryData(sessionQueryKey, response.session)
       } else if (response.isLastPuzzle || !context?.usedPrefetchedNext) {
         queryClient.invalidateQueries({ queryKey: sessionQueryKey })
@@ -220,18 +262,33 @@ export function useTrainingSession(
       }
     },
     onError: (mutationError, _variables, context) => {
+      setIsSubmittingAttempt(false)
+      setPendingAdvanceSession(null)
+
       if (context?.previousData) {
         queryClient.setQueryData(sessionQueryKey, context.previousData)
       }
 
-      if (mutationError.status === 409) {
-        queryClient.invalidateQueries({ queryKey: sessionQueryKey })
+      if (context?.isFailedAttempt) {
+        setPuzzleRenderKey((current) => current + 1)
       }
 
+      queryClient.invalidateQueries({ queryKey: sessionQueryKey })
       setIsTransitioning(false)
       toast.error(mutationError.message || 'Failed to record attempt. Please try again.')
     },
   })
+
+  const advancePendingSession = useCallback(() => {
+    if (!pendingAdvanceSession) {
+      return
+    }
+
+    setIsTransitioning(true)
+    prefetchedRef.current = pendingAdvanceSession.prefetchedNext
+    queryClient.setQueryData(sessionQueryKey, pendingAdvanceSession)
+    setPendingAdvanceSession(null)
+  }, [pendingAdvanceSession, queryClient, sessionQueryKey])
 
   const recordAttempt = useCallback(
     async (
@@ -270,10 +327,14 @@ export function useTrainingSession(
     isCycleComplete: data?.isCycleComplete ?? false,
     cycleStats: data?.cycleStats ?? null,
     isLoading,
-    isTransitioning: isTransitioning || attemptMutation.isPending || isFetching,
-    error: error || attemptMutation.error,
+    isSubmittingAttempt,
+    isTransitioning: isTransitioning || isFetching,
+    hasPendingAdvance: pendingAdvanceSession !== null,
+    error: error ?? null,
+    puzzleRenderKey,
     recordAttempt,
     recordSkip,
+    advancePendingSession,
     refetch,
   }
 }

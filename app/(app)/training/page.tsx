@@ -223,7 +223,12 @@ function TrainingPageInner({
   }, [deleteMutation])
 
   // Navigation guard - active when training is in progress and cycle not complete
-  const isTrainingActive = !!(activeCycleId && selectedSetId && !trainingSession.isCycleComplete)
+  const isTrainingActive = !!(
+    activeCycleId &&
+    selectedSetId &&
+    !trainingSession.isCycleComplete &&
+    !trainingSession.hasPendingAdvance
+  )
   const { showModal, confirmLeave, cancelLeave } = useNavigationGuard({
     enabled: isTrainingActive,
   })
@@ -248,14 +253,18 @@ function TrainingPageInner({
           } : null}
           progress={trainingSession.progress}
           isLoading={trainingSession.isLoading}
+          isSubmittingAttempt={trainingSession.isSubmittingAttempt}
           isTransitioning={trainingSession.isTransitioning}
           error={trainingSession.error}
+          canAdvanceToNext={trainingSession.hasPendingAdvance}
           onPuzzleComplete={handlePuzzleComplete}
           onSkip={handleSkip}
+          onAdvanceToNextPuzzle={trainingSession.advancePendingSession}
           onRetry={trainingSession.refetch}
           isCycleComplete={trainingSession.isCycleComplete}
           cycleStats={trainingSession.cycleStats || undefined}
           onStartNextCycle={handleStartNextCycle}
+          puzzleRenderKey={trainingSession.puzzleRenderKey}
           bugReportContext={{
             puzzleSetId: selectedSetId,
             cycleId: activeCycleId,

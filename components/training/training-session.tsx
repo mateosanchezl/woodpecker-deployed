@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { PuzzleBoard } from './puzzle-board'
 import { PuzzleStatus } from './puzzle-status'
 import {
@@ -10,7 +10,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { AlertCircle, RefreshCw, CheckCircle2, SkipForward, Sparkles } from 'lucide-react'
+import { AlertCircle, RefreshCw, CheckCircle2, ExternalLink, SkipForward, Sparkles } from 'lucide-react'
 import type { TrainingProgress, PuzzleInSetData } from '@/lib/chess/types'
 import { usePuzzleTimer } from '@/hooks/use-puzzle-timer'
 import { useXp } from '@/hooks/use-xp'
@@ -23,8 +23,10 @@ interface TrainingSessionProps {
 
   // Loading and error states
   isLoading: boolean
+  isSubmittingAttempt?: boolean
   isTransitioning?: boolean // True during puzzle transition
   error: Error | null
+  canAdvanceToNext?: boolean
 
   // Callbacks
   onPuzzleComplete: (
@@ -34,6 +36,7 @@ interface TrainingSessionProps {
     movesPlayed: string[]
   ) => void
   onSkip: (puzzleInSetId: string, timeSpent: number) => void
+  onAdvanceToNextPuzzle?: () => void
   onRetry: () => void
 
   // Cycle completion
@@ -45,6 +48,7 @@ interface TrainingSessionProps {
     totalTime: number | null
   }
   onStartNextCycle?: () => void
+  puzzleRenderKey?: number
   bugReportContext: TrainingBugReportContext
 }
 
@@ -56,18 +60,28 @@ export function TrainingSession({
   puzzleData,
   progress,
   isLoading,
+  isSubmittingAttempt = false,
   isTransitioning,
   error,
+  canAdvanceToNext = false,
   onPuzzleComplete,
   onSkip,
+  onAdvanceToNextPuzzle,
   onRetry,
   isCycleComplete,
   cycleStats,
   onStartNextCycle,
+  puzzleRenderKey = 0,
   bugReportContext,
 }: TrainingSessionProps) {
   // Timer hook
   const timer = usePuzzleTimer()
+  const [isReviewingFailedPuzzle, setIsReviewingFailedPuzzle] = useState(false)
+  const resetTimerRef = useRef(timer.reset)
+
+  useEffect(() => {
+    resetTimerRef.current = timer.reset
+  }, [timer.reset])
 
   // Handle keyboard shortcuts at session level
   useEffect(() => {
@@ -78,6 +92,12 @@ export function TrainingSession({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
+
+  useEffect(() => {
+    if (puzzleData?.id) {
+      resetTimerRef.current()
+    }
+  }, [puzzleData?.id, puzzleRenderKey])
 
   // Handle puzzle completion
   const handleComplete = useCallback(
@@ -135,17 +155,23 @@ export function TrainingSession({
     )
   }
 
+  const lichessPuzzleUrl = `https://lichess.org/training/${encodeURIComponent(puzzleData.puzzle.id)}`
+
   return (
     <div className="flex flex-col lg:flex-row items-start justify-center gap-8 w-full max-w-7xl mx-auto p-4">
       {/* Left Column: Board */}
       <div className="flex-1 w-full flex justify-center lg:justify-end">
         <PuzzleBoard
-          key={puzzleData.id}
+          key={`${puzzleData.id}:${puzzleRenderKey}`}
           fen={puzzleData.puzzle.fen}
           moves={puzzleData.puzzle.moves}
           onComplete={handleComplete}
           onSkip={handleSkip}
+          onAdvanceToNextPuzzle={onAdvanceToNextPuzzle}
+          onReviewModeChange={setIsReviewingFailedPuzzle}
           disabled={isTransitioning}
+          isSubmittingAttempt={isSubmittingAttempt}
+          canAdvanceToNext={canAdvanceToNext}
           timer={timer}
         />
       </div>
@@ -156,16 +182,30 @@ export function TrainingSession({
           timeMs={timer.timeMs}
           progress={progress}
           puzzleRating={puzzleData.puzzle.rating}
+          isPausedForReview={isReviewingFailedPuzzle}
         />
-        
-        <Button 
-            variant="ghost" 
+
+        {!isReviewingFailedPuzzle && (
+          <Button
+            variant="ghost"
             onClick={() => handleSkip(timer.getTime())}
-            disabled={isTransitioning}
+            disabled={isTransitioning || isSubmittingAttempt}
             className="w-full text-muted-foreground hover:text-foreground"
-        >
+          >
             <SkipForward className="mr-2 h-4 w-4" />
             Skip Puzzle
+          </Button>
+        )}
+
+        <Button asChild variant="outline" className="w-full">
+          <a
+            href={lichessPuzzleUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <ExternalLink className="h-4 w-4" />
+            View in Lichess
+          </a>
         </Button>
 
         <TrainingBugReport context={bugReportContext} />

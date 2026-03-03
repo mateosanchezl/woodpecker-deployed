@@ -70,7 +70,6 @@ export interface AttemptResult {
 export const ANIMATION_DURATION = 200 // Piece movement in ms
 export const OPPONENT_MOVE_DELAY = 300 // Pause before opponent responds
 export const FEEDBACK_DISPLAY_TIME = 400 // Show correct/incorrect feedback
-export const NEXT_PUZZLE_DELAY = 600 // Delay before advancing to next puzzle
 
 // Promotion piece types
 export type PromotionPiece = 'q' | 'r' | 'b' | 'n'

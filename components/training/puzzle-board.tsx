@@ -1,23 +1,33 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
+import { Chess } from 'chess.js'
 import { Chessboard } from 'react-chessboard'
 import type { ChessboardOptions, SquareHandlerArgs, PieceDropHandlerArgs } from 'react-chessboard'
 import { useChessPuzzle } from '@/hooks/use-chess-puzzle'
 import { usePuzzleTimer } from '@/hooks/use-puzzle-timer'
 import type { Square, PuzzleStatus } from '@/lib/chess/types'
 import { ANIMATION_DURATION } from '@/lib/chess/types'
+import { parseUciMove, parseSolutionMoves } from '@/lib/chess/puzzle-engine'
+import { Button } from '@/components/ui/button'
 import { PromotionDialog } from './promotion-dialog'
 import { PuzzleFeedback } from './puzzle-feedback'
+import { ChevronLeft, ChevronRight, Loader2, SkipForward } from 'lucide-react'
 
 interface PuzzleBoardProps {
   fen: string
   moves: string
   onComplete: (isCorrect: boolean, timeSpent: number, movesPlayed: string[]) => void
   onSkip: (timeSpent: number) => void
+  onAdvanceToNextPuzzle?: () => void
+  onReviewModeChange?: (isReviewing: boolean) => void
   disabled?: boolean // Disable interactions during transitions
+  isSubmittingAttempt?: boolean
+  canAdvanceToNext?: boolean
   timer: ReturnType<typeof usePuzzleTimer>
 }
+
+type PuzzleBoardMode = 'solving' | 'failedReview'
 
 // Custom board colors matching the new "Peck" nature theme
 const customDarkSquareStyle: React.CSSProperties = {
@@ -35,17 +45,44 @@ const customBoardStyle: React.CSSProperties = {
 
 /**
  * Interactive chess puzzle board component.
- * Handles the complete puzzle solving flow with animations and feedback.
+ * Handles the complete puzzle solving flow with animations, feedback, and failed-attempt review.
  */
-export function PuzzleBoard({ fen, moves, onComplete, onSkip, disabled, timer }: PuzzleBoardProps) {
+export function PuzzleBoard({
+  fen,
+  moves,
+  onComplete,
+  onSkip,
+  onAdvanceToNextPuzzle,
+  onReviewModeChange,
+  disabled = false,
+  isSubmittingAttempt = false,
+  canAdvanceToNext = false,
+  timer,
+}: PuzzleBoardProps) {
+  const [mode, setMode] = useState<PuzzleBoardMode>('solving')
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null)
   const [legalMoves, setLegalMoves] = useState<Square[]>([])
+  const [reviewStartFen, setReviewStartFen] = useState(fen)
+  const [reviewStartMoveIndex, setReviewStartMoveIndex] = useState(0)
+  const [reviewStartLastMove, setReviewStartLastMove] = useState<{
+    from: Square
+    to: Square
+  } | null>(null)
+  const [walkthroughPosition, setWalkthroughPosition] = useState(fen)
+  const [walkthroughMoveIndex, setWalkthroughMoveIndex] = useState(0)
+  const [walkthroughLastMove, setWalkthroughLastMove] = useState<{
+    from: Square
+    to: Square
+  } | null>(null)
+
+  const solutionMoves = useMemo(() => parseSolutionMoves(moves), [moves])
 
   // Chess puzzle hook
   const {
     position,
     orientation,
     status,
+    currentMoveIndex,
     lastMove,
     isPlayerTurn,
     promotionState,
@@ -56,29 +93,55 @@ export function PuzzleBoard({ fen, moves, onComplete, onSkip, disabled, timer }:
   } = useChessPuzzle({
     fen,
     solutionMoves: moves,
-    onCorrectMove: () => {
-      // Continue timer
-    },
     onIncorrectMove: () => {
       timer.pause()
     },
     onPuzzleComplete: (isCorrect, finalMoves) => {
+      const finalTime = timer.getTime()
       timer.pause()
-      onComplete(isCorrect, timer.getTime(), finalMoves)
+
+      if (!isCorrect) {
+        setMode('failedReview')
+        setSelectedSquare(null)
+        setLegalMoves([])
+        setReviewStartFen(position)
+        setReviewStartMoveIndex(currentMoveIndex)
+        setReviewStartLastMove(lastMove)
+        setWalkthroughPosition(position)
+        setWalkthroughMoveIndex(currentMoveIndex)
+        setWalkthroughLastMove(lastMove)
+      }
+
+      onComplete(isCorrect, finalTime, finalMoves)
     },
     onReady: () => {
       timer.start()
     },
   })
 
-  // Handle piece drop
+  useEffect(() => {
+    onReviewModeChange?.(mode === 'failedReview')
+  }, [mode, onReviewModeChange])
+
+  useEffect(() => {
+    return () => {
+      onReviewModeChange?.(false)
+    }
+  }, [onReviewModeChange])
+
   const handlePieceDrop = useCallback(
     ({ sourceSquare, targetSquare }: PieceDropHandlerArgs): boolean => {
-      if (!isPlayerTurn || !sourceSquare || !targetSquare) {
+      if (
+        mode !== 'solving' ||
+        disabled ||
+        isSubmittingAttempt ||
+        !isPlayerTurn ||
+        !sourceSquare ||
+        !targetSquare
+      ) {
         return false
       }
 
-      // Ignore drops on the same square (not a move)
       if (sourceSquare === targetSquare) {
         return false
       }
@@ -88,26 +151,23 @@ export function PuzzleBoard({ fen, moves, onComplete, onSkip, disabled, timer }:
 
       return makePlayerMove(sourceSquare as Square, targetSquare as Square)
     },
-    [isPlayerTurn, makePlayerMove]
+    [mode, disabled, isSubmittingAttempt, isPlayerTurn, makePlayerMove]
   )
 
-  // Handle square click (for click-to-move)
   const handleSquareClick = useCallback(
     ({ square }: SquareHandlerArgs) => {
-      if (!isPlayerTurn) {
+      if (mode !== 'solving' || disabled || isSubmittingAttempt || !isPlayerTurn) {
         return
       }
 
       const sq = square as Square
 
-      // If clicking the same square that's selected, deselect it
       if (selectedSquare === sq) {
         setSelectedSquare(null)
         setLegalMoves([])
         return
       }
 
-      // If a piece is already selected and this is a legal target
       if (selectedSquare && legalMoves.includes(sq)) {
         makePlayerMove(selectedSquare, sq)
         setSelectedSquare(null)
@@ -115,102 +175,236 @@ export function PuzzleBoard({ fen, moves, onComplete, onSkip, disabled, timer }:
         return
       }
 
-      // Select the clicked square and get legal moves
-      const moves = getLegalMoves(sq)
-      if (moves.length > 0) {
+      const nextLegalMoves = getLegalMoves(sq)
+      if (nextLegalMoves.length > 0) {
         setSelectedSquare(sq)
-        setLegalMoves(moves)
+        setLegalMoves(nextLegalMoves)
       } else {
         setSelectedSquare(null)
         setLegalMoves([])
       }
     },
-    [isPlayerTurn, selectedSquare, legalMoves, makePlayerMove, getLegalMoves]
+    [
+      mode,
+      disabled,
+      isSubmittingAttempt,
+      isPlayerTurn,
+      selectedSquare,
+      legalMoves,
+      makePlayerMove,
+      getLegalMoves,
+    ]
   )
 
-  // Custom square styles for highlighting
+  const handleSkip = useCallback(() => {
+    if (mode !== 'solving' || disabled || isSubmittingAttempt) {
+      return
+    }
+
+    timer.pause()
+    onSkip(timer.getTime())
+  }, [mode, disabled, isSubmittingAttempt, timer, onSkip])
+
+  const setWalkthroughToMoveIndex = useCallback((targetMoveIndex: number) => {
+    if (mode !== 'failedReview') {
+      return
+    }
+
+    const clampedMoveIndex = Math.min(
+      Math.max(targetMoveIndex, reviewStartMoveIndex),
+      solutionMoves.length
+    )
+    const chess = new Chess()
+    chess.load(reviewStartFen)
+
+    let nextLastMove = reviewStartLastMove
+
+    for (let moveIndex = reviewStartMoveIndex; moveIndex < clampedMoveIndex; moveIndex += 1) {
+      const moveUci = solutionMoves[moveIndex]
+      if (!moveUci) {
+        console.error('Missing walkthrough move:', moveIndex)
+        return
+      }
+
+      const parsed = parseUciMove(moveUci)
+      const result = chess.move({
+        from: parsed.from,
+        to: parsed.to,
+        promotion: parsed.promotion,
+      })
+
+      if (!result) {
+        console.error('Failed to play walkthrough move:', moveUci)
+        return
+      }
+
+      nextLastMove = { from: parsed.from, to: parsed.to }
+    }
+
+    setWalkthroughPosition(chess.fen())
+    setWalkthroughLastMove(nextLastMove)
+    setWalkthroughMoveIndex(clampedMoveIndex)
+  }, [
+    mode,
+    reviewStartFen,
+    reviewStartLastMove,
+    reviewStartMoveIndex,
+    solutionMoves,
+  ])
+
+  const stepForward = useCallback(() => {
+    if (walkthroughMoveIndex >= solutionMoves.length) {
+      return
+    }
+
+    setWalkthroughToMoveIndex(walkthroughMoveIndex + 1)
+  }, [walkthroughMoveIndex, solutionMoves.length, setWalkthroughToMoveIndex])
+
+  const stepBackward = useCallback(() => {
+    if (walkthroughMoveIndex <= reviewStartMoveIndex) {
+      return
+    }
+
+    setWalkthroughToMoveIndex(walkthroughMoveIndex - 1)
+  }, [walkthroughMoveIndex, reviewStartMoveIndex, setWalkthroughToMoveIndex])
+
+  useEffect(() => {
+    if (mode !== 'failedReview') {
+      return
+    }
+
+    const handleReviewKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.target instanceof HTMLElement &&
+        (event.target.isContentEditable ||
+          ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName))
+      ) {
+        return
+      }
+
+      if (event.key === 'ArrowRight') {
+        event.preventDefault()
+        stepForward()
+      }
+
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault()
+        stepBackward()
+      }
+    }
+
+    window.addEventListener('keydown', handleReviewKeyDown)
+    return () => window.removeEventListener('keydown', handleReviewKeyDown)
+  }, [mode, stepForward, stepBackward])
+
+  const handleAdvance = useCallback(() => {
+    if (!canAdvanceToNext || isSubmittingAttempt) {
+      return
+    }
+
+    onAdvanceToNextPuzzle?.()
+  }, [canAdvanceToNext, isSubmittingAttempt, onAdvanceToNextPuzzle])
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key !== 'Escape') {
+        return
+      }
+
+      if (promotionState.isOpen) {
+        cancelPromotion()
+        return
+      }
+
+      if (selectedSquare) {
+        setSelectedSquare(null)
+        setLegalMoves([])
+        return
+      }
+
+      if (mode === 'solving' && isPlayerTurn) {
+        handleSkip()
+      }
+    },
+    [
+      promotionState.isOpen,
+      cancelPromotion,
+      selectedSquare,
+      mode,
+      isPlayerTurn,
+      handleSkip,
+    ]
+  )
+
+  const displayPosition = mode === 'failedReview' ? walkthroughPosition : position
+  const displayLastMove = mode === 'failedReview' ? walkthroughLastMove : lastMove
+  const canInteract =
+    mode === 'solving' &&
+    !disabled &&
+    !isSubmittingAttempt &&
+    status !== 'incorrect' &&
+    status !== 'complete'
+
+  const reviewStepsTotal = Math.max(0, solutionMoves.length - reviewStartMoveIndex)
+  const reviewStepsCompleted = Math.max(0, walkthroughMoveIndex - reviewStartMoveIndex)
+  const isReviewComplete = reviewStepsCompleted >= reviewStepsTotal
+  const canStepBackward = walkthroughMoveIndex > reviewStartMoveIndex
+
   const customSquareStyles = useMemo(() => {
     const styles: Record<string, React.CSSProperties> = {}
 
-    // Highlight last move
-    if (lastMove) {
-      styles[lastMove.from] = {
+    if (displayLastMove) {
+      styles[displayLastMove.from] = {
         backgroundColor: 'rgba(255, 255, 0, 0.3)',
       }
-      styles[lastMove.to] = {
+      styles[displayLastMove.to] = {
         backgroundColor: 'rgba(255, 255, 0, 0.4)',
       }
     }
 
-    // Highlight selected square
-    if (selectedSquare) {
+    if (mode === 'solving' && selectedSquare) {
       styles[selectedSquare] = {
         backgroundColor: 'rgba(59, 130, 246, 0.5)', // blue-500
       }
     }
 
-    // Highlight legal move targets
-    legalMoves.forEach(sq => {
-      styles[sq] = {
-        ...styles[sq],
-        backgroundImage: styles[sq]?.backgroundColor
-          ? `radial-gradient(circle, rgba(0, 0, 0, 0.2) 25%, transparent 25%)`
-          : 'radial-gradient(circle, rgba(0, 0, 0, 0.2) 25%, transparent 25%)',
-        backgroundSize: '100% 100%',
-      }
-    })
+    if (mode === 'solving') {
+      legalMoves.forEach((sq) => {
+        styles[sq] = {
+          ...styles[sq],
+          backgroundImage: styles[sq]?.backgroundColor
+            ? 'radial-gradient(circle, rgba(0, 0, 0, 0.2) 25%, transparent 25%)'
+            : 'radial-gradient(circle, rgba(0, 0, 0, 0.2) 25%, transparent 25%)',
+          backgroundSize: '100% 100%',
+        }
+      })
+    }
 
     return styles
-  }, [lastMove, selectedSquare, legalMoves])
+  }, [displayLastMove, mode, selectedSquare, legalMoves])
 
-  // Handle skip
-  const handleSkip = useCallback(() => {
-    timer.pause()
-    onSkip(timer.getTime())
-  }, [timer, onSkip])
-
-  // Keyboard shortcuts
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (promotionState.isOpen) {
-          cancelPromotion()
-        } else if (selectedSquare) {
-          setSelectedSquare(null)
-          setLegalMoves([])
-        } else if (isPlayerTurn) {
-          handleSkip()
-        }
-      }
-    },
-    [promotionState.isOpen, cancelPromotion, selectedSquare, isPlayerTurn, handleSkip]
+  const chessboardOptions: ChessboardOptions = useMemo(
+    () => ({
+      position: displayPosition,
+      boardOrientation: orientation,
+      onPieceDrop: handlePieceDrop,
+      onSquareClick: handleSquareClick,
+      allowDragging: canInteract,
+      animationDurationInMs: ANIMATION_DURATION,
+      boardStyle: customBoardStyle,
+      darkSquareStyle: customDarkSquareStyle,
+      lightSquareStyle: customLightSquareStyle,
+      squareStyles: customSquareStyles,
+    }),
+    [
+      displayPosition,
+      orientation,
+      handlePieceDrop,
+      handleSquareClick,
+      canInteract,
+      customSquareStyles,
+    ]
   )
-
-  // Effective player turn (disabled during transitions)
-  // Allow dragging during loading/opponent_turn so the board is responsive when ready
-  // The makePlayerMove function already guards against moves during wrong states
-  const canInteract = !disabled && status !== 'incorrect' && status !== 'complete'
-
-  // Chessboard options
-  const chessboardOptions: ChessboardOptions = useMemo(() => ({
-    position,
-    boardOrientation: orientation,
-    onPieceDrop: handlePieceDrop,
-    onSquareClick: handleSquareClick,
-    allowDragging: canInteract,
-    animationDurationInMs: ANIMATION_DURATION,
-    boardStyle: customBoardStyle,
-    darkSquareStyle: customDarkSquareStyle,
-    lightSquareStyle: customLightSquareStyle,
-    squareStyles: customSquareStyles,
-  }), [
-    position,
-    orientation,
-    handlePieceDrop,
-    handleSquareClick,
-    canInteract,
-    customSquareStyles,
-  ])
 
   return (
     <div
@@ -218,31 +412,99 @@ export function PuzzleBoard({ fen, moves, onComplete, onSkip, disabled, timer }:
       onKeyDown={handleKeyDown}
       tabIndex={0}
     >
-      {/* Chess board with feedback overlay */}
       <div className="relative w-full max-w-[700px] aspect-square shadow-2xl rounded-xl overflow-hidden">
         <Chessboard options={chessboardOptions} />
 
-        {/* Feedback overlay */}
-        <PuzzleFeedback status={status} />
+        {mode === 'solving' && <PuzzleFeedback status={status} />}
 
-        {/* Promotion dialog */}
-        <PromotionDialog
-          isOpen={promotionState.isOpen}
-          color={promotionState.color}
-          onSelect={handlePromotionSelect}
-          onCancel={cancelPromotion}
+        {mode === 'solving' && (
+          <PromotionDialog
+            isOpen={promotionState.isOpen}
+            color={promotionState.color}
+            onSelect={handlePromotionSelect}
+            onCancel={cancelPromotion}
+          />
+        )}
+      </div>
+
+      <div className="text-lg font-medium text-muted-foreground">
+        <StatusText
+          mode={mode}
+          status={status}
+          isSubmittingAttempt={isSubmittingAttempt}
+          isReviewComplete={isReviewComplete}
         />
       </div>
 
-      {/* Status indicator */}
-      <div className="text-lg font-medium text-muted-foreground">
-        <StatusText status={status} />
-      </div>
+      {mode === 'failedReview' && (
+        <div className="flex w-full max-w-[700px] flex-col items-center gap-3">
+          {reviewStepsTotal > 0 && (
+            <div className="text-sm text-muted-foreground">
+              Solution {Math.min(reviewStepsCompleted, reviewStepsTotal)} / {reviewStepsTotal}
+            </div>
+          )}
+
+          <div className="flex w-full flex-col gap-2 sm:flex-row">
+            <Button
+              variant="outline"
+              onClick={stepBackward}
+              disabled={!canStepBackward}
+              className="flex-1"
+            >
+              <ChevronLeft className="mr-2 h-4 w-4" />
+              Previous Move
+            </Button>
+            <Button
+              variant="outline"
+              onClick={stepForward}
+              disabled={isReviewComplete}
+              className="flex-1"
+            >
+              <ChevronRight className="mr-2 h-4 w-4" />
+              {isReviewComplete ? 'Solution complete' : 'Next Move'}
+            </Button>
+            <Button
+              onClick={handleAdvance}
+              disabled={!canAdvanceToNext || isSubmittingAttempt}
+              className="flex-1"
+            >
+              {isSubmittingAttempt ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <SkipForward className="mr-2 h-4 w-4" />
+              )}
+              {isSubmittingAttempt ? 'Saving result...' : 'Next Puzzle'}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-function StatusText({ status }: { status: PuzzleStatus }) {
+function StatusText({
+  mode,
+  status,
+  isSubmittingAttempt,
+  isReviewComplete,
+}: {
+  mode: PuzzleBoardMode
+  status: PuzzleStatus
+  isSubmittingAttempt: boolean
+  isReviewComplete: boolean
+}) {
+  if (mode === 'failedReview') {
+    if (isSubmittingAttempt) {
+      return <span className="text-amber-600">Saving result...</span>
+    }
+
+    if (isReviewComplete) {
+      return <span className="text-green-600">Solution complete</span>
+    }
+
+    return <span className="text-amber-600">Review the line you missed</span>
+  }
+
   switch (status) {
     case 'loading':
       return <span>Loading puzzle...</span>

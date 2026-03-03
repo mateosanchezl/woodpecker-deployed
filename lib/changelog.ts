@@ -26,6 +26,22 @@ export function formatChangelogDate(date: string) {
 // Add new releases to the top of this list so index 0 stays the latest.
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    version: "2.4.0",
+    title: "Review Missed Lines and Open Puzzles in Lichess",
+    description:
+      "Training now keeps missed puzzles on the board so you can review the exact line before moving on, and each active puzzle includes a direct Lichess link when you want to inspect the original puzzle page.",
+    features: [
+      "Wrong answers no longer jump away immediately, so the current puzzle stays visible for post-failure review",
+      "Step through the remaining solution move by move with Previous and Next controls, or use the left and right arrow keys",
+      "The puzzle timer now pauses during failed-puzzle review and shows a clear paused state in the sidebar",
+      "Advance to the next puzzle only when you're ready, making it easier to understand the line you missed before continuing",
+      "A new View in Lichess button opens the current puzzle on lichess.org in a new tab without interrupting your training session",
+    ],
+    date: "2026-03-02",
+    learnMoreUrl: "/training",
+    actionLabel: "Try it in training",
+  },
+  {
     version: "2.3.0",
     title: "Faster Training Flow, New Changelog, and Bug Reports",
     description:

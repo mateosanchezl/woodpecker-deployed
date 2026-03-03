@@ -123,9 +123,7 @@ export function useTrainingSession(
   }, [currentPuzzleId, isCycleComplete])
 
   useEffect(() => {
-    if (prefetchedNext) {
-      prefetchedRef.current = prefetchedNext
-    }
+    prefetchedRef.current = prefetchedNext
   }, [prefetchedNext])
 
   const attemptMutation = useMutation<
@@ -287,6 +285,7 @@ export function useTrainingSession(
     }
 
     setIsTransitioning(true)
+    prefetchedRef.current = pendingAdvanceSession.prefetchedNext
     queryClient.setQueryData(sessionQueryKey, pendingAdvanceSession)
     setPendingAdvanceSession(null)
   }, [pendingAdvanceSession, queryClient, sessionQueryKey])

@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { SITE_CONFIG } from "@/lib/seo";
+import { SITE_CONFIG, getAbsoluteUrl } from "@/lib/seo";
 import { getPublishedPosts, getAllTags } from "@/lib/blog";
 import type { Post } from "#site/content";
 
@@ -14,6 +14,7 @@ import type { Post } from "#site/content";
  */
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = SITE_CONFIG.url;
+  const defaultPageImage = getAbsoluteUrl("/opengraph-image");
 
   const staticPages: MetadataRoute.Sitemap = [
     // Homepage - highest priority
@@ -22,6 +23,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 1.0,
+      images: [defaultPageImage],
     },
     // Woodpecker Method educational page - critical for keyword ranking
     {
@@ -29,6 +31,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.9,
+      images: [defaultPageImage],
     },
     // LLMs.txt - helps AI understand our free service
     {
@@ -43,36 +46,42 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.7,
+      images: [defaultPageImage],
     },
     {
       url: `${baseUrl}/pricing`,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.7,
+      images: [defaultPageImage],
     },
     {
       url: `${baseUrl}/about`,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.6,
+      images: [defaultPageImage],
     },
     {
       url: `${baseUrl}/faq`,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.7,
+      images: [defaultPageImage],
     },
     {
       url: `${baseUrl}/blog`,
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.7,
+      images: [defaultPageImage],
     },
     {
       url: `${baseUrl}/docs`,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.6,
+      images: [defaultPageImage],
     },
     // Legal pages - low priority but needed for trust
     {
@@ -96,6 +105,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     lastModified: new Date(post.updated || post.date),
     changeFrequency: "monthly",
     priority: 0.6,
+    images: [getAbsoluteUrl(post.image || "/opengraph-image")],
   }));
 
   // Tag archive pages

@@ -6,6 +6,7 @@ import {
   generateBreadcrumbSchema,
   generateArticleSchema,
   SITE_CONFIG,
+  getAbsoluteUrl,
 } from "@/lib/seo";
 import { getPostBySlug, getPublishedPosts, formatDate } from "@/lib/blog";
 import type { Post } from "#site/content";
@@ -44,7 +45,14 @@ export async function generateMetadata({
     openGraph: {
       type: "article",
       images: post.image
-        ? [{ url: post.image, width: 1200, height: 630, alt: post.title }]
+        ? [
+            {
+              url: getAbsoluteUrl(post.image),
+              width: 1200,
+              height: 630,
+              alt: post.imageAlt || post.title,
+            },
+          ]
         : undefined,
     },
   });
@@ -68,9 +76,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     url: `${SITE_CONFIG.url}/blog/${post.slug}`,
     datePublished: post.date,
     dateModified: post.updated || post.date,
-    image: post.image
-      ? `${SITE_CONFIG.url}${post.image}`
-      : `${SITE_CONFIG.url}/og-image.png`,
+    image: getAbsoluteUrl(post.image || "/opengraph-image"),
   });
 
   return (

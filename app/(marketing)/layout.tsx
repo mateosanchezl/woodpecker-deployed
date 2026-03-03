@@ -23,9 +23,10 @@ export default function MarketingLayout({
             <div className="flex items-center gap-2 font-bold text-xl">
               <Image
                 src="/darklogo.png"
-                alt="Peck Logo"
+                alt=""
                 width={32}
                 height={32}
+                sizes="32px"
                 className="h-8 w-8"
               />
               <span>Peck</span>

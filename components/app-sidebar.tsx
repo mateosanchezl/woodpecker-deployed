@@ -89,9 +89,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <div className="flex items-center gap-2 font-bold text-xl tracking-tight">
             <Image
               src="/darklogo.png"
-              alt="Peck Logo"
+              alt="Peck"
               width={32}
               height={32}
+              sizes="32px"
               className="h-8 w-8"
             />
           </div>

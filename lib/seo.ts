@@ -55,6 +55,13 @@ export const SITE_CONFIG = {
   email: "support@peckchess.com",
 } as const;
 
+const DEFAULT_SOCIAL_IMAGE = {
+  url: "/opengraph-image",
+  width: 1200,
+  height: 630,
+  alt: "Peck chess training dashboard and Woodpecker Method branding",
+} as const;
+
 // =============================================================================
 // Default Metadata - Keyword Optimized
 // =============================================================================
@@ -84,13 +91,7 @@ export const DEFAULT_METADATA: Metadata = {
     description:
       "Master chess tactics with the Woodpecker Method for free. The best app for chess puzzle repetition training. Build pattern recognition and improve your tactical vision.",
     images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "Peck - Woodpecker Method Chess Training App",
-        type: "image/png",
-      },
+      DEFAULT_SOCIAL_IMAGE,
     ],
   },
   twitter: {
@@ -99,7 +100,7 @@ export const DEFAULT_METADATA: Metadata = {
     description:
       "Master chess tactics with the Woodpecker Method for free. Chess puzzle repetition training app.",
     creator: SITE_CONFIG.twitterHandle,
-    images: ["/og-image.png"],
+    images: [DEFAULT_SOCIAL_IMAGE.url],
   },
   robots: {
     index: true,
@@ -159,6 +160,16 @@ interface PageMetadataOptions {
   };
 }
 
+function getTwitterImages(
+  images: NonNullable<PageMetadataOptions["openGraph"]>["images"],
+) {
+  if (!images?.length) {
+    return [DEFAULT_SOCIAL_IMAGE.url];
+  }
+
+  return images.map((image) => image.url);
+}
+
 /**
  * Generate page-specific metadata with proper defaults
  */
@@ -171,6 +182,7 @@ export function generatePageMetadata({
   openGraph,
 }: PageMetadataOptions): Metadata {
   const url = `${SITE_CONFIG.url}${path}`;
+  const resolvedImages = openGraph?.images ?? [DEFAULT_SOCIAL_IMAGE];
 
   return {
     title,
@@ -183,13 +195,17 @@ export function generatePageMetadata({
       title,
       description,
       url,
+      locale: SITE_CONFIG.locale,
+      siteName: `${SITE_CONFIG.name} - Woodpecker Method Chess Training`,
       type: openGraph?.type ?? "website",
-      images: openGraph?.images ?? DEFAULT_METADATA.openGraph?.images,
+      images: resolvedImages,
     },
     twitter: {
       title,
       description,
       card: "summary_large_image",
+      creator: SITE_CONFIG.twitterHandle,
+      images: getTwitterImages(resolvedImages),
     },
     robots: noIndex ? { index: false, follow: false } : DEFAULT_METADATA.robots,
   };

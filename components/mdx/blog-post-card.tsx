@@ -36,6 +36,7 @@ export function BlogPostCard({
             alt={imageAlt || title}
             width={800}
             height={400}
+            sizes="(min-width: 640px) 50vw, 100vw"
             className="aspect-[2/1] w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
           />
         </Link>

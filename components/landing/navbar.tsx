@@ -7,12 +7,11 @@ import {
   useScroll,
   useMotionValueEvent,
   motion,
-  AnimatePresence,
 } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { SignedIn, SignedOut } from "@clerk/nextjs";
-import { Menu, X } from "lucide-react";
+import { Menu } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -63,8 +62,9 @@ export function LandingNavbar() {
             <div className="relative h-8 w-8 overflow-hidden rounded-md transition-transform group-hover:scale-105">
               <Image
                 src="/darklogo.png"
-                alt="Peck Logo"
+                alt=""
                 fill
+                sizes="32px"
                 className="object-contain"
               />
             </div>
@@ -136,7 +136,7 @@ export function LandingNavbar() {
                   <SheetTitle className="flex items-center gap-2">
                     <Image
                       src="/darklogo.png"
-                      alt="Peck"
+                      alt=""
                       width={24}
                       height={24}
                     />

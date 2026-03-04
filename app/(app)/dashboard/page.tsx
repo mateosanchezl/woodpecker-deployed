@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { StreakCard } from "@/components/dashboard/streak-card";
 import { XpCard } from "@/components/dashboard/xp-card";
 import { UpdateNotification } from "@/components/dashboard/update-notification";
+import { DashboardFeedbackPrompt } from "@/components/dashboard/dashboard-feedback-prompt";
 import {
   Card,
   CardContent,
@@ -92,6 +93,7 @@ export default function DashboardPage() {
 
   return (
     <>
+      <DashboardFeedbackPrompt />
       {showQuickStart ? (
         <div className="max-w-2xl mx-auto py-8 w-full">
           <Card>

@@ -12,7 +12,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 interface ReviewResponse {
@@ -28,7 +27,6 @@ interface ReviewResponse {
 
 interface SaveReviewInput {
   rating: number;
-  headline: string;
   comment: string;
 }
 
@@ -52,15 +50,12 @@ export function AppReviewCard({ onSubmitted }: AppReviewCardProps) {
   });
 
   const currentRating = draft?.rating ?? existingReview?.review?.rating ?? 0;
-  const currentHeadline =
-    draft?.headline ?? existingReview?.review?.headline ?? "";
   const currentComment =
     draft?.comment ?? existingReview?.review?.comment ?? "";
 
   const updateDraft = (changes: Partial<SaveReviewInput>) => {
     setDraft((previous) => ({
       rating: previous?.rating ?? existingReview?.review?.rating ?? 0,
-      headline: previous?.headline ?? existingReview?.review?.headline ?? "",
       comment: previous?.comment ?? existingReview?.review?.comment ?? "",
       ...changes,
     }));
@@ -73,7 +68,10 @@ export function AppReviewCard({ onSubmitted }: AppReviewCardProps) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          ...payload,
+          headline: "",
+        }),
       });
 
       if (!response.ok) {
@@ -85,7 +83,7 @@ export function AppReviewCard({ onSubmitted }: AppReviewCardProps) {
     },
     onSuccess: () => {
       toast.success(
-        existingReview?.review ? "Review updated" : "Thanks for the review!",
+        existingReview?.review ? "Feedback updated" : "Thanks for the feedback!",
       );
       setDraft(null);
       queryClient.invalidateQueries({ queryKey: ["app-review"] });
@@ -104,7 +102,6 @@ export function AppReviewCard({ onSubmitted }: AppReviewCardProps) {
 
     saveReview.mutate({
       rating: currentRating,
-      headline: currentHeadline,
       comment: currentComment,
     });
   };
@@ -114,11 +111,10 @@ export function AppReviewCard({ onSubmitted }: AppReviewCardProps) {
       <CardHeader className="space-y-2">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary" />
-          <CardTitle>Share your feedback</CardTitle>
+          <CardTitle>Quick feedback</CardTitle>
         </div>
         <CardDescription>
-          Loving Peck or seeing friction? Your review helps us improve every
-          session.
+          One tap is enough. Add a note only if you want to.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -146,20 +142,13 @@ export function AppReviewCard({ onSubmitted }: AppReviewCardProps) {
           </div>
         </div>
 
-        <Input
-          value={currentHeadline}
-          onChange={(event) => updateDraft({ headline: event.target.value })}
-          maxLength={80}
-          placeholder="Optional headline"
-        />
-
         <div className="space-y-2">
           <textarea
             value={currentComment}
             onChange={(event) => updateDraft({ comment: event.target.value })}
             maxLength={600}
-            rows={4}
-            placeholder="Optional comment"
+            rows={3}
+            placeholder="Anything we should improve? (optional)"
             className="flex min-h-30 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background transition placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           />
           <p className="text-xs text-muted-foreground text-right">
@@ -173,16 +162,12 @@ export function AppReviewCard({ onSubmitted }: AppReviewCardProps) {
           className="w-full sm:w-auto gap-2"
         >
           <Send className="h-4 w-4" />
-          {saveReview.isPending
-            ? "Saving..."
-            : existingReview?.review
-              ? "Update review"
-              : "Submit review"}
+          {saveReview.isPending ? "Sending..." : "Send feedback"}
         </Button>
 
         {!isLoading && existingReview?.review && (
           <p className="text-xs text-muted-foreground">
-            Thanks — your latest review is saved and can be edited anytime.
+            Thanks. Your latest feedback is saved and can be edited anytime.
           </p>
         )}
       </CardContent>

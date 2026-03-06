@@ -81,11 +81,11 @@ export function TrainingSession({
   const timer = usePuzzleTimer()
   const [isReviewingFailedPuzzle, setIsReviewingFailedPuzzle] = useState(false)
   const [showPuzzleThemes, setShowPuzzleThemes] = useState(true)
-  const resetTimerRef = useRef(timer.reset)
+  const resetTimerRef = useRef(timer.controls.reset)
 
   useEffect(() => {
-    resetTimerRef.current = timer.reset
-  }, [timer.reset])
+    resetTimerRef.current = timer.controls.reset
+  }, [timer.controls])
 
   // Handle keyboard shortcuts at session level
   useEffect(() => {
@@ -176,7 +176,7 @@ export function TrainingSession({
           disabled={isTransitioning}
           isSubmittingAttempt={isSubmittingAttempt}
           canAdvanceToNext={canAdvanceToNext}
-          timer={timer}
+          timerControls={timer.controls}
         />
       </div>
 
@@ -192,7 +192,7 @@ export function TrainingSession({
         {!isReviewingFailedPuzzle && (
           <Button
             variant="ghost"
-            onClick={() => handleSkip(timer.getTime())}
+            onClick={() => handleSkip(timer.controls.getTime())}
             disabled={isTransitioning || isSubmittingAttempt}
             className="w-full text-muted-foreground hover:text-foreground"
           >

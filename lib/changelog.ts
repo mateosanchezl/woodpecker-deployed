@@ -26,6 +26,22 @@ export function formatChangelogDate(date: string) {
 // Add new releases to the top of this list so index 0 stays the latest.
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    version: "2.5.0",
+    title: "Smoother Board Controls and Faster Puzzle Flow",
+    description:
+      "Puzzle interactions are now more responsive across mouse and touch, promotion choices are anchored directly to the board, and move timing feels noticeably snappier in both training and review.",
+    features: [
+      "A new board interaction controller unifies drag and tap behavior, including touch dedupe logic and player-color drag guards",
+      "Board highlights are clearer while solving: selected pieces, capture targets, and pending promotion squares are all visually distinct",
+      "Promotion selection now opens near the destination square, adapts to board orientation, and repositions on resize",
+      "Move pacing is faster with reduced animation and opponent-response delays for quicker puzzle throughput",
+      "Puzzle/timer internals were hardened with cancellable async timing, stable timer controls, and memoized board surfaces to reduce race conditions and render churn",
+    ],
+    date: "2026-03-06",
+    learnMoreUrl: "/training",
+    actionLabel: "Try the new board flow",
+  },
+  {
     version: "2.4.0",
     title: "Review Missed Lines and Open Puzzles in Lichess",
     description:

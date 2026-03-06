@@ -1,15 +1,23 @@
 'use client'
 
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 
 interface UsePuzzleTimerOptions {
   autoStart?: boolean
   onTimeUpdate?: (ms: number) => void
 }
 
+export interface PuzzleTimerControls {
+  start: () => void
+  pause: () => void
+  reset: () => void
+  getTime: () => number
+}
+
 interface UsePuzzleTimerReturn {
   timeMs: number
   isRunning: boolean
+  controls: PuzzleTimerControls
   start: () => void
   pause: () => void
   reset: () => void
@@ -28,83 +36,106 @@ export function usePuzzleTimer(
   const [timeMs, setTimeMs] = useState(0)
   const [isRunning, setIsRunning] = useState(autoStart)
 
-  // Refs for tracking time without causing re-renders
+  const onTimeUpdateRef = useRef(onTimeUpdate)
+  const isRunningRef = useRef(autoStart)
+
+  // Refs for tracking elapsed time without render churn
   const startTimeRef = useRef<number | null>(null)
   const accumulatedTimeRef = useRef(0)
-  const animationFrameRef = useRef<number | null>(null)
+  const intervalRef = useRef<number | null>(null)
 
-  // Update function called on each animation frame
-  const updateTime = useCallback(() => {
-    if (startTimeRef.current !== null) {
-      const elapsed = performance.now() - startTimeRef.current
-      const totalTime = accumulatedTimeRef.current + elapsed
-      setTimeMs(Math.floor(totalTime))
-      onTimeUpdate?.(Math.floor(totalTime))
-      animationFrameRef.current = requestAnimationFrame(updateTime)
-    }
+  useEffect(() => {
+    onTimeUpdateRef.current = onTimeUpdate
   }, [onTimeUpdate])
 
-  // Start the timer
-  const start = useCallback(() => {
-    if (!isRunning) {
-      startTimeRef.current = performance.now()
-      setIsRunning(true)
-      animationFrameRef.current = requestAnimationFrame(updateTime)
-    }
-  }, [isRunning, updateTime])
-
-  // Pause the timer
-  const pause = useCallback(() => {
-    if (isRunning && startTimeRef.current !== null) {
-      // Accumulate the elapsed time
-      const elapsed = performance.now() - startTimeRef.current
-      accumulatedTimeRef.current += elapsed
-      startTimeRef.current = null
-      setIsRunning(false)
-
-      if (animationFrameRef.current !== null) {
-        cancelAnimationFrame(animationFrameRef.current)
-        animationFrameRef.current = null
-      }
-    }
-  }, [isRunning])
-
-  // Reset the timer to zero
-  const reset = useCallback(() => {
-    pause()
-    accumulatedTimeRef.current = 0
-    startTimeRef.current = null
-    setTimeMs(0)
-  }, [pause])
-
-  // Get current time (useful for final value before recording)
-  const getTime = useCallback(() => {
+  const getCurrentTime = useCallback(() => {
     if (startTimeRef.current !== null) {
-      const elapsed = performance.now() - startTimeRef.current
-      return Math.floor(accumulatedTimeRef.current + elapsed)
+      return Math.floor(accumulatedTimeRef.current + (performance.now() - startTimeRef.current))
     }
     return Math.floor(accumulatedTimeRef.current)
   }, [])
 
-  // Cleanup animation frame on unmount
-  useEffect(() => {
-    return () => {
-      if (animationFrameRef.current !== null) {
-        cancelAnimationFrame(animationFrameRef.current)
-      }
+  const emitTime = useCallback((nextTime: number) => {
+    setTimeMs(nextTime)
+    onTimeUpdateRef.current?.(nextTime)
+  }, [])
+
+  const clearTicker = useCallback(() => {
+    if (intervalRef.current !== null) {
+      window.clearInterval(intervalRef.current)
+      intervalRef.current = null
     }
   }, [])
 
-  // Auto-start if enabled
-  useEffect(() => {
-    if (autoStart && !isRunning) {
-      start()
+  const tick = useCallback(() => {
+    emitTime(getCurrentTime())
+  }, [emitTime, getCurrentTime])
+
+  const start = useCallback(() => {
+    if (isRunningRef.current) {
+      return
     }
-  }, [autoStart, isRunning, start])
+
+    startTimeRef.current = performance.now()
+    isRunningRef.current = true
+    setIsRunning(true)
+    intervalRef.current = window.setInterval(tick, 100)
+    tick()
+  }, [tick])
+
+  const pause = useCallback(() => {
+    if (!isRunningRef.current || startTimeRef.current === null) {
+      return
+    }
+
+    if (startTimeRef.current !== null) {
+      const elapsed = performance.now() - startTimeRef.current
+      accumulatedTimeRef.current += elapsed
+    }
+    startTimeRef.current = null
+    isRunningRef.current = false
+    setIsRunning(false)
+    clearTicker()
+    emitTime(getCurrentTime())
+  }, [clearTicker, emitTime, getCurrentTime])
+
+  const reset = useCallback(() => {
+    clearTicker()
+    isRunningRef.current = false
+    setIsRunning(false)
+    accumulatedTimeRef.current = 0
+    startTimeRef.current = null
+    emitTime(0)
+  }, [clearTicker, emitTime])
+
+  const getTime = useCallback(() => {
+    return getCurrentTime()
+  }, [getCurrentTime])
+
+  const controls = useMemo<PuzzleTimerControls>(() => ({
+    start,
+    pause,
+    reset,
+    getTime,
+  }), [start, pause, reset, getTime])
+
+  useEffect(() => {
+    return clearTicker
+  }, [clearTicker])
+
+  useEffect(() => {
+    if (autoStart && !isRunningRef.current) {
+      const timeoutId = window.setTimeout(() => {
+        start()
+      }, 0)
+      return () => window.clearTimeout(timeoutId)
+    }
+  }, [autoStart, start])
 
   return {
     timeMs,
     isRunning,
+    controls,
     start,
     pause,
     reset,

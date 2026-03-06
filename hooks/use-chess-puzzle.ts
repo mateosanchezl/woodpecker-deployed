@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { Chess } from 'chess.js'
+import { Chess, type Move } from 'chess.js'
 import type {
   PuzzleStatus,
   BoardOrientation,
@@ -19,8 +19,6 @@ import {
   getOrientationFromFen,
   parseSolutionMoves,
   isCorrectMove,
-  isPromotionMove,
-  sleep,
 } from '@/lib/chess/puzzle-engine'
 
 interface UseChessPuzzleOptions {
@@ -30,6 +28,12 @@ interface UseChessPuzzleOptions {
   onIncorrectMove?: () => void
   onPuzzleComplete?: (isCorrect: boolean, movesPlayed: string[]) => void
   onReady?: () => void // Called when puzzle is ready for player input
+}
+
+export interface LegalMoveTarget {
+  to: Square
+  isCapture: boolean
+  requiresPromotion: boolean
 }
 
 interface UseChessPuzzleReturn {
@@ -51,6 +55,7 @@ interface UseChessPuzzleReturn {
 
   // For highlighting legal moves
   getLegalMoves: (square: Square) => Square[]
+  getLegalMoveTargets: (square: Square) => LegalMoveTarget[]
 }
 
 /**
@@ -60,22 +65,20 @@ interface UseChessPuzzleReturn {
 export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleReturn {
   const { fen, solutionMoves, onCorrectMove, onIncorrectMove, onPuzzleComplete, onReady } = options
 
-  // Parse solution moves once
   const solutionMovesArray = parseSolutionMoves(solutionMoves)
   const orientation = getOrientationFromFen(fen)
 
-  // Chess.js instance ref (mutable, doesn't trigger re-renders)
   const chessRef = useRef<Chess>(new Chess())
-
-  // Track initialization to prevent race conditions
-  const initIdRef = useRef(0)
   const onCorrectMoveRef = useRef(onCorrectMove)
   const onIncorrectMoveRef = useRef(onIncorrectMove)
   const onPuzzleCompleteRef = useRef(onPuzzleComplete)
   const onReadyRef = useRef(onReady)
   const movesPlayedRef = useRef<string[]>([])
+  const runTokenRef = useRef(0)
+  const pendingTimeoutsRef = useRef<Set<number>>(new Set())
+  const pendingDelayResolversRef = useRef<Map<number, (isStillActive: boolean) => void>>(new Map())
+  const isMountedRef = useRef(true)
 
-  // State
   const [position, setPosition] = useState(fen)
   const [status, setStatus] = useState<PuzzleStatus>('loading')
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0)
@@ -88,7 +91,6 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
     color: 'w',
   })
 
-  // Derived state
   const isPlayerTurn = status === 'player_turn'
 
   useEffect(() => {
@@ -98,18 +100,53 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
     onReadyRef.current = onReady
   }, [onCorrectMove, onIncorrectMove, onPuzzleComplete, onReady])
 
-  // Initialize puzzle
+  const isRunActive = useCallback((runToken: number) => {
+    return isMountedRef.current && runTokenRef.current === runToken
+  }, [])
+
+  const cancelPendingAsyncWork = useCallback(() => {
+    runTokenRef.current += 1
+    pendingTimeoutsRef.current.forEach(timeoutId => {
+      window.clearTimeout(timeoutId)
+      pendingDelayResolversRef.current.get(timeoutId)?.(false)
+    })
+    pendingTimeoutsRef.current.clear()
+    pendingDelayResolversRef.current.clear()
+  }, [])
+
+  const waitFor = useCallback((ms: number, runToken: number): Promise<boolean> => {
+    if (!isRunActive(runToken)) {
+      return Promise.resolve(false)
+    }
+
+    return new Promise(resolve => {
+      const timeoutId = window.setTimeout(() => {
+        pendingTimeoutsRef.current.delete(timeoutId)
+        pendingDelayResolversRef.current.delete(timeoutId)
+        resolve(isRunActive(runToken))
+      }, ms)
+      pendingTimeoutsRef.current.add(timeoutId)
+      pendingDelayResolversRef.current.set(timeoutId, resolve)
+    })
+  }, [isRunActive])
+
+  const getLegalCandidatesForMove = useCallback((from: Square, to: Square): Move[] => {
+    try {
+      return chessRef.current.moves({ square: from, verbose: true }).filter(move => move.to === to)
+    } catch {
+      return []
+    }
+  }, [])
+
   const initialize = useCallback(async () => {
-    // Increment init ID to track this specific initialization
-    const currentInitId = ++initIdRef.current
+    cancelPendingAsyncWork()
+    const runToken = runTokenRef.current
 
     try {
-      // Create a fresh Chess instance and load the FEN
       const chess = new Chess()
       chess.load(fen)
       chessRef.current = chess
 
-      // Parse the solution moves for this specific puzzle
       const moves = parseSolutionMoves(solutionMoves)
 
       setPosition(fen)
@@ -120,15 +157,10 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
       movesPlayedRef.current = []
       setPromotionState({ isOpen: false, from: null, to: null, color: 'w' })
 
-      // Brief delay before showing opponent's first move
-      await sleep(OPPONENT_MOVE_DELAY)
-
-      // Check if this initialization is still current (puzzle hasn't changed)
-      if (initIdRef.current !== currentInitId) {
-        return // Abort - puzzle changed during delay
+      if (!(await waitFor(OPPONENT_MOVE_DELAY, runToken))) {
+        return
       }
 
-      // Play opponent's first move
       if (moves.length > 0) {
         const firstMove = parseUciMove(moves[0])
         setStatus('opponent_turn')
@@ -140,52 +172,68 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
         })
 
         if (result) {
+          if (!isRunActive(runToken)) {
+            return
+          }
+
           setPosition(chessRef.current.fen())
           setLastMove({ from: firstMove.from, to: firstMove.to })
           setCurrentMoveIndex(1)
 
-          // Wait for animation
-          await sleep(ANIMATION_DURATION)
-
-          // Check again if still current
-          if (initIdRef.current !== currentInitId) {
-            return // Abort - puzzle changed during animation
+          if (!(await waitFor(ANIMATION_DURATION, runToken))) {
+            return
           }
 
-          // Ready for player
+          if (!isRunActive(runToken)) {
+            return
+          }
+
           setStatus('player_turn')
           onReadyRef.current?.()
         } else {
           console.error('Failed to play first move:', moves[0], 'FEN:', fen)
+          if (!isRunActive(runToken)) {
+            return
+          }
           setStatus('player_turn')
           onReadyRef.current?.()
         }
       } else {
+        if (!isRunActive(runToken)) {
+          return
+        }
         setStatus('player_turn')
         onReadyRef.current?.()
       }
     } catch (error) {
       console.error('Failed to initialize puzzle:', error)
-      // Only set status if this init is still current
-      if (initIdRef.current === currentInitId) {
+      if (isRunActive(runToken)) {
         setStatus('player_turn')
       }
     }
-  }, [fen, solutionMoves])
+  }, [cancelPendingAsyncWork, fen, solutionMoves, waitFor, isRunActive])
 
-  // Play opponent's next move
-  const playOpponentMove = useCallback(async (moveIndex: number) => {
+  const playOpponentMove = useCallback(async (moveIndex: number, runToken: number): Promise<boolean> => {
+    if (!isRunActive(runToken)) {
+      return false
+    }
+
     if (moveIndex >= solutionMovesArray.length) {
-      // Puzzle complete!
       setStatus('complete')
       onPuzzleCompleteRef.current?.(true, [...movesPlayedRef.current])
-      return
+      return true
     }
 
     setStatus('opponent_turn')
-    await sleep(OPPONENT_MOVE_DELAY)
+    if (!(await waitFor(OPPONENT_MOVE_DELAY, runToken))) {
+      return false
+    }
 
     const moveUci = solutionMovesArray[moveIndex]
+    if (!moveUci) {
+      return false
+    }
+
     const parsed = parseUciMove(moveUci)
 
     const result = chessRef.current.move({
@@ -194,27 +242,40 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
       promotion: parsed.promotion,
     })
 
-    if (result) {
-      setPosition(chessRef.current.fen())
-      setLastMove({ from: parsed.from, to: parsed.to })
-      setCurrentMoveIndex(moveIndex + 1)
-
-      await sleep(ANIMATION_DURATION)
-
-      // Check if puzzle is complete
-      if (moveIndex + 1 >= solutionMovesArray.length) {
-        setStatus('complete')
-        onPuzzleCompleteRef.current?.(true, [...movesPlayedRef.current])
-      } else {
+    if (!result) {
+      console.error('Failed to play opponent move:', moveUci)
+      if (isRunActive(runToken)) {
         setStatus('player_turn')
       }
-    } else {
-      console.error('Failed to play opponent move:', moveUci)
-      setStatus('player_turn')
+      return false
     }
-  }, [solutionMovesArray])
 
-  // Handle player move (internal, after promotion is resolved)
+    if (!isRunActive(runToken)) {
+      return false
+    }
+
+    setPosition(chessRef.current.fen())
+    setLastMove({ from: parsed.from, to: parsed.to })
+    setCurrentMoveIndex(moveIndex + 1)
+
+    if (!(await waitFor(ANIMATION_DURATION, runToken))) {
+      return false
+    }
+
+    if (!isRunActive(runToken)) {
+      return false
+    }
+
+    if (moveIndex + 1 >= solutionMovesArray.length) {
+      setStatus('complete')
+      onPuzzleCompleteRef.current?.(true, [...movesPlayedRef.current])
+      return true
+    }
+
+    setStatus('player_turn')
+    return true
+  }, [solutionMovesArray, waitFor, isRunActive])
+
   const executePlayerMove = useCallback(async (
     from: Square,
     to: Square,
@@ -224,31 +285,42 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
       return false
     }
 
-    // Check if this is the correct move
     const expectedMoveUci = solutionMovesArray[currentMoveIndex]
     if (!expectedMoveUci) {
       return false
     }
 
-    // First check if this is a legal move - illegal moves should be ignored, not counted as wrong
-    const legalMoves = chessRef.current.moves({ square: from, verbose: true })
-    const isLegalMove = legalMoves.some(m =>
-      m.to === to && (m.promotion === promotion || (!m.promotion && !promotion))
-    )
-    if (!isLegalMove) {
-      return false // Silently reject illegal moves
+    const legalCandidates = getLegalCandidatesForMove(from, to)
+    if (legalCandidates.length === 0) {
+      return false
     }
+
+    const moveRequiresPromotion = legalCandidates.some(move => Boolean(move.promotion))
+    if (moveRequiresPromotion && !promotion) {
+      return false
+    }
+
+    if (promotion && !legalCandidates.some(move => move.promotion === promotion)) {
+      return false
+    }
+
+    cancelPendingAsyncWork()
+    const runToken = runTokenRef.current
 
     const isCorrect = isCorrectMove(from, to, promotion, expectedMoveUci)
 
     if (!isCorrect) {
-      // Wrong move - show feedback and fail
       setStatus('incorrect')
       onIncorrectMoveRef.current?.()
 
-      await sleep(FEEDBACK_DISPLAY_TIME)
+      if (!(await waitFor(FEEDBACK_DISPLAY_TIME, runToken))) {
+        return false
+      }
 
-      // Record the incorrect move
+      if (!isRunActive(runToken)) {
+        return false
+      }
+
       const incorrectMoveUci = toUciMove(from, to, promotion)
       const finalMoves = [...movesPlayedRef.current, incorrectMoveUci]
       movesPlayedRef.current = finalMoves
@@ -257,7 +329,6 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
       return false
     }
 
-    // Correct move - execute it
     const result = chessRef.current.move({
       from,
       to,
@@ -265,12 +336,14 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
     })
 
     if (!result) {
-      // This shouldn't happen if isCorrectMove passed, but handle it
       console.error('Legal move validation passed but chess.js rejected move')
       return false
     }
 
-    // Update state
+    if (!isRunActive(runToken)) {
+      return false
+    }
+
     const moveUci = toUciMove(from, to, promotion)
     const newMovesPlayed = [...movesPlayedRef.current, moveUci]
     movesPlayedRef.current = newMovesPlayed
@@ -280,22 +353,31 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
     setStatus('correct')
     onCorrectMoveRef.current?.()
 
-    await sleep(FEEDBACK_DISPLAY_TIME)
+    const feedbackDelayBeforeOpponent = Math.min(FEEDBACK_DISPLAY_TIME, ANIMATION_DURATION)
+    if (!(await waitFor(feedbackDelayBeforeOpponent, runToken))) {
+      return false
+    }
 
-    // Play opponent's response
+    if (!isRunActive(runToken)) {
+      return false
+    }
+
     const nextMoveIndex = currentMoveIndex + 1
     setCurrentMoveIndex(nextMoveIndex)
-    await playOpponentMove(nextMoveIndex)
+    await playOpponentMove(nextMoveIndex, runToken)
 
     return true
   }, [
     status,
     currentMoveIndex,
     solutionMovesArray,
+    getLegalCandidatesForMove,
+    cancelPendingAsyncWork,
+    waitFor,
     playOpponentMove,
+    isRunActive,
   ])
 
-  // Public method to make a player move
   const makePlayerMove = useCallback((
     from: Square,
     to: Square,
@@ -305,14 +387,17 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
       return false
     }
 
-    // Ignore same-square "moves" (not a real move)
     if (from === to) {
       return false
     }
 
-    // Check if this is a promotion move
-    if (isPromotionMove(position, from, to) && !promotion) {
-      // Show promotion dialog
+    const legalCandidates = getLegalCandidatesForMove(from, to)
+    if (legalCandidates.length === 0) {
+      return false
+    }
+
+    const moveRequiresPromotion = legalCandidates.some(move => Boolean(move.promotion))
+    if (moveRequiresPromotion && !promotion) {
       const piece = chessRef.current.get(from)
       setPromotionState({
         isOpen: true,
@@ -320,49 +405,88 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
         to,
         color: piece?.color || 'w',
       })
-      return false // Move not executed yet
+      return false
     }
 
-    // Execute the move (async, but we return immediately)
-    executePlayerMove(from, to, promotion)
-    return true
-  }, [status, position, executePlayerMove])
+    if (promotion && !legalCandidates.some(move => move.promotion === promotion)) {
+      return false
+    }
 
-  // Handle promotion piece selection
+    void executePlayerMove(from, to, promotion)
+    return true
+  }, [status, getLegalCandidatesForMove, executePlayerMove])
+
   const handlePromotionSelect = useCallback((piece: 'q' | 'r' | 'b' | 'n') => {
     if (promotionState.from && promotionState.to) {
-      executePlayerMove(promotionState.from, promotionState.to, piece)
+      void executePlayerMove(promotionState.from, promotionState.to, piece)
     }
     setPromotionState({ isOpen: false, from: null, to: null, color: 'w' })
   }, [promotionState, executePlayerMove])
 
-  // Cancel promotion dialog
   const cancelPromotion = useCallback(() => {
     setPromotionState({ isOpen: false, from: null, to: null, color: 'w' })
   }, [])
 
-  // Reset to initial state
   const reset = useCallback(() => {
-    initialize()
+    void initialize()
   }, [initialize])
 
-  // Get legal moves from a square
-  const getLegalMoves = useCallback((square: Square): Square[] => {
+  const getLegalMoveTargets = useCallback((square: Square): LegalMoveTarget[] => {
     if (status !== 'player_turn') {
       return []
     }
+
     const moves = chessRef.current.moves({ square, verbose: true })
-    return moves.map(m => m.to as Square)
+    const targetMap = new Map<Square, LegalMoveTarget>()
+
+    moves.forEach(move => {
+      const targetSquare = move.to as Square
+      const isCapture = move.flags.includes('c') || move.flags.includes('e')
+      const requiresPromotion = Boolean(move.promotion)
+      const existingTarget = targetMap.get(targetSquare)
+
+      if (!existingTarget) {
+        targetMap.set(targetSquare, {
+          to: targetSquare,
+          isCapture,
+          requiresPromotion,
+        })
+        return
+      }
+
+      targetMap.set(targetSquare, {
+        to: targetSquare,
+        isCapture: existingTarget.isCapture || isCapture,
+        requiresPromotion: existingTarget.requiresPromotion || requiresPromotion,
+      })
+    })
+
+    return Array.from(targetMap.values())
   }, [status])
 
-  // Initialize on mount or when puzzle changes
+  const getLegalMoves = useCallback((square: Square): Square[] => {
+    return getLegalMoveTargets(square).map(target => target.to)
+  }, [getLegalMoveTargets])
+
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       void initialize()
     }, 0)
 
-    return () => window.clearTimeout(timeoutId)
-  }, [initialize])
+    return () => {
+      window.clearTimeout(timeoutId)
+      cancelPendingAsyncWork()
+    }
+  }, [initialize, cancelPendingAsyncWork])
+
+  useEffect(() => {
+    isMountedRef.current = true
+
+    return () => {
+      isMountedRef.current = false
+      cancelPendingAsyncWork()
+    }
+  }, [cancelPendingAsyncWork])
 
   return {
     position,
@@ -378,5 +502,6 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
     cancelPromotion,
     reset,
     getLegalMoves,
+    getLegalMoveTargets,
   }
 }

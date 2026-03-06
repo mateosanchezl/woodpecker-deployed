@@ -67,9 +67,9 @@ export interface AttemptResult {
 }
 
 // Animation timing constants
-export const ANIMATION_DURATION = 200 // Piece movement in ms
-export const OPPONENT_MOVE_DELAY = 300 // Pause before opponent responds
-export const FEEDBACK_DISPLAY_TIME = 400 // Show correct/incorrect feedback
+export const ANIMATION_DURATION = 140 // Piece movement in ms
+export const OPPONENT_MOVE_DELAY = 80 // Pause before opponent responds
+export const FEEDBACK_DISPLAY_TIME = 140 // Show correct/incorrect feedback
 
 // Promotion piece types
 export type PromotionPiece = 'q' | 'r' | 'b' | 'n'

@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { memo, useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { Chess } from 'chess.js'
 import { Chessboard } from 'react-chessboard'
-import type { ChessboardOptions, SquareHandlerArgs, PieceDropHandlerArgs } from 'react-chessboard'
+import type { ChessboardOptions } from 'react-chessboard'
 import { useChessPuzzle } from '@/hooks/use-chess-puzzle'
-import { usePuzzleTimer } from '@/hooks/use-puzzle-timer'
-import type { Square, PuzzleStatus } from '@/lib/chess/types'
+import { useBoardInteractionController } from '@/hooks/use-board-interaction-controller'
+import type { PuzzleTimerControls } from '@/hooks/use-puzzle-timer'
+import type { Square, PuzzleStatus, PromotionState, BoardOrientation } from '@/lib/chess/types'
 import { ANIMATION_DURATION } from '@/lib/chess/types'
 import { parseUciMove, parseSolutionMoves } from '@/lib/chess/puzzle-engine'
 import { cn } from '@/lib/utils'
@@ -35,7 +36,7 @@ interface PuzzleBoardProps {
   disabled?: boolean // Disable interactions during transitions
   isSubmittingAttempt?: boolean
   canAdvanceToNext?: boolean
-  timer: ReturnType<typeof usePuzzleTimer>
+  timerControls: PuzzleTimerControls
 }
 
 type PuzzleBoardMode = 'solving' | 'failedReview'
@@ -54,11 +55,61 @@ const customBoardStyle: React.CSSProperties = {
   boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
 }
 
+function addInsetShadow(existingShadow: string | undefined, shadow: string): string {
+  return existingShadow ? `${existingShadow}, ${shadow}` : shadow
+}
+
 /**
  * Interactive chess puzzle board component.
  * Handles the complete puzzle solving flow with animations, feedback, and failed-attempt review.
  */
-export function PuzzleBoard({
+interface PuzzleBoardSurfaceProps {
+  chessboardOptions: ChessboardOptions
+  status: PuzzleStatus
+  mode: PuzzleBoardMode
+  promotionState: PromotionState
+  orientation: BoardOrientation
+  onSelectPromotion: (piece: 'q' | 'r' | 'b' | 'n') => void
+  onCancelPromotion: () => void
+}
+
+const PuzzleBoardSurface = memo(function PuzzleBoardSurface({
+  chessboardOptions,
+  status,
+  mode,
+  promotionState,
+  orientation,
+  onSelectPromotion,
+  onCancelPromotion,
+}: PuzzleBoardSurfaceProps) {
+  const boardContainerRef = useRef<HTMLDivElement>(null)
+
+  return (
+    <div className="relative w-full max-w-[700px] aspect-square shadow-2xl rounded-xl overflow-hidden">
+      <div ref={boardContainerRef} className="absolute inset-0">
+        <Chessboard options={chessboardOptions} />
+
+        {mode === 'solving' && <PuzzleFeedback status={status} />}
+
+        {mode === 'solving' && (
+          <PromotionDialog
+            isOpen={promotionState.isOpen}
+            color={promotionState.color}
+            anchorSquare={promotionState.to}
+            boardOrientation={orientation}
+            boardContainerRef={boardContainerRef}
+            onSelect={onSelectPromotion}
+            onCancel={onCancelPromotion}
+          />
+        )}
+      </div>
+    </div>
+  )
+})
+
+PuzzleBoardSurface.displayName = 'PuzzleBoardSurface'
+
+export const PuzzleBoard = memo(function PuzzleBoard({
   fen,
   moves,
   onComplete,
@@ -68,11 +119,9 @@ export function PuzzleBoard({
   disabled = false,
   isSubmittingAttempt = false,
   canAdvanceToNext = false,
-  timer,
+  timerControls,
 }: PuzzleBoardProps) {
   const [mode, setMode] = useState<PuzzleBoardMode>('solving')
-  const [selectedSquare, setSelectedSquare] = useState<Square | null>(null)
-  const [legalMoves, setLegalMoves] = useState<Square[]>([])
   const [reviewStartFen, setReviewStartFen] = useState(fen)
   const [reviewStartMoveIndex, setReviewStartMoveIndex] = useState(0)
   const [reviewStartLastMove, setReviewStartLastMove] = useState<{
@@ -100,21 +149,19 @@ export function PuzzleBoard({
     makePlayerMove,
     handlePromotionSelect,
     cancelPromotion,
-    getLegalMoves,
+    getLegalMoveTargets,
   } = useChessPuzzle({
     fen,
     solutionMoves: moves,
     onIncorrectMove: () => {
-      timer.pause()
+      timerControls.pause()
     },
     onPuzzleComplete: (isCorrect, finalMoves) => {
-      const finalTime = timer.getTime()
-      timer.pause()
+      const finalTime = timerControls.getTime()
+      timerControls.pause()
 
       if (!isCorrect) {
         setMode('failedReview')
-        setSelectedSquare(null)
-        setLegalMoves([])
         setReviewStartFen(position)
         setReviewStartMoveIndex(currentMoveIndex)
         setReviewStartLastMove(lastMove)
@@ -126,8 +173,34 @@ export function PuzzleBoard({
       onComplete(isCorrect, finalTime, finalMoves)
     },
     onReady: () => {
-      timer.start()
+      timerControls.start()
     },
+  })
+
+  const canInteract =
+    mode === 'solving' &&
+    !disabled &&
+    !isSubmittingAttempt &&
+    status !== 'incorrect' &&
+    status !== 'complete'
+
+  const playerColor = orientation === 'white' ? 'w' : 'b'
+
+  const {
+    selectedSquare,
+    legalTargets,
+    allowDragging,
+    canDragPiece,
+    dragActivationDistance,
+    handlePieceDrop,
+    handleSquareClick,
+    clearSelection,
+  } = useBoardInteractionController({
+    canInteract,
+    isPlayerTurn,
+    playerColor,
+    makePlayerMove,
+    getLegalMoveTargets,
   })
 
   useEffect(() => {
@@ -140,81 +213,14 @@ export function PuzzleBoard({
     }
   }, [onReviewModeChange])
 
-  const handlePieceDrop = useCallback(
-    ({ sourceSquare, targetSquare }: PieceDropHandlerArgs): boolean => {
-      if (
-        mode !== 'solving' ||
-        disabled ||
-        isSubmittingAttempt ||
-        !isPlayerTurn ||
-        !sourceSquare ||
-        !targetSquare
-      ) {
-        return false
-      }
-
-      if (sourceSquare === targetSquare) {
-        return false
-      }
-
-      setSelectedSquare(null)
-      setLegalMoves([])
-
-      return makePlayerMove(sourceSquare as Square, targetSquare as Square)
-    },
-    [mode, disabled, isSubmittingAttempt, isPlayerTurn, makePlayerMove]
-  )
-
-  const handleSquareClick = useCallback(
-    ({ square }: SquareHandlerArgs) => {
-      if (mode !== 'solving' || disabled || isSubmittingAttempt || !isPlayerTurn) {
-        return
-      }
-
-      const sq = square as Square
-
-      if (selectedSquare === sq) {
-        setSelectedSquare(null)
-        setLegalMoves([])
-        return
-      }
-
-      if (selectedSquare && legalMoves.includes(sq)) {
-        makePlayerMove(selectedSquare, sq)
-        setSelectedSquare(null)
-        setLegalMoves([])
-        return
-      }
-
-      const nextLegalMoves = getLegalMoves(sq)
-      if (nextLegalMoves.length > 0) {
-        setSelectedSquare(sq)
-        setLegalMoves(nextLegalMoves)
-      } else {
-        setSelectedSquare(null)
-        setLegalMoves([])
-      }
-    },
-    [
-      mode,
-      disabled,
-      isSubmittingAttempt,
-      isPlayerTurn,
-      selectedSquare,
-      legalMoves,
-      makePlayerMove,
-      getLegalMoves,
-    ]
-  )
-
   const handleSkip = useCallback(() => {
     if (mode !== 'solving' || disabled || isSubmittingAttempt) {
       return
     }
 
-    timer.pause()
-    onSkip(timer.getTime())
-  }, [mode, disabled, isSubmittingAttempt, timer, onSkip])
+    timerControls.pause()
+    onSkip(timerControls.getTime())
+  }, [mode, disabled, isSubmittingAttempt, timerControls, onSkip])
 
   const setWalkthroughToMoveIndex = useCallback((targetMoveIndex: number) => {
     if (mode !== 'failedReview') {
@@ -328,8 +334,7 @@ export function PuzzleBoard({
       }
 
       if (selectedSquare) {
-        setSelectedSquare(null)
-        setLegalMoves([])
+        clearSelection()
         return
       }
 
@@ -341,6 +346,7 @@ export function PuzzleBoard({
       promotionState.isOpen,
       cancelPromotion,
       selectedSquare,
+      clearSelection,
       mode,
       isPlayerTurn,
       handleSkip,
@@ -349,12 +355,6 @@ export function PuzzleBoard({
 
   const displayPosition = mode === 'failedReview' ? walkthroughPosition : position
   const displayLastMove = mode === 'failedReview' ? walkthroughLastMove : lastMove
-  const canInteract =
-    mode === 'solving' &&
-    !disabled &&
-    !isSubmittingAttempt &&
-    status !== 'incorrect' &&
-    status !== 'complete'
 
   const reviewStepsTotal = Math.max(0, solutionMoves.length - reviewStartMoveIndex)
   const reviewStepsCompleted = Math.max(0, walkthroughMoveIndex - reviewStartMoveIndex)
@@ -375,24 +375,50 @@ export function PuzzleBoard({
 
     if (mode === 'solving' && selectedSquare) {
       styles[selectedSquare] = {
-        backgroundColor: 'rgba(59, 130, 246, 0.5)', // blue-500
+        ...styles[selectedSquare],
+        boxShadow: addInsetShadow(
+          styles[selectedSquare]?.boxShadow as string | undefined,
+          'inset 0 0 0 3px rgba(59, 130, 246, 0.8)'
+        ),
       }
     }
 
     if (mode === 'solving') {
-      legalMoves.forEach((sq) => {
-        styles[sq] = {
-          ...styles[sq],
-          backgroundImage: styles[sq]?.backgroundColor
-            ? 'radial-gradient(circle, rgba(0, 0, 0, 0.2) 25%, transparent 25%)'
-            : 'radial-gradient(circle, rgba(0, 0, 0, 0.2) 25%, transparent 25%)',
-          backgroundSize: '100% 100%',
+      legalTargets.forEach(({ to, isCapture }) => {
+        const currentStyle = styles[to] ?? {}
+
+        styles[to] = {
+          ...currentStyle,
+          ...(isCapture
+            ? {
+                boxShadow: addInsetShadow(
+                  currentStyle.boxShadow as string | undefined,
+                  'inset 0 0 0 4px rgba(239, 68, 68, 0.72)'
+                ),
+              }
+            : {
+                backgroundImage:
+                  'radial-gradient(circle, rgba(15, 23, 42, 0.35) 22%, transparent 24%)',
+                backgroundSize: '100% 100%',
+              }),
         }
       })
     }
 
+    if (mode === 'solving' && promotionState.isOpen && promotionState.to) {
+      const currentStyle = styles[promotionState.to] ?? {}
+      styles[promotionState.to] = {
+        ...currentStyle,
+        backgroundColor: currentStyle.backgroundColor || 'rgba(251, 191, 36, 0.28)',
+        boxShadow: addInsetShadow(
+          currentStyle.boxShadow as string | undefined,
+          'inset 0 0 0 4px rgba(251, 191, 36, 0.82)'
+        ),
+      }
+    }
+
     return styles
-  }, [displayLastMove, mode, selectedSquare, legalMoves])
+  }, [displayLastMove, mode, selectedSquare, legalTargets, promotionState.isOpen, promotionState.to])
 
   const chessboardOptions: ChessboardOptions = useMemo(
     () => ({
@@ -400,7 +426,11 @@ export function PuzzleBoard({
       boardOrientation: orientation,
       onPieceDrop: handlePieceDrop,
       onSquareClick: handleSquareClick,
-      allowDragging: canInteract,
+      allowDragging,
+      canDragPiece,
+      allowDragOffBoard: false,
+      dragActivationDistance,
+      clearArrowsOnPositionChange: false,
       animationDurationInMs: ANIMATION_DURATION,
       boardStyle: customBoardStyle,
       darkSquareStyle: customDarkSquareStyle,
@@ -412,7 +442,9 @@ export function PuzzleBoard({
       orientation,
       handlePieceDrop,
       handleSquareClick,
-      canInteract,
+      allowDragging,
+      canDragPiece,
+      dragActivationDistance,
       customSquareStyles,
     ]
   )
@@ -423,20 +455,15 @@ export function PuzzleBoard({
       onKeyDown={handleKeyDown}
       tabIndex={0}
     >
-      <div className="relative w-full max-w-[700px] aspect-square shadow-2xl rounded-xl overflow-hidden">
-        <Chessboard options={chessboardOptions} />
-
-        {mode === 'solving' && <PuzzleFeedback status={status} />}
-
-        {mode === 'solving' && (
-          <PromotionDialog
-            isOpen={promotionState.isOpen}
-            color={promotionState.color}
-            onSelect={handlePromotionSelect}
-            onCancel={cancelPromotion}
-          />
-        )}
-      </div>
+      <PuzzleBoardSurface
+        chessboardOptions={chessboardOptions}
+        status={status}
+        mode={mode}
+        promotionState={promotionState}
+        orientation={orientation}
+        onSelectPromotion={handlePromotionSelect}
+        onCancelPromotion={cancelPromotion}
+      />
 
       <div className="flex min-h-10 items-center justify-center text-lg font-medium">
         <StatusText
@@ -491,7 +518,9 @@ export function PuzzleBoard({
       )}
     </div>
   )
-}
+})
+
+PuzzleBoard.displayName = 'PuzzleBoard'
 
 function StatusText({
   mode,

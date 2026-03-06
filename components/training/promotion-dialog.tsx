@@ -1,13 +1,17 @@
 'use client'
 
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
+import type { BoardOrientation, Square } from '@/lib/chess/types'
 
 interface PromotionDialogProps {
   isOpen: boolean
   color: 'w' | 'b'
   onSelect: (piece: 'q' | 'r' | 'b' | 'n') => void
   onCancel: () => void
+  anchorSquare?: Square | null
+  boardOrientation?: BoardOrientation
+  boardContainerRef?: React.RefObject<HTMLElement | null>
 }
 
 const PROMOTION_PIECES = [
@@ -23,6 +27,64 @@ const PIECE_SYMBOLS: Record<string, Record<string, string>> = {
   b: { q: '\u265B', r: '\u265C', b: '\u265D', n: '\u265E' },
 }
 
+interface PromotionAnchorLayout {
+  style: React.CSSProperties
+  buttonSize: number
+}
+
+function getAnchorLayout({
+  anchorSquare,
+  boardOrientation,
+  boardContainer,
+}: {
+  anchorSquare: Square | null | undefined
+  boardOrientation: BoardOrientation
+  boardContainer: HTMLElement | null | undefined
+}): PromotionAnchorLayout | null {
+  if (!anchorSquare || !boardContainer) {
+    return null
+  }
+
+  const boardRect = boardContainer.getBoundingClientRect()
+  const boardSize = Math.min(boardRect.width, boardRect.height)
+  if (!Number.isFinite(boardSize) || boardSize <= 0) {
+    return null
+  }
+
+  const file = anchorSquare.charCodeAt(0) - 97
+  const rank = Number(anchorSquare[1])
+  if (!Number.isFinite(file) || !Number.isFinite(rank) || file < 0 || file > 7 || rank < 1 || rank > 8) {
+    return null
+  }
+
+  const squareSize = boardSize / 8
+  const column = boardOrientation === 'black' ? 7 - file : file
+  const row = boardOrientation === 'black' ? rank - 1 : 8 - rank
+
+  const buttonSize = Math.round(Math.min(64, Math.max(44, squareSize * 0.92)))
+  const buttonGap = 4 // Matches Tailwind `gap-1`.
+  const panelWidth = buttonSize + 16
+  const panelHeight = buttonSize * 4 + 16 + buttonGap * 3
+
+  const anchorCenterX = column * squareSize + squareSize / 2
+  let left = anchorCenterX - panelWidth / 2
+  left = Math.max(6, Math.min(left, boardSize - panelWidth - 6))
+
+  const preferDown = row <= 1
+  const preferredTop = preferDown
+    ? row * squareSize + squareSize + 4
+    : row * squareSize - panelHeight - 4
+  const top = Math.max(6, Math.min(preferredTop, boardSize - panelHeight - 6))
+
+  return {
+    style: {
+      left: `${left}px`,
+      top: `${top}px`,
+    },
+    buttonSize,
+  }
+}
+
 /**
  * Modal dialog for selecting a promotion piece.
  * Shows Q/R/B/N options with piece symbols.
@@ -32,7 +94,12 @@ export function PromotionDialog({
   color,
   onSelect,
   onCancel,
+  anchorSquare = null,
+  boardOrientation = 'white',
+  boardContainerRef,
 }: PromotionDialogProps) {
+  const [anchorLayout, setAnchorLayout] = useState<PromotionAnchorLayout | null>(null)
+
   // Handle keyboard shortcuts
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -67,45 +134,90 @@ export function PromotionDialog({
     }
   }, [isOpen, handleKeyDown])
 
+  useEffect(() => {
+    if (!isOpen) {
+      const timeoutId = window.setTimeout(() => {
+        setAnchorLayout(null)
+      }, 0)
+      return () => window.clearTimeout(timeoutId)
+    }
+
+    const updateLayout = () => {
+      setAnchorLayout(getAnchorLayout({
+        anchorSquare,
+        boardOrientation,
+        boardContainer: boardContainerRef?.current,
+      }))
+    }
+
+    const frameId = window.requestAnimationFrame(updateLayout)
+    window.addEventListener('resize', updateLayout)
+    return () => {
+      window.cancelAnimationFrame(frameId)
+      window.removeEventListener('resize', updateLayout)
+    }
+  }, [isOpen, anchorSquare, boardOrientation, boardContainerRef])
+
+  const panelStyle = useMemo<React.CSSProperties>(() => {
+    if (anchorLayout) {
+      return {
+        ...anchorLayout.style,
+        ['--promotion-button-size' as string]: `${anchorLayout.buttonSize}px`,
+      }
+    }
+
+    return {
+      left: '50%',
+      top: '50%',
+      transform: 'translate(-50%, -50%)',
+    }
+  }, [anchorLayout])
+
   if (!isOpen) {
     return null
   }
 
   return (
-    <>
-      {/* Backdrop */}
+    <div
+      className="absolute inset-0 z-20"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Select promotion piece"
+    >
       <div
-        className="absolute inset-0 bg-black/20 rounded"
+        className={cn(
+          'absolute inset-0 rounded',
+          anchorLayout ? 'bg-black/5' : 'bg-black/20'
+        )}
         onClick={onCancel}
         aria-hidden="true"
       />
-
-      {/* Dialog */}
       <div
-        className="absolute inset-0 flex items-center justify-center"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Select promotion piece"
+        className={cn(
+          'absolute rounded-lg border bg-background p-2 shadow-lg',
+          'flex flex-col gap-1'
+        )}
+        style={panelStyle}
       >
-        <div className="bg-background border rounded-lg shadow-lg p-2 flex gap-1">
-          {PROMOTION_PIECES.map(({ piece, name }) => (
-            <button
-              key={piece}
-              onClick={() => onSelect(piece)}
-              className={cn(
-                'w-16 h-16 flex items-center justify-center',
-                'text-5xl leading-none',
-                'rounded hover:bg-accent transition-colors',
-                'focus:outline-none focus:ring-2 focus:ring-ring'
-              )}
-              title={`${name} (${piece.toUpperCase()})`}
-              aria-label={`Promote to ${name}`}
-            >
-              {PIECE_SYMBOLS[color][piece]}
-            </button>
-          ))}
-        </div>
+        {PROMOTION_PIECES.map(({ piece, name }) => (
+          <button
+            key={piece}
+            onClick={() => onSelect(piece)}
+            className={cn(
+              'flex items-center justify-center rounded',
+              'leading-none transition-colors hover:bg-accent',
+              'focus:outline-none focus:ring-2 focus:ring-ring',
+              anchorLayout
+                ? 'h-[var(--promotion-button-size)] w-[var(--promotion-button-size)] text-[calc(var(--promotion-button-size)*0.68)]'
+                : 'h-14 w-14 text-5xl'
+            )}
+            title={`${name} (${piece.toUpperCase()})`}
+            aria-label={`Promote to ${name}`}
+          >
+            {PIECE_SYMBOLS[color][piece]}
+          </button>
+        ))}
       </div>
-    </>
+    </div>
   )
 }

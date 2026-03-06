@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef } from "react";
+import { memo, useState, useCallback, useMemo, useRef } from "react";
 import { Chessboard } from "react-chessboard";
-import type {
-  ChessboardOptions,
-  SquareHandlerArgs,
-  PieceDropHandlerArgs,
-} from "react-chessboard";
+import type { ChessboardOptions } from "react-chessboard";
 import { Chess } from "chess.js";
 import { useChessPuzzle } from "@/hooks/use-chess-puzzle";
+import { useBoardInteractionController } from "@/hooks/use-board-interaction-controller";
 import { usePuzzleTimer } from "@/hooks/use-puzzle-timer";
-import type { Square, PuzzleStatus } from "@/lib/chess/types";
+import type {
+  Square,
+  PuzzleStatus,
+  PromotionState,
+  BoardOrientation,
+} from "@/lib/chess/types";
 import { ANIMATION_DURATION } from "@/lib/chess/types";
 import {
   parseUciMove,
@@ -55,6 +57,54 @@ const customBoardStyle: React.CSSProperties = {
     "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
 };
 
+function addInsetShadow(existingShadow: string | undefined, shadow: string): string {
+  return existingShadow ? `${existingShadow}, ${shadow}` : shadow;
+}
+
+interface ReviewBoardSurfaceProps {
+  chessboardOptions: ChessboardOptions;
+  isWalkthrough: boolean;
+  status: PuzzleStatus;
+  promotionState: PromotionState;
+  orientation: BoardOrientation;
+  onSelectPromotion: (piece: "q" | "r" | "b" | "n") => void;
+  onCancelPromotion: () => void;
+}
+
+const ReviewBoardSurface = memo(function ReviewBoardSurface({
+  chessboardOptions,
+  isWalkthrough,
+  status,
+  promotionState,
+  orientation,
+  onSelectPromotion,
+  onCancelPromotion,
+}: ReviewBoardSurfaceProps) {
+  const boardContainerRef = useRef<HTMLDivElement>(null);
+
+  return (
+    <div className="relative w-full max-w-140 aspect-square shadow-2xl rounded-xl overflow-hidden">
+      <div ref={boardContainerRef} className="absolute inset-0">
+        <Chessboard options={chessboardOptions} />
+        {!isWalkthrough && <PuzzleFeedback status={status} />}
+        {!isWalkthrough && (
+          <PromotionDialog
+            isOpen={promotionState.isOpen}
+            color={promotionState.color}
+            anchorSquare={promotionState.to}
+            boardOrientation={orientation}
+            boardContainerRef={boardContainerRef}
+            onSelect={onSelectPromotion}
+            onCancel={onCancelPromotion}
+          />
+        )}
+      </div>
+    </div>
+  );
+});
+
+ReviewBoardSurface.displayName = "ReviewBoardSurface";
+
 function formatTheme(theme: string): string {
   return theme
     .replace(/([A-Z])/g, " $1")
@@ -78,9 +128,9 @@ export function ReviewPuzzleBoard({
   correctAttempts,
   onComplete,
 }: ReviewPuzzleBoardProps) {
+  const puzzleKey = `${fen}::${moves}`;
   const [reviewMode, setReviewMode] = useState<ReviewMode>("solving");
-  const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
-  const [legalMoves, setLegalMoves] = useState<Square[]>([]);
+  const [boardEpoch, setBoardEpoch] = useState(0);
 
   // Solution walkthrough state
   const [walkthroughPosition, setWalkthroughPosition] = useState(fen);
@@ -106,90 +156,52 @@ export function ReviewPuzzleBoard({
     makePlayerMove,
     handlePromotionSelect,
     cancelPromotion,
-    getLegalMoves,
+    getLegalMoveTargets,
     reset: resetPuzzle,
   } = useChessPuzzle({
     fen,
     solutionMoves: moves,
     onCorrectMove: () => {},
     onIncorrectMove: () => {
-      timer.pause();
+      timer.controls.pause();
     },
     onPuzzleComplete: (isCorrect, finalMoves) => {
-      timer.pause();
+      timer.controls.pause();
       if (isCorrect) {
         setReviewMode("complete");
-        onComplete?.(true, timer.getTime(), finalMoves);
+        onComplete?.(true, timer.controls.getTime(), finalMoves);
       } else {
         setReviewMode("failed");
-        onComplete?.(false, timer.getTime(), finalMoves);
+        onComplete?.(false, timer.controls.getTime(), finalMoves);
       }
     },
     onReady: () => {
       if (reviewMode === "solving") {
-        timer.start();
+        timer.controls.start();
       }
     },
   });
 
-  // ----- SOLVING MODE HANDLERS -----
+  const canInteract =
+    reviewMode === "solving" && status !== "incorrect" && status !== "complete";
+  const playerColor = orientation === "white" ? "w" : "b";
 
-  const handlePieceDrop = useCallback(
-    ({ sourceSquare, targetSquare }: PieceDropHandlerArgs): boolean => {
-      if (
-        !isPlayerTurn ||
-        !sourceSquare ||
-        !targetSquare ||
-        reviewMode !== "solving"
-      ) {
-        return false;
-      }
-      if (sourceSquare === targetSquare) return false;
-
-      setSelectedSquare(null);
-      setLegalMoves([]);
-      return makePlayerMove(sourceSquare as Square, targetSquare as Square);
-    },
-    [isPlayerTurn, makePlayerMove, reviewMode],
-  );
-
-  const handleSquareClick = useCallback(
-    ({ square }: SquareHandlerArgs) => {
-      if (!isPlayerTurn || reviewMode !== "solving") return;
-
-      const sq = square as Square;
-
-      if (selectedSquare === sq) {
-        setSelectedSquare(null);
-        setLegalMoves([]);
-        return;
-      }
-
-      if (selectedSquare && legalMoves.includes(sq)) {
-        makePlayerMove(selectedSquare, sq);
-        setSelectedSquare(null);
-        setLegalMoves([]);
-        return;
-      }
-
-      const moves = getLegalMoves(sq);
-      if (moves.length > 0) {
-        setSelectedSquare(sq);
-        setLegalMoves(moves);
-      } else {
-        setSelectedSquare(null);
-        setLegalMoves([]);
-      }
-    },
-    [
-      isPlayerTurn,
-      selectedSquare,
-      legalMoves,
-      makePlayerMove,
-      getLegalMoves,
-      reviewMode,
-    ],
-  );
+  const {
+    selectedSquare,
+    legalTargets,
+    allowDragging,
+    canDragPiece,
+    dragActivationDistance,
+    handlePieceDrop,
+    handleSquareClick,
+    clearSelection,
+  } = useBoardInteractionController({
+    canInteract,
+    isPlayerTurn,
+    playerColor,
+    makePlayerMove,
+    getLegalMoveTargets,
+  });
 
   // ----- WALKTHROUGH HANDLERS -----
 
@@ -273,13 +285,13 @@ export function ReviewPuzzleBoard({
 
   const handleRetry = useCallback(() => {
     setReviewMode("solving");
-    setSelectedSquare(null);
-    setLegalMoves([]);
+    clearSelection();
+    setBoardEpoch((prev) => prev + 1);
     setIsAutoPlaying(false);
     autoPlayRef.current = false;
-    timer.reset();
+    timer.controls.reset();
     resetPuzzle();
-  }, [timer, resetPuzzle]);
+  }, [clearSelection, timer.controls, resetPuzzle]);
 
   // ----- RENDERING -----
 
@@ -299,26 +311,60 @@ export function ReviewPuzzleBoard({
       };
     }
 
-    if (selectedSquare && !isWalkthrough) {
-      styles[selectedSquare] = { backgroundColor: "rgba(59, 130, 246, 0.5)" };
+    if (selectedSquare && canInteract && !isWalkthrough) {
+      styles[selectedSquare] = {
+        ...styles[selectedSquare],
+        boxShadow: addInsetShadow(
+          styles[selectedSquare]?.boxShadow as string | undefined,
+          "inset 0 0 0 3px rgba(59, 130, 246, 0.8)",
+        ),
+      };
     }
 
-    if (!isWalkthrough) {
-      legalMoves.forEach((sq) => {
-        styles[sq] = {
-          ...styles[sq],
-          backgroundImage:
-            "radial-gradient(circle, rgba(0, 0, 0, 0.2) 25%, transparent 25%)",
-          backgroundSize: "100% 100%",
+    if (canInteract && !isWalkthrough) {
+      legalTargets.forEach(({ to, isCapture }) => {
+        const currentStyle = styles[to] ?? {};
+
+        styles[to] = {
+          ...currentStyle,
+          ...(isCapture
+            ? {
+                boxShadow: addInsetShadow(
+                  currentStyle.boxShadow as string | undefined,
+                  "inset 0 0 0 4px rgba(239, 68, 68, 0.72)",
+                ),
+              }
+            : {
+                backgroundImage:
+                  "radial-gradient(circle, rgba(15, 23, 42, 0.35) 22%, transparent 24%)",
+                backgroundSize: "100% 100%",
+              }),
         };
       });
     }
 
-    return styles;
-  }, [displayLastMove, selectedSquare, legalMoves, isWalkthrough]);
+    if (canInteract && !isWalkthrough && promotionState.isOpen && promotionState.to) {
+      const currentStyle = styles[promotionState.to] ?? {};
+      styles[promotionState.to] = {
+        ...currentStyle,
+        backgroundColor: currentStyle.backgroundColor || "rgba(251, 191, 36, 0.28)",
+        boxShadow: addInsetShadow(
+          currentStyle.boxShadow as string | undefined,
+          "inset 0 0 0 4px rgba(251, 191, 36, 0.82)",
+        ),
+      };
+    }
 
-  const canInteract =
-    reviewMode === "solving" && status !== "incorrect" && status !== "complete";
+    return styles;
+  }, [
+    displayLastMove,
+    selectedSquare,
+    legalTargets,
+    canInteract,
+    isWalkthrough,
+    promotionState.isOpen,
+    promotionState.to,
+  ]);
 
   const chessboardOptions: ChessboardOptions = useMemo(
     () => ({
@@ -326,7 +372,11 @@ export function ReviewPuzzleBoard({
       boardOrientation: orientation,
       onPieceDrop: handlePieceDrop,
       onSquareClick: handleSquareClick,
-      allowDragging: canInteract,
+      allowDragging,
+      canDragPiece,
+      allowDragOffBoard: false,
+      dragActivationDistance,
+      clearArrowsOnPositionChange: false,
       animationDurationInMs: ANIMATION_DURATION,
       boardStyle: customBoardStyle,
       darkSquareStyle: customDarkSquareStyle,
@@ -338,7 +388,9 @@ export function ReviewPuzzleBoard({
       orientation,
       handlePieceDrop,
       handleSquareClick,
-      canInteract,
+      allowDragging,
+      canDragPiece,
+      dragActivationDistance,
       customSquareStyles,
     ],
   );
@@ -349,18 +401,16 @@ export function ReviewPuzzleBoard({
     <div className="flex flex-col lg:flex-row items-start justify-center gap-6 w-full">
       {/* Board */}
       <div className="flex-1 w-full flex flex-col items-center gap-4">
-        <div className="relative w-full max-w-140 aspect-square shadow-2xl rounded-xl overflow-hidden">
-          <Chessboard options={chessboardOptions} />
-          {!isWalkthrough && <PuzzleFeedback status={status} />}
-          {!isWalkthrough && (
-            <PromotionDialog
-              isOpen={promotionState.isOpen}
-              color={promotionState.color}
-              onSelect={handlePromotionSelect}
-              onCancel={cancelPromotion}
-            />
-          )}
-        </div>
+        <ReviewBoardSurface
+          key={`${puzzleKey}:${boardEpoch}`}
+          chessboardOptions={chessboardOptions}
+          isWalkthrough={isWalkthrough}
+          status={status}
+          promotionState={promotionState}
+          orientation={orientation}
+          onSelectPromotion={handlePromotionSelect}
+          onCancelPromotion={cancelPromotion}
+        />
 
         {/* Status text */}
         <div className="text-lg font-medium text-muted-foreground">

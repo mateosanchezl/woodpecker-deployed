@@ -1,7 +1,9 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
@@ -31,8 +33,88 @@ interface UpdateSettingsInput {
   showOnLeaderboard?: boolean
 }
 
+interface SettingsDraft {
+  estimatedRating: number
+  preferredSetSize: number
+  targetCycles: number
+  autoStartNextPuzzle: boolean
+  showOnLeaderboard: boolean
+}
+
+interface UpdateSettingsResponse {
+  user: {
+    id: string
+    estimatedRating: number
+    preferredSetSize: number
+    targetCycles: number
+    autoStartNextPuzzle: boolean
+    showOnLeaderboard: boolean
+    hasCompletedOnboarding: boolean
+  }
+}
+
+const DEFAULT_SETTINGS: SettingsDraft = {
+  estimatedRating: 1200,
+  preferredSetSize: 150,
+  targetCycles: 5,
+  autoStartNextPuzzle: true,
+  showOnLeaderboard: true,
+}
+
+function createSettingsDraft(
+  user?: Partial<Pick<UserData['user'], keyof SettingsDraft>>
+): SettingsDraft {
+  return {
+    estimatedRating: user?.estimatedRating ?? DEFAULT_SETTINGS.estimatedRating,
+    preferredSetSize: user?.preferredSetSize ?? DEFAULT_SETTINGS.preferredSetSize,
+    targetCycles: user?.targetCycles ?? DEFAULT_SETTINGS.targetCycles,
+    autoStartNextPuzzle:
+      user?.autoStartNextPuzzle ?? DEFAULT_SETTINGS.autoStartNextPuzzle,
+    showOnLeaderboard: user?.showOnLeaderboard ?? DEFAULT_SETTINGS.showOnLeaderboard,
+  }
+}
+
+function settingsAreEqual(a: SettingsDraft, b: SettingsDraft) {
+  return (
+    a.estimatedRating === b.estimatedRating &&
+    a.preferredSetSize === b.preferredSetSize &&
+    a.targetCycles === b.targetCycles &&
+    a.autoStartNextPuzzle === b.autoStartNextPuzzle &&
+    a.showOnLeaderboard === b.showOnLeaderboard
+  )
+}
+
+function getChangedSettings(
+  savedSettings: SettingsDraft,
+  draftSettings: SettingsDraft
+): UpdateSettingsInput {
+  const changes: UpdateSettingsInput = {}
+
+  if (savedSettings.estimatedRating !== draftSettings.estimatedRating) {
+    changes.estimatedRating = draftSettings.estimatedRating
+  }
+  if (savedSettings.preferredSetSize !== draftSettings.preferredSetSize) {
+    changes.preferredSetSize = draftSettings.preferredSetSize
+  }
+  if (savedSettings.targetCycles !== draftSettings.targetCycles) {
+    changes.targetCycles = draftSettings.targetCycles
+  }
+  if (
+    savedSettings.autoStartNextPuzzle !== draftSettings.autoStartNextPuzzle
+  ) {
+    changes.autoStartNextPuzzle = draftSettings.autoStartNextPuzzle
+  }
+  if (savedSettings.showOnLeaderboard !== draftSettings.showOnLeaderboard) {
+    changes.showOnLeaderboard = draftSettings.showOnLeaderboard
+  }
+
+  return changes
+}
+
 export default function SettingsPage() {
   const queryClient = useQueryClient()
+  const [draftSettings, setDraftSettings] = useState<SettingsDraft | null>(null)
+  const lastLoadedSettingsRef = useRef<SettingsDraft | null>(null)
 
   const { data, isLoading } = useQuery<UserData>({
     queryKey: ['user'],
@@ -43,11 +125,16 @@ export default function SettingsPage() {
     },
   })
 
+  const loadedEstimatedRating = data?.user?.estimatedRating
+  const loadedPreferredSetSize = data?.user?.preferredSetSize
+  const loadedTargetCycles = data?.user?.targetCycles
+  const loadedAutoStartNextPuzzle = data?.user?.autoStartNextPuzzle
+  const loadedShowOnLeaderboard = data?.user?.showOnLeaderboard
+
   const updateSettings = useMutation<
-    unknown,
+    UpdateSettingsResponse,
     Error,
-    UpdateSettingsInput,
-    { previousUserData?: UserData }
+    UpdateSettingsInput
   >({
     mutationFn: async (settings) => {
       const res = await fetch('/api/user', {
@@ -61,11 +148,7 @@ export default function SettingsPage() {
       }
       return res.json()
     },
-    onMutate: async (settings) => {
-      await queryClient.cancelQueries({ queryKey: ['user'] })
-
-      const previousUserData = queryClient.getQueryData<UserData>(['user'])
-
+    onSuccess: (response) => {
       queryClient.setQueryData<UserData>(['user'], oldData => {
         if (!oldData?.user) {
           return oldData
@@ -75,60 +158,94 @@ export default function SettingsPage() {
           ...oldData,
           user: {
             ...oldData.user,
-            ...settings,
+            ...response.user,
           },
         }
       })
 
-      return { previousUserData }
-    },
-    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leaderboard'] })
-      toast.success('Settings updated')
-    },
-    onError: (error, _settings, context) => {
-      if (context?.previousUserData) {
-        queryClient.setQueryData(['user'], context.previousUserData)
-      }
-
-      toast.error(error.message)
-    },
-    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['user'] })
+      toast.success('Settings saved')
+    },
+    onError: (error) => {
+      toast.error(error.message)
     },
   })
 
-  const handleLeaderboardToggle = (checked: boolean) => {
-    updateSettings.mutate({ showOnLeaderboard: checked })
+  useEffect(() => {
+    if (
+      loadedEstimatedRating === undefined ||
+      loadedPreferredSetSize === undefined ||
+      loadedTargetCycles === undefined ||
+      loadedAutoStartNextPuzzle === undefined ||
+      loadedShowOnLeaderboard === undefined
+    ) {
+      return
+    }
+
+    const nextLoadedSettings: SettingsDraft = {
+      estimatedRating: loadedEstimatedRating,
+      preferredSetSize: loadedPreferredSetSize,
+      targetCycles: loadedTargetCycles,
+      autoStartNextPuzzle: loadedAutoStartNextPuzzle,
+      showOnLeaderboard: loadedShowOnLeaderboard,
+    }
+    const previousLoadedSettings = lastLoadedSettingsRef.current
+
+    setDraftSettings(currentDraftSettings => {
+      if (
+        !currentDraftSettings ||
+        !previousLoadedSettings ||
+        settingsAreEqual(currentDraftSettings, previousLoadedSettings)
+      ) {
+        return nextLoadedSettings
+      }
+
+      return currentDraftSettings
+    })
+
+    lastLoadedSettingsRef.current = nextLoadedSettings
+  }, [
+    loadedEstimatedRating,
+    loadedPreferredSetSize,
+    loadedTargetCycles,
+    loadedAutoStartNextPuzzle,
+    loadedShowOnLeaderboard,
+  ])
+
+  const savedSettings = data?.user ? createSettingsDraft(data.user) : null
+  const currentSettings = draftSettings ?? savedSettings ?? DEFAULT_SETTINGS
+  const isDirty =
+    savedSettings !== null &&
+    draftSettings !== null &&
+    !settingsAreEqual(draftSettings, savedSettings)
+
+  const updateDraft = (changes: Partial<SettingsDraft>) => {
+    setDraftSettings(currentDraftSettings => ({
+      ...(currentDraftSettings ?? savedSettings ?? DEFAULT_SETTINGS),
+      ...changes,
+    }))
   }
 
-  const handleRatingChange = (value: number[]) => {
-    const newRating = value[0]
-    updateSettings.mutate({ estimatedRating: newRating })
+  const handleSave = () => {
+    if (!savedSettings || !draftSettings || !isDirty) {
+      return
+    }
+
+    updateSettings.mutate(getChangedSettings(savedSettings, draftSettings))
   }
 
-  const handleSetSizeChange = (value: number[]) => {
-    const newSize = value[0]
-    updateSettings.mutate({ preferredSetSize: newSize })
-  }
+  const handleReset = () => {
+    if (!savedSettings) {
+      return
+    }
 
-  const handleCyclesChange = (value: number[]) => {
-    const newCycles = value[0]
-    updateSettings.mutate({ targetCycles: newCycles })
-  }
-
-  const handleAutoStartNextPuzzleToggle = (checked: boolean) => {
-    updateSettings.mutate({ autoStartNextPuzzle: checked })
+    setDraftSettings(savedSettings)
   }
 
   if (isLoading) {
     return <SettingsSkeleton />
   }
-
-  const estimatedRating = data?.user.estimatedRating ?? 1200
-  const preferredSetSize = data?.user.preferredSetSize ?? 150
-  const targetCycles = data?.user.targetCycles ?? 5
-  const autoStartNextPuzzle = data?.user.autoStartNextPuzzle ?? true
 
   return (
     <div className="space-y-6">
@@ -139,6 +256,24 @@ export default function SettingsPage() {
           Manage your account preferences
         </p>
       </div>
+
+      {isDirty ? (
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="outline"
+            onClick={handleReset}
+            disabled={updateSettings.isPending}
+          >
+            Reset
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={updateSettings.isPending}
+          >
+            {updateSettings.isPending ? 'Saving...' : 'Save changes'}
+          </Button>
+        </div>
+      ) : null}
 
       {/* Privacy Settings */}
       <Card>
@@ -160,7 +295,7 @@ export default function SettingsPage() {
                 Show on Leaderboard
               </Label>
               <p className="text-sm text-muted-foreground">
-                {data?.user.showOnLeaderboard ? (
+                {currentSettings.showOnLeaderboard ? (
                   <span className="flex items-center gap-1">
                     <Eye className="h-3 w-3" />
                     Your ranking is visible to other players
@@ -175,8 +310,10 @@ export default function SettingsPage() {
             </div>
             <Switch
               id="leaderboard-toggle"
-              checked={data?.user.showOnLeaderboard ?? true}
-              onCheckedChange={handleLeaderboardToggle}
+              checked={currentSettings.showOnLeaderboard}
+              onCheckedChange={(checked) =>
+                updateDraft({ showOnLeaderboard: checked })
+              }
               disabled={updateSettings.isPending}
             />
           </div>
@@ -207,8 +344,10 @@ export default function SettingsPage() {
             </div>
             <Switch
               id="auto-start-next-puzzle"
-              checked={autoStartNextPuzzle}
-              onCheckedChange={handleAutoStartNextPuzzleToggle}
+              checked={currentSettings.autoStartNextPuzzle}
+              onCheckedChange={(checked) =>
+                updateDraft({ autoStartNextPuzzle: checked })
+              }
               disabled={updateSettings.isPending}
             />
           </div>
@@ -233,11 +372,15 @@ export default function SettingsPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label>Estimated Rating</Label>
-              <span className="text-sm font-medium tabular-nums">{estimatedRating}</span>
+              <span className="text-sm font-medium tabular-nums">
+                {currentSettings.estimatedRating}
+              </span>
             </div>
             <Slider
-              value={[estimatedRating]}
-              onValueChange={handleRatingChange}
+              value={[currentSettings.estimatedRating]}
+              onValueChange={([estimatedRating]) =>
+                updateDraft({ estimatedRating })
+              }
               min={800}
               max={2600}
               step={25}
@@ -252,18 +395,24 @@ export default function SettingsPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label>Preferred Set Size</Label>
-              <span className="text-sm font-medium tabular-nums">{preferredSetSize}</span>
+              <span className="text-sm font-medium tabular-nums">
+                {currentSettings.preferredSetSize}
+              </span>
             </div>
             <Slider
-              value={[preferredSetSize]}
-              onValueChange={handleSetSizeChange}
+              value={[currentSettings.preferredSetSize]}
+              onValueChange={([preferredSetSize]) =>
+                updateDraft({ preferredSetSize })
+              }
               min={50}
               max={500}
               step={25}
               disabled={updateSettings.isPending}
             />
             <p className="text-xs text-muted-foreground">
-              Default puzzle count (~{Math.round((preferredSetSize * 0.5) / 60)}-{Math.round((preferredSetSize * 1.5) / 60)} min/cycle)
+              Default puzzle count (~
+              {Math.round((currentSettings.preferredSetSize * 0.5) / 60)}-
+              {Math.round((currentSettings.preferredSetSize * 1.5) / 60)} min/cycle)
             </p>
           </div>
 
@@ -271,11 +420,13 @@ export default function SettingsPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label>Target Cycles</Label>
-              <span className="text-sm font-medium tabular-nums">{targetCycles}</span>
+              <span className="text-sm font-medium tabular-nums">
+                {currentSettings.targetCycles}
+              </span>
             </div>
             <Slider
-              value={[targetCycles]}
-              onValueChange={handleCyclesChange}
+              value={[currentSettings.targetCycles]}
+              onValueChange={([targetCycles]) => updateDraft({ targetCycles })}
               min={1}
               max={10}
               step={1}

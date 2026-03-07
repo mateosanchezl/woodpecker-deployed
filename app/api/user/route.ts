@@ -10,7 +10,7 @@ import {
 /**
  * GET /api/user
  * Returns the current user's profile.
- * User creation is handled by Clerk webhooks (production) or auto-created (development).
+ * Creates the local user row on demand if webhook delivery lags behind sign-up.
  */
 export async function GET() {
   try {
@@ -19,13 +19,10 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // In development, ensure user exists (creates if missing when webhooks aren't set up)
-    if (process.env.NODE_ENV === 'development') {
-      await ensureUserExists(clerkId)
-    }
+    const appUser = await ensureUserExists(clerkId)
 
     const user = await prisma.user.findUnique({
-      where: { clerkId },
+      where: { id: appUser.id },
       include: {
         _count: {
           select: { puzzleSets: true },
@@ -83,10 +80,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // In development, ensure user exists (creates if missing when webhooks aren't set up)
-    if (process.env.NODE_ENV === 'development') {
-      await ensureUserExists(clerkId)
-    }
+    const appUser = await ensureUserExists(clerkId)
 
     const body = await request.json()
 
@@ -109,7 +103,7 @@ export async function PATCH(request: NextRequest) {
       const { estimatedRating } = onboardingValidation.data
 
       const user = await prisma.user.update({
-        where: { clerkId },
+        where: { id: appUser.id },
         data: {
           estimatedRating,
           hasCompletedOnboarding: true,
@@ -167,7 +161,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const user = await prisma.user.update({
-      where: { clerkId },
+      where: { id: appUser.id },
       data: updateData,
     })
 

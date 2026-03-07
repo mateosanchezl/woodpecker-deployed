@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
+import { ensureUserExists } from '@/lib/ensure-user'
 import type { ProgressResponse, CycleStats, ThemePerformance, ProblemPuzzle } from '@/lib/validations/progress'
 
 interface RouteContext {
@@ -42,14 +43,7 @@ export async function GET(
 
     const { setId } = await context.params
 
-    // Get the user's database ID from their Clerk ID
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
+    const user = await ensureUserExists(userId)
 
     // Fetch puzzle set with all related data
     const puzzleSet = await prisma.puzzleSet.findUnique({

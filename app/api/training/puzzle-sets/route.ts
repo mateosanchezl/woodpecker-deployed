@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
+import { ensureUserExists } from '@/lib/ensure-user'
 import { createPuzzleSetSchema } from '@/lib/validations/training'
 import { selectRandomPuzzlesForSet } from '@/lib/training/puzzle-selection'
 
@@ -15,6 +16,8 @@ export async function GET() {
     if (!clerkId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    await ensureUserExists(clerkId)
 
     // Get all puzzle sets with their latest cycle.
     const puzzleSets = await prisma.puzzleSet.findMany({
@@ -90,6 +93,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const user = await ensureUserExists(clerkId)
+
     // Parse and validate request body
     const body = await request.json()
     const validation = createPuzzleSetSchema.safeParse(body)
@@ -132,7 +137,7 @@ export async function POST(request: NextRequest) {
       const set = await tx.puzzleSet.create({
         data: {
           user: {
-            connect: { clerkId },
+            connect: { id: user.id },
           },
           name,
           targetRating,
@@ -155,7 +160,7 @@ export async function POST(request: NextRequest) {
 
       await tx.user.updateMany({
         where: {
-          clerkId,
+          id: user.id,
           hasCompletedOnboarding: false,
         },
         data: { hasCompletedOnboarding: true },

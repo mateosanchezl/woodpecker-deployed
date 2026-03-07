@@ -86,18 +86,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (process.env.NODE_ENV === "development") {
-      await ensureUserExists(clerkId);
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { clerkId },
-      select: { id: true },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
+    const user = await ensureUserExists(clerkId);
 
     const review = await prisma.appReview.findUnique({
       where: { userId: user.id },
@@ -135,9 +124,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (process.env.NODE_ENV === "development") {
-      await ensureUserExists(clerkId);
-    }
+    const user = await ensureUserExists(clerkId);
 
     const body = await request.json();
     const validation = appReviewSchema.safeParse(body);
@@ -147,19 +134,6 @@ export async function POST(request: NextRequest) {
         { error: "Invalid request body", details: validation.error.message },
         { status: 400 },
       );
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { clerkId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-      },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const existingReview = await prisma.appReview.findUnique({

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { Resend } from "resend";
-import { prisma } from "@/lib/prisma";
 import { ensureUserExists } from "@/lib/ensure-user";
 import {
   trainingBugReportSchema,
@@ -72,9 +71,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (process.env.NODE_ENV === "development") {
-      await ensureUserExists(clerkId);
-    }
+    const user = await ensureUserExists(clerkId);
 
     const body = await request.json();
     const validation = trainingBugReportSchema.safeParse(body);
@@ -85,14 +82,6 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
-
-    const user = await prisma.user.findUnique({
-      where: { clerkId },
-      select: {
-        id: true,
-        email: true,
-      },
-    });
 
     const payload = validation.data;
     const subjectParts = [

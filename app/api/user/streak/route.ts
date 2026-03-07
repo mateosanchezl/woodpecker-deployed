@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { prisma } from '@/lib/prisma'
+import { ensureUserExists } from '@/lib/ensure-user'
 import { formatStreakResponse, getStreakStatus } from '@/lib/streak'
 
 /**
@@ -14,21 +14,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { clerkId },
-      select: {
-        currentStreak: true,
-        longestStreak: true,
-        lastTrainedDate: true,
-      },
-    })
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
-    }
+    const user = await ensureUserExists(clerkId)
 
     // Check if streak is still valid (hasn't been broken since last calculation)
     const status = getStreakStatus(

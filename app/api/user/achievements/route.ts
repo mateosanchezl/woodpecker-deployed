@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { prisma } from '@/lib/prisma'
+import { ensureUserExists } from '@/lib/ensure-user'
 import { getUserAchievements } from '@/lib/achievements'
 
 /**
@@ -14,14 +14,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { clerkId },
-      select: { id: true },
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
+    const user = await ensureUserExists(clerkId)
 
     const { achievements, totalUnlocked, totalAchievements } =
       await getUserAchievements(user.id)

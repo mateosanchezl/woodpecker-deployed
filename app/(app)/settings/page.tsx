@@ -1,6 +1,5 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
@@ -8,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { Settings, Users, Eye, EyeOff, Target } from 'lucide-react'
+import { Settings, Users, Eye, EyeOff, Target, Clock3 } from 'lucide-react'
 
 interface UserData {
   user: {
@@ -18,18 +17,22 @@ interface UserData {
     estimatedRating: number
     preferredSetSize: number
     targetCycles: number
+    autoStartNextPuzzle: boolean
     showOnLeaderboard: boolean
     hasCompletedOnboarding: boolean
   }
 }
 
+interface UpdateSettingsInput {
+  estimatedRating?: number
+  preferredSetSize?: number
+  targetCycles?: number
+  autoStartNextPuzzle?: boolean
+  showOnLeaderboard?: boolean
+}
+
 export default function SettingsPage() {
   const queryClient = useQueryClient()
-
-  // Local state for training preferences
-  const [estimatedRating, setEstimatedRating] = useState<number>(1200)
-  const [preferredSetSize, setPreferredSetSize] = useState<number>(150)
-  const [targetCycles, setTargetCycles] = useState<number>(5)
 
   const { data, isLoading } = useQuery<UserData>({
     queryKey: ['user'],
@@ -40,22 +43,13 @@ export default function SettingsPage() {
     },
   })
 
-  // Initialize local state when data loads
-  useEffect(() => {
-    if (data?.user) {
-      setEstimatedRating(data.user.estimatedRating)
-      setPreferredSetSize(data.user.preferredSetSize)
-      setTargetCycles(data.user.targetCycles)
-    }
-  }, [data])
-
-  const updateSettings = useMutation({
-    mutationFn: async (settings: {
-      estimatedRating?: number
-      preferredSetSize?: number
-      targetCycles?: number
-      showOnLeaderboard?: boolean
-    }) => {
+  const updateSettings = useMutation<
+    unknown,
+    Error,
+    UpdateSettingsInput,
+    { previousUserData?: UserData }
+  >({
+    mutationFn: async (settings) => {
       const res = await fetch('/api/user', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -67,13 +61,40 @@ export default function SettingsPage() {
       }
       return res.json()
     },
+    onMutate: async (settings) => {
+      await queryClient.cancelQueries({ queryKey: ['user'] })
+
+      const previousUserData = queryClient.getQueryData<UserData>(['user'])
+
+      queryClient.setQueryData<UserData>(['user'], oldData => {
+        if (!oldData?.user) {
+          return oldData
+        }
+
+        return {
+          ...oldData,
+          user: {
+            ...oldData.user,
+            ...settings,
+          },
+        }
+      })
+
+      return { previousUserData }
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user'] })
       queryClient.invalidateQueries({ queryKey: ['leaderboard'] })
       toast.success('Settings updated')
     },
-    onError: (error) => {
+    onError: (error, _settings, context) => {
+      if (context?.previousUserData) {
+        queryClient.setQueryData(['user'], context.previousUserData)
+      }
+
       toast.error(error.message)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['user'] })
     },
   })
 
@@ -83,25 +104,31 @@ export default function SettingsPage() {
 
   const handleRatingChange = (value: number[]) => {
     const newRating = value[0]
-    setEstimatedRating(newRating)
     updateSettings.mutate({ estimatedRating: newRating })
   }
 
   const handleSetSizeChange = (value: number[]) => {
     const newSize = value[0]
-    setPreferredSetSize(newSize)
     updateSettings.mutate({ preferredSetSize: newSize })
   }
 
   const handleCyclesChange = (value: number[]) => {
     const newCycles = value[0]
-    setTargetCycles(newCycles)
     updateSettings.mutate({ targetCycles: newCycles })
+  }
+
+  const handleAutoStartNextPuzzleToggle = (checked: boolean) => {
+    updateSettings.mutate({ autoStartNextPuzzle: checked })
   }
 
   if (isLoading) {
     return <SettingsSkeleton />
   }
+
+  const estimatedRating = data?.user.estimatedRating ?? 1200
+  const preferredSetSize = data?.user.preferredSetSize ?? 150
+  const targetCycles = data?.user.targetCycles ?? 5
+  const autoStartNextPuzzle = data?.user.autoStartNextPuzzle ?? true
 
   return (
     <div className="space-y-6">
@@ -150,6 +177,38 @@ export default function SettingsPage() {
               id="leaderboard-toggle"
               checked={data?.user.showOnLeaderboard ?? true}
               onCheckedChange={handleLeaderboardToggle}
+              disabled={updateSettings.isPending}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base font-medium flex items-center gap-2">
+            <div className="rounded-lg bg-emerald-100 p-1.5">
+              <Clock3 className="h-4 w-4 text-emerald-700" />
+            </div>
+            Training Session
+          </CardTitle>
+          <CardDescription>
+            Control how quickly training moves from one puzzle to the next
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between gap-6">
+            <div className="space-y-1">
+              <Label htmlFor="auto-start-next-puzzle" className="text-sm font-medium">
+                Auto-start next puzzle
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Turn off to pause after each puzzle and continue with a manual click.
+              </p>
+            </div>
+            <Switch
+              id="auto-start-next-puzzle"
+              checked={autoStartNextPuzzle}
+              onCheckedChange={handleAutoStartNextPuzzleToggle}
               disabled={updateSettings.isPending}
             />
           </div>

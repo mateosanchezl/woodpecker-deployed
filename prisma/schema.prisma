@@ -16,6 +16,7 @@ model User {
   estimatedRating  Int         @default(1200)
   preferredSetSize Int         @default(150)
   targetCycles     Int         @default(5)
+  autoStartNextPuzzle Boolean  @default(true)
 
   // Onboarding
   hasCompletedOnboarding Boolean @default(false)

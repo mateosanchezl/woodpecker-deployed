@@ -26,6 +26,22 @@ export function formatChangelogDate(date: string) {
 // Add new releases to the top of this list so index 0 stays the latest.
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    version: "2.6.0",
+    title: "Control Training Pace Between Puzzles",
+    description:
+      "Training sessions now let you choose whether the next puzzle starts automatically or waits for a manual click, with the preference available in both active training and Settings.",
+    features: [
+      "A new Auto-start next puzzle preference lets you pause between puzzles and continue manually when you want a slower training rhythm",
+      "The training sidebar now includes the same pace toggle, so you can switch between automatic and manual flow without leaving the session",
+      "Manual pacing now works after both solved puzzles and skips, with a dedicated Next Puzzle action instead of forcing an immediate transition",
+      "Training waits for your saved pace preference before rendering an active session, so a refresh cannot accidentally auto-advance the first puzzle",
+      "Settings now roll back the auto-start toggle if saving fails, keeping the UI aligned with the value actually stored on your account",
+    ],
+    date: "2026-03-07",
+    learnMoreUrl: "/training",
+    actionLabel: "Adjust training pace",
+  },
+  {
     version: "2.5.0",
     title: "Smoother Board Controls and Faster Puzzle Flow",
     description:

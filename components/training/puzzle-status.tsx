@@ -11,7 +11,7 @@ interface PuzzleStatusProps {
   timeMs: number
   progress: TrainingProgress
   puzzleRating?: number
-  isPausedForReview?: boolean
+  isPaused?: boolean
 }
 
 /**
@@ -21,7 +21,7 @@ export function PuzzleStatus({
   timeMs,
   progress,
   puzzleRating,
-  isPausedForReview = false,
+  isPaused = false,
 }: PuzzleStatusProps) {
   const [isTimerVisible, setIsTimerVisible] = useState(true)
 
@@ -42,7 +42,7 @@ export function PuzzleStatus({
                 </div>
                 <div className="mt-1 flex items-center justify-center gap-2 text-xs text-muted-foreground">
                   <span>Time</span>
-                  {isPausedForReview && (
+                  {isPaused && (
                     <span className="rounded-full bg-muted px-2 py-0.5 font-medium">
                       Paused
                     </span>

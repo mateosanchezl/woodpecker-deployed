@@ -17,6 +17,7 @@ interface ApiError extends Error {
 interface UseTrainingSessionOptions {
   puzzleSetId: string
   cycleId: string | null
+  autoStartNextPuzzle: boolean
 }
 
 type UserCacheData = {
@@ -25,6 +26,13 @@ type UserCacheData = {
     currentLevel?: number
     weeklyXp?: number
   } & Record<string, unknown>
+}
+
+type AttemptMutationContext = {
+  previousData: TrainingSession | undefined
+  usedPrefetchedNext: boolean
+  shouldQueueNextSession: boolean
+  shouldResetBoardOnError: boolean
 }
 
 interface UseTrainingSessionReturn {
@@ -72,7 +80,7 @@ async function fetchTrainingSession(
 export function useTrainingSession(
   options: UseTrainingSessionOptions
 ): UseTrainingSessionReturn {
-  const { puzzleSetId, cycleId } = options
+  const { puzzleSetId, cycleId, autoStartNextPuzzle } = options
   const queryClient = useQueryClient()
   const sessionQueryKey = useMemo(
     () => ['training-session', puzzleSetId, cycleId] as const,
@@ -139,7 +147,8 @@ export function useTrainingSession(
     {
       previousData: TrainingSession | undefined
       usedPrefetchedNext: boolean
-      isFailedAttempt: boolean
+      shouldQueueNextSession: boolean
+      shouldResetBoardOnError: boolean
     }
   >({
     mutationFn: async ({ puzzleInSetId, timeSpent, isCorrect, wasSkipped, movesPlayed }) => {
@@ -173,6 +182,7 @@ export function useTrainingSession(
     },
     onMutate: async (variables) => {
       const isFailedAttempt = !variables.isCorrect && !variables.wasSkipped
+      const shouldQueueNextSession = isFailedAttempt || !autoStartNextPuzzle
       setPendingAdvanceSession(null)
       setIsSubmittingAttempt(true)
 
@@ -181,12 +191,12 @@ export function useTrainingSession(
       const previousData = queryClient.getQueryData<TrainingSession>(sessionQueryKey)
       let usedPrefetchedNext = false
 
-      if (!isFailedAttempt) {
+      if (!shouldQueueNextSession) {
         setIsTransitioning(true)
       }
 
       if (
-        !isFailedAttempt &&
+        !shouldQueueNextSession &&
         prefetchedRef.current &&
         previousData &&
         !previousData.isCycleComplete
@@ -208,7 +218,12 @@ export function useTrainingSession(
         prefetchedRef.current = null
       }
 
-      return { previousData, usedPrefetchedNext, isFailedAttempt }
+      return {
+        previousData,
+        usedPrefetchedNext,
+        shouldQueueNextSession,
+        shouldResetBoardOnError: shouldQueueNextSession,
+      } satisfies AttemptMutationContext
     },
     onSuccess: (response, _variables, context) => {
       setIsSubmittingAttempt(false)
@@ -234,13 +249,15 @@ export function useTrainingSession(
         })
       }
 
-      if (context?.isFailedAttempt) {
-        if (response.session) {
-          setPendingAdvanceSession(response.session)
-        } else {
-          queryClient.invalidateQueries({ queryKey: sessionQueryKey })
-        }
+      const shouldQueueResolvedSession =
+        !!(
+          context?.shouldQueueNextSession &&
+          response.session &&
+          !response.session.isCycleComplete
+        )
 
+      if (shouldQueueResolvedSession && response.session) {
+        setPendingAdvanceSession(response.session)
         setIsTransitioning(false)
       } else if (response.session) {
         queryClient.setQueryData(sessionQueryKey, response.session)
@@ -269,7 +286,7 @@ export function useTrainingSession(
         queryClient.setQueryData(sessionQueryKey, context.previousData)
       }
 
-      if (context?.isFailedAttempt) {
+      if (context?.shouldResetBoardOnError) {
         setPuzzleRenderKey((current) => current + 1)
       }
 

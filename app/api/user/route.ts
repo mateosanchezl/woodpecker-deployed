@@ -48,6 +48,7 @@ export async function GET() {
         estimatedRating: user.estimatedRating,
         preferredSetSize: user.preferredSetSize,
         targetCycles: user.targetCycles,
+        autoStartNextPuzzle: user.autoStartNextPuzzle,
         hasCompletedOnboarding: user.hasCompletedOnboarding,
         showOnLeaderboard: user.showOnLeaderboard,
         puzzleSetCount: user._count.puzzleSets,
@@ -73,7 +74,7 @@ export async function GET() {
 /**
  * PATCH /api/user
  * Updates the current user's profile.
- * Supports both onboarding (estimatedRating) and settings updates (showOnLeaderboard).
+ * Supports both onboarding (estimatedRating only) and settings updates.
  */
 export async function PATCH(request: NextRequest) {
   try {
@@ -93,9 +94,16 @@ export async function PATCH(request: NextRequest) {
     const settingsValidation = updateUserSettingsSchema.safeParse(body)
     const onboardingValidation = completeOnboardingSchema.safeParse(body)
 
-    // If it's an onboarding request (has estimatedRating and no other fields)
+    const submittedKeys =
+      body && typeof body === 'object' && !Array.isArray(body)
+        ? Object.keys(body)
+        : []
+
+    // Treat estimatedRating-only requests as onboarding completion.
     const isOnboarding =
-      onboardingValidation.success && !('showOnLeaderboard' in body)
+      onboardingValidation.success &&
+      submittedKeys.length === 1 &&
+      submittedKeys[0] === 'estimatedRating'
 
     if (isOnboarding) {
       const { estimatedRating } = onboardingValidation.data
@@ -126,13 +134,20 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const { estimatedRating, preferredSetSize, targetCycles, showOnLeaderboard } = settingsValidation.data
+    const {
+      estimatedRating,
+      preferredSetSize,
+      targetCycles,
+      autoStartNextPuzzle,
+      showOnLeaderboard,
+    } = settingsValidation.data
 
     // Build update data only with provided fields
     const updateData: {
       estimatedRating?: number
       preferredSetSize?: number
       targetCycles?: number
+      autoStartNextPuzzle?: boolean
       showOnLeaderboard?: boolean
     } = {}
     if (estimatedRating !== undefined) {
@@ -143,6 +158,9 @@ export async function PATCH(request: NextRequest) {
     }
     if (targetCycles !== undefined) {
       updateData.targetCycles = targetCycles
+    }
+    if (autoStartNextPuzzle !== undefined) {
+      updateData.autoStartNextPuzzle = autoStartNextPuzzle
     }
     if (showOnLeaderboard !== undefined) {
       updateData.showOnLeaderboard = showOnLeaderboard
@@ -159,6 +177,7 @@ export async function PATCH(request: NextRequest) {
         estimatedRating: user.estimatedRating,
         preferredSetSize: user.preferredSetSize,
         targetCycles: user.targetCycles,
+        autoStartNextPuzzle: user.autoStartNextPuzzle,
         hasCompletedOnboarding: user.hasCompletedOnboarding,
         showOnLeaderboard: user.showOnLeaderboard,
       },

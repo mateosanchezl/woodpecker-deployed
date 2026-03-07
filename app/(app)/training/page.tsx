@@ -18,7 +18,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Play, Target, TrendingUp, MoreVertical, Trash2, Clock, Flame, Loader2 } from 'lucide-react'
+import {
+  Play,
+  Target,
+  TrendingUp,
+  MoreVertical,
+  Trash2,
+  Clock,
+  Flame,
+  Loader2,
+  AlertCircle,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { useStreak } from '@/hooks/use-streak'
 import { useNavigationGuard } from '@/hooks/use-navigation-guard'
@@ -39,6 +49,12 @@ interface PuzzleSetData {
   currentCycleId: string | null
   completedCycles: number
   lastTrainedAt: string | null
+}
+
+interface UserPreferenceData {
+  user: {
+    autoStartNextPuzzle: boolean
+  }
 }
 
 /**
@@ -96,8 +112,27 @@ function TrainingPageInner({
     },
   })
 
+  const {
+    data: userData,
+    isLoading: isLoadingUserPreferences,
+    error: userPreferencesError,
+    refetch: refetchUserPreferences,
+  } = useQuery<UserPreferenceData>({
+    queryKey: ['user'],
+    queryFn: async () => {
+      const res = await fetch('/api/user')
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to fetch user')
+      }
+      return res.json()
+    },
+    staleTime: 60000,
+  })
+
   const [selectedSetId, setSelectedSetId] = useState<string | null>(urlSetId)
   const [activeCycleId, setActiveCycleId] = useState<string | null>(urlCycleId)
+  const autoStartNextPuzzle = userData?.user.autoStartNextPuzzle
 
   // Delete puzzle set mutation
   const deleteMutation = useMutation({
@@ -156,10 +191,62 @@ function TrainingPageInner({
   // Create cycle mutation
   const createCycleMutation = useCreateCycle()
 
+  const updateAutoStartNextPuzzleMutation = useMutation<
+    UserPreferenceData,
+    Error,
+    boolean,
+    { previousUserData?: UserPreferenceData }
+  >({
+    mutationFn: async (autoStartNextPuzzle) => {
+      const res = await fetch('/api/user', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ autoStartNextPuzzle }),
+      })
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to update training pace')
+      }
+      return res.json()
+    },
+    onMutate: async (autoStartNextPuzzle) => {
+      await queryClient.cancelQueries({ queryKey: ['user'] })
+
+      const previousUserData = queryClient.getQueryData<UserPreferenceData>(['user'])
+
+      queryClient.setQueryData<UserPreferenceData>(['user'], oldData => {
+        if (!oldData?.user) {
+          return oldData
+        }
+
+        return {
+          ...oldData,
+          user: {
+            ...oldData.user,
+            autoStartNextPuzzle,
+          },
+        }
+      })
+
+      return { previousUserData }
+    },
+    onError: (error, _value, context) => {
+      if (context?.previousUserData) {
+        queryClient.setQueryData(['user'], context.previousUserData)
+      }
+
+      toast.error(error.message || 'Failed to update training pace')
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['user'] })
+    },
+  })
+
   // Training session hook
   const trainingSession = useTrainingSession({
     puzzleSetId: selectedSetId || '',
     cycleId: activeCycleId,
+    autoStartNextPuzzle: autoStartNextPuzzle ?? true,
   })
 
   const hasNoSets = !loadingSets && (puzzleSets?.sets?.length ?? 0) === 0
@@ -208,6 +295,13 @@ function TrainingPageInner({
     [trainingSession]
   )
 
+  const handleAutoStartNextPuzzleChange = useCallback(
+    (autoStartNextPuzzle: boolean) => {
+      updateAutoStartNextPuzzleMutation.mutate(autoStartNextPuzzle)
+    },
+    [updateAutoStartNextPuzzleMutation]
+  )
+
   // Handle starting next cycle after completion
   const handleStartNextCycle = useCallback(async () => {
     if (selectedSetId) {
@@ -222,12 +316,13 @@ function TrainingPageInner({
     }
   }, [deleteMutation])
 
+  const hasLoadedTrainingPreference = typeof autoStartNextPuzzle === 'boolean'
+
   // Navigation guard - active when training is in progress and cycle not complete
   const isTrainingActive = !!(
     activeCycleId &&
     selectedSetId &&
-    !trainingSession.isCycleComplete &&
-    !trainingSession.hasPendingAdvance
+    !trainingSession.isCycleComplete
   )
   const { showModal, confirmLeave, cancelLeave } = useNavigationGuard({
     enabled: isTrainingActive,
@@ -236,6 +331,35 @@ function TrainingPageInner({
   // Loading state
   if (loadingSets) {
     return <TrainingPageSkeleton />
+  }
+
+  if (activeCycleId && selectedSetId && !hasLoadedTrainingPreference && isLoadingUserPreferences) {
+    return <TrainingPageSkeleton />
+  }
+
+  if (activeCycleId && selectedSetId && !hasLoadedTrainingPreference) {
+    return (
+      <div className="py-4">
+        <Card className="max-w-lg mx-auto">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-destructive" />
+              Could not load training preferences
+            </CardTitle>
+            <CardDescription>
+              {userPreferencesError instanceof Error
+                ? userPreferencesError.message
+                : 'Auto-start is stored in your user settings. Reload that preference before starting the session so the first puzzle uses the right pace.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => refetchUserPreferences()}>
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   // Training in progress
@@ -257,9 +381,12 @@ function TrainingPageInner({
           isTransitioning={trainingSession.isTransitioning}
           error={trainingSession.error}
           canAdvanceToNext={trainingSession.hasPendingAdvance}
+          autoStartNextPuzzle={autoStartNextPuzzle ?? true}
+          isUpdatingAutoStartNextPuzzle={updateAutoStartNextPuzzleMutation.isPending}
           onPuzzleComplete={handlePuzzleComplete}
           onSkip={handleSkip}
           onAdvanceToNextPuzzle={trainingSession.advancePendingSession}
+          onAutoStartNextPuzzleChange={handleAutoStartNextPuzzleChange}
           onRetry={trainingSession.refetch}
           isCycleComplete={trainingSession.isCycleComplete}
           cycleStats={trainingSession.cycleStats || undefined}

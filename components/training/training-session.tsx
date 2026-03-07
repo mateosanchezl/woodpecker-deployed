@@ -30,6 +30,8 @@ interface TrainingSessionProps {
   isTransitioning?: boolean // True during puzzle transition
   error: Error | null
   canAdvanceToNext?: boolean
+  autoStartNextPuzzle: boolean
+  isUpdatingAutoStartNextPuzzle?: boolean
 
   // Callbacks
   onPuzzleComplete: (
@@ -40,6 +42,7 @@ interface TrainingSessionProps {
   ) => void
   onSkip: (puzzleInSetId: string, timeSpent: number) => void
   onAdvanceToNextPuzzle?: () => void
+  onAutoStartNextPuzzleChange: (checked: boolean) => void
   onRetry: () => void
 
   // Cycle completion
@@ -67,9 +70,12 @@ export function TrainingSession({
   isTransitioning,
   error,
   canAdvanceToNext = false,
+  autoStartNextPuzzle,
+  isUpdatingAutoStartNextPuzzle = false,
   onPuzzleComplete,
   onSkip,
   onAdvanceToNextPuzzle,
+  onAutoStartNextPuzzleChange,
   onRetry,
   isCycleComplete,
   cycleStats,
@@ -79,7 +85,8 @@ export function TrainingSession({
 }: TrainingSessionProps) {
   // Timer hook
   const timer = usePuzzleTimer()
-  const [isReviewingFailedPuzzle, setIsReviewingFailedPuzzle] = useState(false)
+  const [externalSkipRequest, setExternalSkipRequest] = useState(0)
+  const [isPuzzleFlowPaused, setIsPuzzleFlowPaused] = useState(false)
   const [showPuzzleThemes, setShowPuzzleThemes] = useState(true)
   const resetTimerRef = useRef(timer.controls.reset)
 
@@ -171,11 +178,13 @@ export function TrainingSession({
           moves={puzzleData.puzzle.moves}
           onComplete={handleComplete}
           onSkip={handleSkip}
+          externalSkipRequest={externalSkipRequest}
           onAdvanceToNextPuzzle={onAdvanceToNextPuzzle}
-          onReviewModeChange={setIsReviewingFailedPuzzle}
+          onPauseStateChange={setIsPuzzleFlowPaused}
           disabled={isTransitioning}
           isSubmittingAttempt={isSubmittingAttempt}
           canAdvanceToNext={canAdvanceToNext}
+          autoStartNextPuzzle={autoStartNextPuzzle}
           timerControls={timer.controls}
         />
       </div>
@@ -186,13 +195,35 @@ export function TrainingSession({
           timeMs={timer.timeMs}
           progress={progress}
           puzzleRating={puzzleData.puzzle.rating}
-          isPausedForReview={isReviewingFailedPuzzle}
+          isPaused={isPuzzleFlowPaused}
         />
 
-        {!isReviewingFailedPuzzle && (
+        <div className="rounded-lg border bg-card p-3 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <Label
+                htmlFor="training-pace-toggle"
+                className="text-sm font-medium"
+              >
+                Auto-start next puzzle
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Turn off to pause between puzzles and start the next one manually.
+              </p>
+            </div>
+            <Switch
+              id="training-pace-toggle"
+              checked={autoStartNextPuzzle}
+              onCheckedChange={onAutoStartNextPuzzleChange}
+              disabled={isUpdatingAutoStartNextPuzzle}
+            />
+          </div>
+        </div>
+
+        {!isPuzzleFlowPaused && (
           <Button
             variant="ghost"
-            onClick={() => handleSkip(timer.controls.getTime())}
+            onClick={() => setExternalSkipRequest((current) => current + 1)}
             disabled={isTransitioning || isSubmittingAttempt}
             className="w-full text-muted-foreground hover:text-foreground"
           >

@@ -1,0 +1,2 @@
+ALTER TABLE "User"
+ADD COLUMN "autoStartNextPuzzle" BOOLEAN NOT NULL DEFAULT true;

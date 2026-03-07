@@ -31,15 +31,18 @@ interface PuzzleBoardProps {
   moves: string
   onComplete: (isCorrect: boolean, timeSpent: number, movesPlayed: string[]) => void
   onSkip: (timeSpent: number) => void
+  externalSkipRequest?: number
   onAdvanceToNextPuzzle?: () => void
-  onReviewModeChange?: (isReviewing: boolean) => void
+  onPauseStateChange?: (isPaused: boolean) => void
   disabled?: boolean // Disable interactions during transitions
   isSubmittingAttempt?: boolean
   canAdvanceToNext?: boolean
+  autoStartNextPuzzle?: boolean
   timerControls: PuzzleTimerControls
 }
 
-type PuzzleBoardMode = 'solving' | 'failedReview'
+type PuzzleBoardMode = 'solving' | 'failedReview' | 'awaitingAdvance'
+type PendingAdvanceOutcome = 'correct' | 'skipped'
 
 // Custom board colors matching the new "Peck" nature theme
 const customDarkSquareStyle: React.CSSProperties = {
@@ -114,14 +117,18 @@ export const PuzzleBoard = memo(function PuzzleBoard({
   moves,
   onComplete,
   onSkip,
+  externalSkipRequest = 0,
   onAdvanceToNextPuzzle,
-  onReviewModeChange,
+  onPauseStateChange,
   disabled = false,
   isSubmittingAttempt = false,
   canAdvanceToNext = false,
+  autoStartNextPuzzle = true,
   timerControls,
 }: PuzzleBoardProps) {
   const [mode, setMode] = useState<PuzzleBoardMode>('solving')
+  const [pendingAdvanceOutcome, setPendingAdvanceOutcome] =
+    useState<PendingAdvanceOutcome | null>(null)
   const [reviewStartFen, setReviewStartFen] = useState(fen)
   const [reviewStartMoveIndex, setReviewStartMoveIndex] = useState(0)
   const [reviewStartLastMove, setReviewStartLastMove] = useState<{
@@ -134,6 +141,7 @@ export const PuzzleBoard = memo(function PuzzleBoard({
     from: Square
     to: Square
   } | null>(null)
+  const lastProcessedSkipRequestRef = useRef(externalSkipRequest)
 
   const solutionMoves = useMemo(() => parseSolutionMoves(moves), [moves])
 
@@ -161,6 +169,7 @@ export const PuzzleBoard = memo(function PuzzleBoard({
       timerControls.pause()
 
       if (!isCorrect) {
+        setPendingAdvanceOutcome(null)
         setMode('failedReview')
         setReviewStartFen(position)
         setReviewStartMoveIndex(currentMoveIndex)
@@ -168,6 +177,9 @@ export const PuzzleBoard = memo(function PuzzleBoard({
         setWalkthroughPosition(position)
         setWalkthroughMoveIndex(currentMoveIndex)
         setWalkthroughLastMove(lastMove)
+      } else if (!autoStartNextPuzzle) {
+        setPendingAdvanceOutcome('correct')
+        setMode('awaitingAdvance')
       }
 
       onComplete(isCorrect, finalTime, finalMoves)
@@ -204,14 +216,14 @@ export const PuzzleBoard = memo(function PuzzleBoard({
   })
 
   useEffect(() => {
-    onReviewModeChange?.(mode === 'failedReview')
-  }, [mode, onReviewModeChange])
+    onPauseStateChange?.(mode !== 'solving')
+  }, [mode, onPauseStateChange])
 
   useEffect(() => {
     return () => {
-      onReviewModeChange?.(false)
+      onPauseStateChange?.(false)
     }
-  }, [onReviewModeChange])
+  }, [onPauseStateChange])
 
   const handleSkip = useCallback(() => {
     if (mode !== 'solving' || disabled || isSubmittingAttempt) {
@@ -219,8 +231,21 @@ export const PuzzleBoard = memo(function PuzzleBoard({
     }
 
     timerControls.pause()
+    if (!autoStartNextPuzzle) {
+      setPendingAdvanceOutcome('skipped')
+      setMode('awaitingAdvance')
+    }
     onSkip(timerControls.getTime())
-  }, [mode, disabled, isSubmittingAttempt, timerControls, onSkip])
+  }, [mode, disabled, isSubmittingAttempt, timerControls, autoStartNextPuzzle, onSkip])
+
+  useEffect(() => {
+    if (externalSkipRequest === lastProcessedSkipRequestRef.current) {
+      return
+    }
+
+    lastProcessedSkipRequestRef.current = externalSkipRequest
+    handleSkip()
+  }, [externalSkipRequest, handleSkip])
 
   const setWalkthroughToMoveIndex = useCallback((targetMoveIndex: number) => {
     if (mode !== 'failedReview') {
@@ -471,6 +496,7 @@ export const PuzzleBoard = memo(function PuzzleBoard({
           status={status}
           isSubmittingAttempt={isSubmittingAttempt}
           isReviewComplete={isReviewComplete}
+          pendingAdvanceOutcome={pendingAdvanceOutcome}
         />
       </div>
 
@@ -516,6 +542,23 @@ export const PuzzleBoard = memo(function PuzzleBoard({
           </div>
         </div>
       )}
+
+      {mode === 'awaitingAdvance' && (
+        <div className="flex w-full max-w-[700px] flex-col items-center gap-3">
+          <Button
+            onClick={handleAdvance}
+            disabled={!canAdvanceToNext || isSubmittingAttempt}
+            className="w-full sm:w-auto sm:min-w-56"
+          >
+            {isSubmittingAttempt ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <SkipForward className="mr-2 h-4 w-4" />
+            )}
+            {isSubmittingAttempt ? 'Saving result...' : 'Next Puzzle'}
+          </Button>
+        </div>
+      )}
     </div>
   )
 })
@@ -527,11 +570,13 @@ function StatusText({
   status,
   isSubmittingAttempt,
   isReviewComplete,
+  pendingAdvanceOutcome,
 }: {
   mode: PuzzleBoardMode
   status: PuzzleStatus
   isSubmittingAttempt: boolean
   isReviewComplete: boolean
+  pendingAdvanceOutcome: PendingAdvanceOutcome | null
 }) {
   if (mode === 'failedReview') {
     if (isSubmittingAttempt) {
@@ -560,6 +605,37 @@ function StatusText({
         icon={Eye}
         label="Review The Missed Line"
         tone="warning"
+      />
+    )
+  }
+
+  if (mode === 'awaitingAdvance') {
+    if (isSubmittingAttempt) {
+      return (
+        <StatusBadge
+          icon={Loader2}
+          label="Saving result"
+          tone="warning"
+          iconClassName="animate-spin"
+        />
+      )
+    }
+
+    if (pendingAdvanceOutcome === 'skipped') {
+      return (
+        <StatusBadge
+          icon={SkipForward}
+          label="Puzzle Skipped"
+          tone="warning"
+        />
+      )
+    }
+
+    return (
+      <StatusBadge
+        icon={CheckCircle2}
+        label="Puzzle Complete"
+        tone="success"
       />
     )
   }

@@ -4,8 +4,6 @@ import {
   SITE_CONFIG,
   generatePageMetadata,
   PAGE_METADATA,
-  generateWoodpeckerFAQSchema,
-  generateHowToSchema,
   generateSoftwareApplicationSchema,
 } from "@/lib/seo";
 import {
@@ -32,28 +30,6 @@ export default async function Page() {
 
   return (
     <>
-      {/* 
-        Structured Data for Rich Snippets
-        These schemas help Google understand the page and display rich results
-      */}
-
-      {/* FAQ Schema - Targets "what is woodpecker method" queries */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(generateWoodpeckerFAQSchema()),
-        }}
-      />
-
-      {/* HowTo Schema - Targets "how to use woodpecker method" queries */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(generateHowToSchema()),
-        }}
-      />
-
-      {/* SoftwareApplication Schema - Targets "woodpecker method app" queries */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{

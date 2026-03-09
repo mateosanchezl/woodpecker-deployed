@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  generatePageMetadata,
   generateBreadcrumbSchema,
   generateArticleSchema,
   SITE_CONFIG,
@@ -32,30 +31,45 @@ export async function generateMetadata({
   const post = getPostBySlug(slug);
   if (!post) return {};
 
-  return generatePageMetadata({
-    title: `${post.title} | Peck Blog`,
+  const url = `${SITE_CONFIG.url}/blog/${post.slug}`;
+  const image = post.image
+    ? {
+        url: getAbsoluteUrl(post.image),
+        width: 1200,
+        height: 630,
+        alt: post.imageAlt || post.title,
+      }
+    : undefined;
+
+  return {
+    title: post.title,
     description: post.description,
-    path: `/blog/${post.slug}`,
     keywords: [
       ...post.tags,
       "woodpecker method",
       "chess training",
       "chess tactics",
     ],
-    openGraph: {
-      type: "article",
-      images: post.image
-        ? [
-            {
-              url: getAbsoluteUrl(post.image),
-              width: 1200,
-              height: 630,
-              alt: post.imageAlt || post.title,
-            },
-          ]
-        : undefined,
+    alternates: {
+      canonical: url,
     },
-  });
+    openGraph: {
+      title: post.title,
+      description: post.description,
+      url,
+      locale: SITE_CONFIG.locale,
+      siteName: SITE_CONFIG.name,
+      type: "article",
+      ...(image ? { images: [image] } : {}),
+    },
+    twitter: {
+      title: post.title,
+      description: post.description,
+      card: "summary_large_image",
+      creator: SITE_CONFIG.twitterHandle,
+      ...(image ? { images: [image.url] } : {}),
+    },
+  };
 }
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {

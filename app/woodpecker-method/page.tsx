@@ -7,7 +7,6 @@ import {
   PAGE_METADATA,
   generateArticleSchema,
   generateHowToSchema,
-  generateWoodpeckerFAQSchema,
   generateBreadcrumbSchema,
   SITE_CONFIG,
 } from "@/lib/seo";
@@ -34,8 +33,6 @@ export default function WoodpeckerMethodPage() {
     description:
       "Learn how the Woodpecker Method can transform your chess tactics through intensive puzzle repetition.",
     url: `${SITE_CONFIG.url}/woodpecker-method`,
-    datePublished: "2024-01-01T00:00:00Z",
-    dateModified: new Date().toISOString(),
   });
 
   const breadcrumbSchema = generateBreadcrumbSchema([
@@ -58,12 +55,6 @@ export default function WoodpeckerMethodPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(generateHowToSchema()),
-        }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(generateWoodpeckerFAQSchema()),
         }}
       />
 

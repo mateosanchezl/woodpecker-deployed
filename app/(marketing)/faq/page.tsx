@@ -3,7 +3,7 @@ import Link from "next/link";
 import {
   generatePageMetadata,
   PAGE_METADATA,
-  generateWoodpeckerFAQSchema,
+  generateFAQSchema,
 } from "@/lib/seo";
 import { Button } from "@/components/ui/button";
 import { HelpCircle, ArrowRight } from "lucide-react";
@@ -65,7 +65,12 @@ const faqs = [
 ];
 
 export default function FAQPage() {
-  const faqSchema = generateWoodpeckerFAQSchema();
+  const faqSchema = generateFAQSchema(
+    faqs.map((faq) => ({
+      question: faq.q,
+      answer: faq.a,
+    })),
+  );
 
   return (
     <>

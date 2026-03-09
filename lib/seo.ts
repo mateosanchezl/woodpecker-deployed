@@ -69,11 +69,11 @@ const DEFAULT_SOCIAL_IMAGE = {
 export const DEFAULT_METADATA: Metadata = {
   metadataBase: new URL(SITE_CONFIG.url),
   title: {
-    default: `${SITE_CONFIG.name} - Free Woodpecker Method Chess Training`,
-    template: `%s | ${SITE_CONFIG.name} - Woodpecker Method`,
+    default: SITE_CONFIG.name,
+    template: `%s | ${SITE_CONFIG.name}`,
   },
   description: SITE_CONFIG.description,
-  applicationName: `${SITE_CONFIG.name} - Woodpecker Method`,
+  applicationName: SITE_CONFIG.name,
   authors: [{ name: SITE_CONFIG.name, url: SITE_CONFIG.url }],
   creator: SITE_CONFIG.name,
   publisher: SITE_CONFIG.name,
@@ -86,8 +86,8 @@ export const DEFAULT_METADATA: Metadata = {
     type: "website",
     locale: SITE_CONFIG.locale,
     url: SITE_CONFIG.url,
-    siteName: `${SITE_CONFIG.name} - Woodpecker Method Chess Training`,
-    title: `${SITE_CONFIG.name} - Free Woodpecker Method Chess Training`,
+    siteName: SITE_CONFIG.name,
+    title: SITE_CONFIG.name,
     description:
       "Master chess tactics with the Woodpecker Method for free. The best app for chess puzzle repetition training. Build pattern recognition and improve your tactical vision.",
     images: [
@@ -96,7 +96,7 @@ export const DEFAULT_METADATA: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SITE_CONFIG.name} - Free Woodpecker Method Chess Training`,
+    title: SITE_CONFIG.name,
     description:
       "Master chess tactics with the Woodpecker Method for free. Chess puzzle repetition training app.",
     creator: SITE_CONFIG.twitterHandle,
@@ -160,6 +160,13 @@ interface PageMetadataOptions {
   };
 }
 
+function dedupeKeywords(
+  keywords: readonly string[] | string[] | undefined,
+): string[] | undefined {
+  if (!keywords?.length) return undefined;
+  return [...new Set(keywords)];
+}
+
 function getTwitterImages(
   images: NonNullable<PageMetadataOptions["openGraph"]>["images"],
 ) {
@@ -187,7 +194,7 @@ export function generatePageMetadata({
   return {
     title,
     description,
-    keywords: keywords ? [...keywords] : DEFAULT_METADATA.keywords,
+    keywords: dedupeKeywords(keywords) ?? DEFAULT_METADATA.keywords,
     alternates: {
       canonical: url,
     },
@@ -196,7 +203,7 @@ export function generatePageMetadata({
       description,
       url,
       locale: SITE_CONFIG.locale,
-      siteName: `${SITE_CONFIG.name} - Woodpecker Method Chess Training`,
+      siteName: SITE_CONFIG.name,
       type: openGraph?.type ?? "website",
       images: resolvedImages,
     },
@@ -230,7 +237,7 @@ export const PAGE_METADATA = {
     ],
   },
   woodpeckerMethod: {
-    title: "What is the Woodpecker Method? | Chess Training Guide",
+    title: "What Is the Woodpecker Method?",
     description:
       "Learn the Woodpecker Method for chess improvement. Discover how solving the same tactical puzzles repeatedly builds pattern recognition and calculation speed. Free training available.",
     path: "/woodpecker-method",
@@ -285,32 +292,32 @@ export const PAGE_METADATA = {
     path: "/settings",
   },
   signIn: {
-    title: "Sign In | Woodpecker Method Chess Training",
+    title: "Sign In",
     description:
       "Sign in to continue your Woodpecker Method chess training. Pick up where you left off in your puzzle cycles.",
     path: "/sign-in",
   },
   signUp: {
-    title: "Start Free Woodpecker Method Training | Create Account",
+    title: "Create Account",
     description:
       "Create your free account and start Woodpecker Method chess training today. No credit card required.",
     path: "/sign-up",
   },
   privacy: {
-    title: "Privacy Policy | Peck Woodpecker Method Training",
+    title: "Privacy Policy",
     description:
       "Privacy policy for Peck, the Woodpecker Method chess training app. Learn how we protect your data.",
     path: "/privacy",
   },
   terms: {
-    title: "Terms of Service | Peck Woodpecker Method Training",
+    title: "Terms of Service",
     description:
       "Terms of service for Peck, the Woodpecker Method chess training platform.",
     path: "/terms",
   },
  // Public marketing pages (Phase 1 SEO)
   features: {
-    title: "Features | Woodpecker Method Chess Training",
+    title: "Features",
     description:
       "Explore Peck's features: Woodpecker Method cycles, progress analytics, achievements, streaks, leaderboards, and personalized puzzle sets. Free chess tactics training.",
     path: "/features",
@@ -322,7 +329,7 @@ export const PAGE_METADATA = {
     ],
   },
   pricing: {
-    title: "Pricing | Free Woodpecker Method Training",
+    title: "Pricing",
     description:
       "Peck is free. No credit card required. Full access to Woodpecker Method training, unlimited puzzle sets, progress tracking, and achievements.",
     path: "/pricing",
@@ -333,7 +340,7 @@ export const PAGE_METADATA = {
     ],
   },
   about: {
-    title: "About Peck | Woodpecker Method Chess Training",
+    title: "About",
     description:
       "Learn about Peck, the free Woodpecker Method chess training app. Our mission is to make tactical improvement accessible to every chess player.",
     path: "/about",
@@ -344,7 +351,7 @@ export const PAGE_METADATA = {
     ],
   },
   faq: {
-    title: "FAQ | Woodpecker Method & Peck",
+    title: "FAQ",
     description:
       "Frequently asked questions about the Woodpecker Method and Peck: puzzle sets, cycles, ratings, improvement, and how to get started.",
     path: "/faq",
@@ -355,7 +362,7 @@ export const PAGE_METADATA = {
     ],
   },
   blog: {
-    title: "Blog | Woodpecker Method & Chess Training",
+    title: "Blog",
     description:
       "Articles and tips on the Woodpecker Method, chess tactics training, and improving your game with Peck.",
     path: "/blog",
@@ -366,7 +373,7 @@ export const PAGE_METADATA = {
     ],
   },
   docs: {
-    title: "Documentation | Peck Woodpecker Method",
+    title: "Documentation",
     description:
       "Documentation and guides for Peck: getting started, Woodpecker Method setup, and training best practices.",
     path: "/docs",
@@ -436,13 +443,6 @@ export function generateSoftwareApplicationSchema() {
     ],
     screenshot: `${SITE_CONFIG.url}/og-image.png`,
     softwareVersion: "1.0",
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: "4.8",
-      ratingCount: "150",
-      bestRating: "5",
-      worstRating: "1",
-    },
   };
 }
 
@@ -492,14 +492,6 @@ export function generateWebSiteSchema() {
       "@type": "Organization",
       name: SITE_CONFIG.name,
       url: SITE_CONFIG.url,
-    },
-    potentialAction: {
-      "@type": "SearchAction",
-      target: {
-        "@type": "EntryPoint",
-        urlTemplate: `${SITE_CONFIG.url}/training?q={search_term_string}`,
-      },
-      "query-input": "required name=search_term_string",
     },
   };
 }
@@ -728,8 +720,8 @@ export function generateArticleSchema(article: {
   title: string;
   description: string;
   url: string;
-  datePublished: string;
-  dateModified: string;
+  datePublished?: string;
+  dateModified?: string;
   image?: string;
 }) {
   return {
@@ -738,8 +730,8 @@ export function generateArticleSchema(article: {
     headline: article.title,
     description: article.description,
     url: article.url,
-    datePublished: article.datePublished,
-    dateModified: article.dateModified,
+    ...(article.datePublished ? { datePublished: article.datePublished } : {}),
+    ...(article.dateModified ? { dateModified: article.dateModified } : {}),
     image: article.image || `${SITE_CONFIG.url}/og-image.png`,
     author: {
       "@type": "Organization",
@@ -793,11 +785,9 @@ export function generateSlugPageMetadata({
   const slugTitle = slug ? slug.replace(/-/g, " ").replace(/\//g, " · ") : "";
   const defaultTitle =
     pathPrefix === "/blog"
-      ? slugTitle
-        ? `${slugTitle} | Peck Blog`
-        : PAGE_METADATA.blog.title
+      ? slugTitle || PAGE_METADATA.blog.title
       : slugTitle
-        ? `${slugTitle} | Peck Docs`
+        ? slugTitle
         : PAGE_METADATA.docs.title;
   const defaultDescription =
     pathPrefix === "/blog"

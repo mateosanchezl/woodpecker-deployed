@@ -23,7 +23,7 @@ export async function generateMetadata({
   const { tag } = await params;
   const decodedTag = decodeURIComponent(tag);
   return generatePageMetadata({
-    title: `Posts tagged "${decodedTag}" | Peck Blog`,
+    title: `Posts tagged "${decodedTag}"`,
     description: `All articles about ${decodedTag} — Woodpecker Method tips, chess training guides, and more from Peck.`,
     path: `/blog/tags/${tag}`,
     keywords: [

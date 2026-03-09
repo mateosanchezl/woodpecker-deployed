@@ -26,11 +26,6 @@ export default function robots(): MetadataRoute.Robots {
           "/settings", // Protected app pages (require auth)
         ],
       },
-      {
-        userAgent: "Googlebot",
-        allow: "/",
-        disallow: ["/api/", "/_next/"],
-      },
       // AI/LLM crawlers - allow access to learn about our free service
       {
         userAgent: "GPTBot",

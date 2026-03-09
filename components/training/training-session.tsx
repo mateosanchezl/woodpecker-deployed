@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { AlertCircle, RefreshCw, CheckCircle2, ExternalLink, SkipForward, Sparkles } from 'lucide-react'
+import type { BoardThemeId } from '@/lib/chess/board-themes'
 import type { TrainingProgress, PuzzleInSetData } from '@/lib/chess/types'
 import { usePuzzleTimer } from '@/hooks/use-puzzle-timer'
 import { useXp } from '@/hooks/use-xp'
@@ -32,6 +33,7 @@ interface TrainingSessionProps {
   canAdvanceToNext?: boolean
   autoStartNextPuzzle: boolean
   isUpdatingAutoStartNextPuzzle?: boolean
+  boardTheme: BoardThemeId
 
   // Callbacks
   onPuzzleComplete: (
@@ -72,6 +74,7 @@ export function TrainingSession({
   canAdvanceToNext = false,
   autoStartNextPuzzle,
   isUpdatingAutoStartNextPuzzle = false,
+  boardTheme,
   onPuzzleComplete,
   onSkip,
   onAdvanceToNextPuzzle,
@@ -185,6 +188,7 @@ export function TrainingSession({
           isSubmittingAttempt={isSubmittingAttempt}
           canAdvanceToNext={canAdvanceToNext}
           autoStartNextPuzzle={autoStartNextPuzzle}
+          boardTheme={boardTheme}
           timerControls={timer.controls}
         />
       </div>
@@ -203,9 +207,12 @@ export function TrainingSession({
             <div className="space-y-0.5">
               <Label
                 htmlFor="training-pace-toggle"
-                className="text-sm font-medium"
+                className="flex items-center gap-2 text-sm font-medium"
               >
-                Auto-start next puzzle
+                <span>Auto-start next puzzle</span>
+                <Badge variant="secondary" className="uppercase tracking-wide">
+                  New
+                </Badge>
               </Label>
               <p className="text-xs text-muted-foreground">
                 Turn off to pause between puzzles and start the next one manually.
@@ -252,12 +259,9 @@ export function TrainingSession({
               <div className="space-y-0.5">
                 <Label
                   htmlFor="puzzle-theme-visibility"
-                  className="flex items-center gap-2 text-sm font-medium"
+                  className="text-sm font-medium"
                 >
-                  <span>Show puzzle themes</span>
-                  <Badge variant="secondary" className="uppercase tracking-wide">
-                    New
-                  </Badge>
+                  Show puzzle themes
                 </Label>
                 <p className="text-xs text-muted-foreground">
                   Hide theme labels to avoid tactical hints.

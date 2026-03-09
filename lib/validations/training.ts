@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { TRAINING_THEME_KEYS } from '@/lib/chess/training-themes'
+import { BOARD_THEME_IDS } from '@/lib/chess/board-themes'
 
 // UCI move pattern: e2e4 or e7e8q (with promotion)
 const uciMovePattern = /^[a-h][1-8][a-h][1-8][qrbn]?$/
@@ -308,6 +309,7 @@ export const updateUserSettingsSchema = z.object({
     .max(10, 'Cannot exceed 10 cycles')
     .optional(),
   autoStartNextPuzzle: z.boolean().optional(),
+  boardTheme: z.enum(BOARD_THEME_IDS).optional(),
   showOnLeaderboard: z.boolean().optional(),
 })
 

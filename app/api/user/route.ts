@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { ensureUserExists } from '@/lib/ensure-user'
+import type { BoardThemeId } from '@/lib/chess/board-themes'
 import {
   completeOnboardingSchema,
   updateUserSettingsSchema,
@@ -46,6 +47,7 @@ export async function GET() {
         preferredSetSize: user.preferredSetSize,
         targetCycles: user.targetCycles,
         autoStartNextPuzzle: user.autoStartNextPuzzle,
+        boardTheme: user.boardTheme,
         hasCompletedOnboarding: user.hasCompletedOnboarding,
         showOnLeaderboard: user.showOnLeaderboard,
         puzzleSetCount: user._count.puzzleSets,
@@ -114,6 +116,7 @@ export async function PATCH(request: NextRequest) {
         user: {
           id: user.id,
           estimatedRating: user.estimatedRating,
+          boardTheme: user.boardTheme,
           hasCompletedOnboarding: user.hasCompletedOnboarding,
           showOnLeaderboard: user.showOnLeaderboard,
         },
@@ -133,6 +136,7 @@ export async function PATCH(request: NextRequest) {
       preferredSetSize,
       targetCycles,
       autoStartNextPuzzle,
+      boardTheme,
       showOnLeaderboard,
     } = settingsValidation.data
 
@@ -142,6 +146,7 @@ export async function PATCH(request: NextRequest) {
       preferredSetSize?: number
       targetCycles?: number
       autoStartNextPuzzle?: boolean
+      boardTheme?: BoardThemeId
       showOnLeaderboard?: boolean
     } = {}
     if (estimatedRating !== undefined) {
@@ -155,6 +160,9 @@ export async function PATCH(request: NextRequest) {
     }
     if (autoStartNextPuzzle !== undefined) {
       updateData.autoStartNextPuzzle = autoStartNextPuzzle
+    }
+    if (boardTheme !== undefined) {
+      updateData.boardTheme = boardTheme
     }
     if (showOnLeaderboard !== undefined) {
       updateData.showOnLeaderboard = showOnLeaderboard
@@ -172,6 +180,7 @@ export async function PATCH(request: NextRequest) {
         preferredSetSize: user.preferredSetSize,
         targetCycles: user.targetCycles,
         autoStartNextPuzzle: user.autoStartNextPuzzle,
+        boardTheme: user.boardTheme,
         hasCompletedOnboarding: user.hasCompletedOnboarding,
         showOnLeaderboard: user.showOnLeaderboard,
       },

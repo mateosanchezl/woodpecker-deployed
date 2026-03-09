@@ -26,6 +26,21 @@ export function formatChangelogDate(date: string) {
 // Add new releases to the top of this list so index 0 stays the latest.
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    version: "2.7.0",
+    title: "Training Board Themes",
+    description:
+      "You can now personalize the training board with a saved theme from Settings and keep that look every time you come back to solve.",
+    features: [
+      "A new Board theme setting in Settings lets you switch between four training palettes: Peck, Tournament, Slate, and Blueprint",
+      "Your selected board theme persists on your account, so training keeps the same palette when you return",
+      "Theme changes apply to the training board without interrupting the current puzzle state",
+      "Peck remains the default theme, with three additional presets for players who want a different visual feel",
+    ],
+    date: "2026-03-09",
+    learnMoreUrl: "/settings",
+    actionLabel: "Choose a board theme",
+  },
+  {
     version: "2.6.0",
     title: "Control Training Pace Between Puzzles",
     description:

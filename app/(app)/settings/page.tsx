@@ -4,12 +4,18 @@ import { useEffect, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { Skeleton } from '@/components/ui/skeleton'
+import { BoardThemePicker } from '@/components/training/board-theme-picker'
+import {
+  resolveBoardTheme,
+  type BoardThemeId,
+} from '@/lib/chess/board-themes'
 import { toast } from 'sonner'
-import { Settings, Users, Eye, EyeOff, Target, Clock3 } from 'lucide-react'
+import { Settings, Users, Eye, EyeOff, Target, Clock3, Palette } from 'lucide-react'
 
 interface UserData {
   user: {
@@ -20,6 +26,7 @@ interface UserData {
     preferredSetSize: number
     targetCycles: number
     autoStartNextPuzzle: boolean
+    boardTheme?: string | null
     showOnLeaderboard: boolean
     hasCompletedOnboarding: boolean
   }
@@ -30,6 +37,7 @@ interface UpdateSettingsInput {
   preferredSetSize?: number
   targetCycles?: number
   autoStartNextPuzzle?: boolean
+  boardTheme?: BoardThemeId
   showOnLeaderboard?: boolean
 }
 
@@ -38,6 +46,7 @@ interface SettingsDraft {
   preferredSetSize: number
   targetCycles: number
   autoStartNextPuzzle: boolean
+  boardTheme: BoardThemeId
   showOnLeaderboard: boolean
 }
 
@@ -48,6 +57,7 @@ interface UpdateSettingsResponse {
     preferredSetSize: number
     targetCycles: number
     autoStartNextPuzzle: boolean
+    boardTheme?: string | null
     showOnLeaderboard: boolean
     hasCompletedOnboarding: boolean
   }
@@ -58,11 +68,19 @@ const DEFAULT_SETTINGS: SettingsDraft = {
   preferredSetSize: 150,
   targetCycles: 5,
   autoStartNextPuzzle: true,
+  boardTheme: 'peck',
   showOnLeaderboard: true,
 }
 
 function createSettingsDraft(
-  user?: Partial<Pick<UserData['user'], keyof SettingsDraft>>
+  user?: {
+    estimatedRating?: number
+    preferredSetSize?: number
+    targetCycles?: number
+    autoStartNextPuzzle?: boolean
+    boardTheme?: string | null
+    showOnLeaderboard?: boolean
+  }
 ): SettingsDraft {
   return {
     estimatedRating: user?.estimatedRating ?? DEFAULT_SETTINGS.estimatedRating,
@@ -70,6 +88,7 @@ function createSettingsDraft(
     targetCycles: user?.targetCycles ?? DEFAULT_SETTINGS.targetCycles,
     autoStartNextPuzzle:
       user?.autoStartNextPuzzle ?? DEFAULT_SETTINGS.autoStartNextPuzzle,
+    boardTheme: resolveBoardTheme(user?.boardTheme),
     showOnLeaderboard: user?.showOnLeaderboard ?? DEFAULT_SETTINGS.showOnLeaderboard,
   }
 }
@@ -80,6 +99,7 @@ function settingsAreEqual(a: SettingsDraft, b: SettingsDraft) {
     a.preferredSetSize === b.preferredSetSize &&
     a.targetCycles === b.targetCycles &&
     a.autoStartNextPuzzle === b.autoStartNextPuzzle &&
+    a.boardTheme === b.boardTheme &&
     a.showOnLeaderboard === b.showOnLeaderboard
   )
 }
@@ -103,6 +123,9 @@ function getChangedSettings(
     savedSettings.autoStartNextPuzzle !== draftSettings.autoStartNextPuzzle
   ) {
     changes.autoStartNextPuzzle = draftSettings.autoStartNextPuzzle
+  }
+  if (savedSettings.boardTheme !== draftSettings.boardTheme) {
+    changes.boardTheme = draftSettings.boardTheme
   }
   if (savedSettings.showOnLeaderboard !== draftSettings.showOnLeaderboard) {
     changes.showOnLeaderboard = draftSettings.showOnLeaderboard
@@ -129,6 +152,7 @@ export default function SettingsPage() {
   const loadedPreferredSetSize = data?.user?.preferredSetSize
   const loadedTargetCycles = data?.user?.targetCycles
   const loadedAutoStartNextPuzzle = data?.user?.autoStartNextPuzzle
+  const loadedBoardTheme = data?.user?.boardTheme
   const loadedShowOnLeaderboard = data?.user?.showOnLeaderboard
 
   const updateSettings = useMutation<
@@ -178,6 +202,7 @@ export default function SettingsPage() {
       loadedPreferredSetSize === undefined ||
       loadedTargetCycles === undefined ||
       loadedAutoStartNextPuzzle === undefined ||
+      loadedBoardTheme === undefined ||
       loadedShowOnLeaderboard === undefined
     ) {
       return
@@ -188,6 +213,7 @@ export default function SettingsPage() {
       preferredSetSize: loadedPreferredSetSize,
       targetCycles: loadedTargetCycles,
       autoStartNextPuzzle: loadedAutoStartNextPuzzle,
+      boardTheme: resolveBoardTheme(loadedBoardTheme),
       showOnLeaderboard: loadedShowOnLeaderboard,
     }
     const previousLoadedSettings = lastLoadedSettingsRef.current
@@ -210,6 +236,7 @@ export default function SettingsPage() {
     loadedPreferredSetSize,
     loadedTargetCycles,
     loadedAutoStartNextPuzzle,
+    loadedBoardTheme,
     loadedShowOnLeaderboard,
   ])
 
@@ -351,6 +378,39 @@ export default function SettingsPage() {
               disabled={updateSettings.isPending}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base font-medium flex items-center gap-2">
+            <div className="rounded-lg bg-sky-100 p-1.5">
+              <Palette className="h-4 w-4 text-sky-700" />
+            </div>
+            Board Appearance
+          </CardTitle>
+          <CardDescription>
+            Pick the board palette used during training
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-1">
+            <Label className="flex items-center gap-2 text-sm font-medium">
+              <span>Board theme</span>
+              <Badge variant="secondary" className="uppercase tracking-wide">
+                New
+              </Badge>
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              This changes the training board only. Puzzle tactical themes stay separate.
+            </p>
+          </div>
+
+          <BoardThemePicker
+            value={currentSettings.boardTheme}
+            onValueChange={(boardTheme) => updateDraft({ boardTheme })}
+            disabled={updateSettings.isPending}
+          />
         </CardContent>
       </Card>
 

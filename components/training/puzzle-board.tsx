@@ -10,6 +10,7 @@ import type { PuzzleTimerControls } from '@/hooks/use-puzzle-timer'
 import type { Square, PuzzleStatus, PromotionState, BoardOrientation } from '@/lib/chess/types'
 import { ANIMATION_DURATION } from '@/lib/chess/types'
 import { parseUciMove, parseSolutionMoves } from '@/lib/chess/puzzle-engine'
+import { getBoardThemeSquareStyles, type BoardThemeId } from '@/lib/chess/board-themes'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { PromotionDialog } from './promotion-dialog'
@@ -38,20 +39,12 @@ interface PuzzleBoardProps {
   isSubmittingAttempt?: boolean
   canAdvanceToNext?: boolean
   autoStartNextPuzzle?: boolean
+  boardTheme: BoardThemeId
   timerControls: PuzzleTimerControls
 }
 
 type PuzzleBoardMode = 'solving' | 'failedReview' | 'awaitingAdvance'
 type PendingAdvanceOutcome = 'correct' | 'skipped'
-
-// Custom board colors matching the new "Peck" nature theme
-const customDarkSquareStyle: React.CSSProperties = {
-  backgroundColor: 'oklch(0.6 0.1 145)', // Muted moss green
-}
-
-const customLightSquareStyle: React.CSSProperties = {
-  backgroundColor: 'oklch(0.96 0.03 145)', // Very light green/cream
-}
 
 const customBoardStyle: React.CSSProperties = {
   borderRadius: '12px',
@@ -124,6 +117,7 @@ export const PuzzleBoard = memo(function PuzzleBoard({
   isSubmittingAttempt = false,
   canAdvanceToNext = false,
   autoStartNextPuzzle = true,
+  boardTheme,
   timerControls,
 }: PuzzleBoardProps) {
   const [mode, setMode] = useState<PuzzleBoardMode>('solving')
@@ -244,7 +238,12 @@ export const PuzzleBoard = memo(function PuzzleBoard({
     }
 
     lastProcessedSkipRequestRef.current = externalSkipRequest
-    handleSkip()
+
+    const timeoutId = window.setTimeout(() => {
+      handleSkip()
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
   }, [externalSkipRequest, handleSkip])
 
   const setWalkthroughToMoveIndex = useCallback((targetMoveIndex: number) => {
@@ -445,6 +444,11 @@ export const PuzzleBoard = memo(function PuzzleBoard({
     return styles
   }, [displayLastMove, mode, selectedSquare, legalTargets, promotionState.isOpen, promotionState.to])
 
+  const boardThemeStyles = useMemo(
+    () => getBoardThemeSquareStyles(boardTheme),
+    [boardTheme]
+  )
+
   const chessboardOptions: ChessboardOptions = useMemo(
     () => ({
       position: displayPosition,
@@ -458,8 +462,8 @@ export const PuzzleBoard = memo(function PuzzleBoard({
       clearArrowsOnPositionChange: false,
       animationDurationInMs: ANIMATION_DURATION,
       boardStyle: customBoardStyle,
-      darkSquareStyle: customDarkSquareStyle,
-      lightSquareStyle: customLightSquareStyle,
+      darkSquareStyle: boardThemeStyles.darkSquareStyle,
+      lightSquareStyle: boardThemeStyles.lightSquareStyle,
       squareStyles: customSquareStyles,
     }),
     [
@@ -470,6 +474,8 @@ export const PuzzleBoard = memo(function PuzzleBoard({
       allowDragging,
       canDragPiece,
       dragActivationDistance,
+      boardThemeStyles.darkSquareStyle,
+      boardThemeStyles.lightSquareStyle,
       customSquareStyles,
     ]
   )

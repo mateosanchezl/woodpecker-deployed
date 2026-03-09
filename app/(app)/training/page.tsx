@@ -35,6 +35,7 @@ import { useNavigationGuard } from '@/hooks/use-navigation-guard'
 import { getStreakMessage } from '@/lib/streak-milestones'
 import { LeaveTrainingModal } from '@/components/training/leave-training-modal'
 import { cn } from '@/lib/utils'
+import { resolveBoardTheme } from '@/lib/chess/board-themes'
 import { getTrainingThemeLabel } from '@/lib/chess/training-themes'
 
 interface PuzzleSetData {
@@ -54,6 +55,7 @@ interface PuzzleSetData {
 interface UserPreferenceData {
   user: {
     autoStartNextPuzzle: boolean
+    boardTheme?: string | null
   }
 }
 
@@ -133,6 +135,7 @@ function TrainingPageInner({
   const [selectedSetId, setSelectedSetId] = useState<string | null>(urlSetId)
   const [activeCycleId, setActiveCycleId] = useState<string | null>(urlCycleId)
   const autoStartNextPuzzle = userData?.user.autoStartNextPuzzle
+  const boardTheme = resolveBoardTheme(userData?.user.boardTheme)
 
   // Delete puzzle set mutation
   const deleteMutation = useMutation({
@@ -349,7 +352,7 @@ function TrainingPageInner({
             <CardDescription>
               {userPreferencesError instanceof Error
                 ? userPreferencesError.message
-                : 'Auto-start is stored in your user settings. Reload that preference before starting the session so the first puzzle uses the right pace.'}
+                : 'Training pace and board theme are stored in your user settings. Reload those preferences before starting the session so the board and puzzle flow load correctly.'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -383,6 +386,7 @@ function TrainingPageInner({
           canAdvanceToNext={trainingSession.hasPendingAdvance}
           autoStartNextPuzzle={autoStartNextPuzzle ?? true}
           isUpdatingAutoStartNextPuzzle={updateAutoStartNextPuzzleMutation.isPending}
+          boardTheme={boardTheme}
           onPuzzleComplete={handlePuzzleComplete}
           onSkip={handleSkip}
           onAdvanceToNextPuzzle={trainingSession.advancePendingSession}

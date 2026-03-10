@@ -20,11 +20,16 @@ import {
   getOrientationFromFen,
   sleep,
 } from "@/lib/chess/puzzle-engine";
+import {
+  getBoardThemeSquareStyles,
+  type BoardThemeId,
+} from "@/lib/chess/board-themes";
 import { PromotionDialog } from "@/components/training/promotion-dialog";
 import { PuzzleFeedback } from "@/components/training/puzzle-feedback";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Eye, RotateCcw, ChevronRight, Play, Pause } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { ChevronRight, Clock3, Eye, Pause, Play, RotateCcw, SkipForward } from "lucide-react";
 import { formatTime } from "@/hooks/use-puzzle-timer";
 
 interface ReviewPuzzleBoardProps {
@@ -35,6 +40,9 @@ interface ReviewPuzzleBoardProps {
   successRate: number;
   totalAttempts: number;
   correctAttempts: number;
+  boardTheme: BoardThemeId;
+  canGoToNextPuzzle?: boolean;
+  onNextPuzzle?: () => void;
   onComplete?: (
     isCorrect: boolean,
     timeSpent: number,
@@ -42,22 +50,16 @@ interface ReviewPuzzleBoardProps {
   ) => void;
 }
 
-// Board styling (same as training)
-const customDarkSquareStyle: React.CSSProperties = {
-  backgroundColor: "oklch(0.6 0.1 145)",
-};
-
-const customLightSquareStyle: React.CSSProperties = {
-  backgroundColor: "oklch(0.96 0.03 145)",
-};
-
 const customBoardStyle: React.CSSProperties = {
   borderRadius: "12px",
   boxShadow:
     "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
 };
 
-function addInsetShadow(existingShadow: string | undefined, shadow: string): string {
+function addInsetShadow(
+  existingShadow: string | undefined,
+  shadow: string,
+): string {
   return existingShadow ? `${existingShadow}, ${shadow}` : shadow;
 }
 
@@ -83,7 +85,7 @@ const ReviewBoardSurface = memo(function ReviewBoardSurface({
   const boardContainerRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div className="relative w-full max-w-140 aspect-square shadow-2xl rounded-xl overflow-hidden">
+    <div className="relative mx-auto w-full max-w-[700px] aspect-square overflow-hidden rounded-xl shadow-2xl">
       <div ref={boardContainerRef} className="absolute inset-0">
         <Chessboard options={chessboardOptions} />
         {!isWalkthrough && <PuzzleFeedback status={status} />}
@@ -126,13 +128,15 @@ export function ReviewPuzzleBoard({
   successRate,
   totalAttempts,
   correctAttempts,
+  boardTheme,
+  canGoToNextPuzzle = false,
+  onNextPuzzle,
   onComplete,
 }: ReviewPuzzleBoardProps) {
   const puzzleKey = `${fen}::${moves}`;
   const [reviewMode, setReviewMode] = useState<ReviewMode>("solving");
   const [boardEpoch, setBoardEpoch] = useState(0);
 
-  // Solution walkthrough state
   const [walkthroughPosition, setWalkthroughPosition] = useState(fen);
   const [walkthroughMoveIndex, setWalkthroughMoveIndex] = useState(0);
   const [walkthroughLastMove, setWalkthroughLastMove] = useState<{
@@ -146,7 +150,6 @@ export function ReviewPuzzleBoard({
   const solutionArray = parseSolutionMoves(moves);
   const orientation = getOrientationFromFen(fen);
 
-  // Chess puzzle hook for solving mode
   const {
     position,
     status,
@@ -203,8 +206,6 @@ export function ReviewPuzzleBoard({
     getLegalMoveTargets,
   });
 
-  // ----- WALKTHROUGH HANDLERS -----
-
   const initWalkthrough = useCallback(() => {
     setReviewMode("walkthrough");
     setWalkthroughPosition(fen);
@@ -220,7 +221,6 @@ export function ReviewPuzzleBoard({
     const chess = new Chess();
     chess.load(fen);
 
-    // Replay all moves up to and including current index
     for (let i = 0; i <= walkthroughMoveIndex; i++) {
       const parsed = parseUciMove(solutionArray[i]);
       chess.move({
@@ -249,7 +249,6 @@ export function ReviewPuzzleBoard({
     const chess = new Chess();
     chess.load(fen);
 
-    // Replay up to current position first
     for (let i = 0; i < walkthroughMoveIndex; i++) {
       const parsed = parseUciMove(solutionArray[i]);
       chess.move({
@@ -281,8 +280,6 @@ export function ReviewPuzzleBoard({
     autoPlayRef.current = false;
   }, [isAutoPlaying, fen, walkthroughMoveIndex, solutionArray]);
 
-  // ----- RETRY -----
-
   const handleRetry = useCallback(() => {
     setReviewMode("solving");
     clearSelection();
@@ -292,8 +289,6 @@ export function ReviewPuzzleBoard({
     timer.controls.reset();
     resetPuzzle();
   }, [clearSelection, timer.controls, resetPuzzle]);
-
-  // ----- RENDERING -----
 
   const isWalkthrough = reviewMode === "walkthrough";
   const displayPosition = isWalkthrough ? walkthroughPosition : position;
@@ -366,6 +361,11 @@ export function ReviewPuzzleBoard({
     promotionState.to,
   ]);
 
+  const boardThemeStyles = useMemo(
+    () => getBoardThemeSquareStyles(boardTheme),
+    [boardTheme],
+  );
+
   const chessboardOptions: ChessboardOptions = useMemo(
     () => ({
       position: displayPosition,
@@ -379,8 +379,8 @@ export function ReviewPuzzleBoard({
       clearArrowsOnPositionChange: false,
       animationDurationInMs: ANIMATION_DURATION,
       boardStyle: customBoardStyle,
-      darkSquareStyle: customDarkSquareStyle,
-      lightSquareStyle: customLightSquareStyle,
+      darkSquareStyle: boardThemeStyles.darkSquareStyle,
+      lightSquareStyle: boardThemeStyles.lightSquareStyle,
       squareStyles: customSquareStyles,
     }),
     [
@@ -391,121 +391,98 @@ export function ReviewPuzzleBoard({
       allowDragging,
       canDragPiece,
       dragActivationDistance,
+      boardThemeStyles.darkSquareStyle,
+      boardThemeStyles.lightSquareStyle,
       customSquareStyles,
     ],
   );
 
   const walkthroughComplete = walkthroughMoveIndex >= solutionArray.length;
+  const showNextPuzzleAction = canGoToNextPuzzle && typeof onNextPuzzle === "function";
+  const successRateToneClass =
+    successRate >= 50 ? "text-amber-700 dark:text-amber-300" : "text-rose-700 dark:text-rose-300";
 
   return (
-    <div className="flex flex-col lg:flex-row items-start justify-center gap-6 w-full">
-      {/* Board */}
-      <div className="flex-1 w-full flex flex-col items-center gap-4">
-        <ReviewBoardSurface
-          key={`${puzzleKey}:${boardEpoch}`}
-          chessboardOptions={chessboardOptions}
-          isWalkthrough={isWalkthrough}
-          status={status}
-          promotionState={promotionState}
-          orientation={orientation}
-          onSelectPromotion={handlePromotionSelect}
-          onCancelPromotion={cancelPromotion}
-        />
+    <div className="flex w-full flex-col gap-4">
+      <ReviewBoardSurface
+        key={`${puzzleKey}:${boardEpoch}`}
+        chessboardOptions={chessboardOptions}
+        isWalkthrough={isWalkthrough}
+        status={status}
+        promotionState={promotionState}
+        orientation={orientation}
+        onSelectPromotion={handlePromotionSelect}
+        onCancelPromotion={cancelPromotion}
+      />
 
-        {/* Status text */}
-        <div className="text-lg font-medium text-muted-foreground">
-          <ReviewStatusText
-            reviewMode={reviewMode}
-            puzzleStatus={status}
-            walkthroughIndex={walkthroughMoveIndex}
-            totalMoves={solutionArray.length}
-          />
-        </div>
-      </div>
+      <Card className="py-0">
+        <CardContent className="space-y-4 p-4 sm:p-5">
+          <div className="text-center text-sm font-medium sm:text-base">
+            <ReviewStatusText
+              reviewMode={reviewMode}
+              puzzleStatus={status}
+              walkthroughIndex={walkthroughMoveIndex}
+              totalMoves={solutionArray.length}
+            />
+          </div>
 
-      {/* Side panel */}
-      <div className="w-full lg:w-80 flex flex-col gap-4">
-        {/* Timer (solving mode only) */}
-        {reviewMode === "solving" && (
-          <Card>
-            <CardContent className="py-4">
-              <div className="text-center">
-                <div className="font-mono text-3xl tabular-nums font-medium">
-                  {formatTime(timer.timeMs)}
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">Time</div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Puzzle info */}
-        <Card>
-          <CardContent className="py-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Rating</span>
-              <span className="font-mono text-sm font-medium">
-                {puzzleRating}
+          <div className="flex flex-wrap items-center justify-center gap-2 text-sm">
+            {reviewMode === "solving" && (
+              <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-muted-foreground">
+                <Clock3 className="h-3.5 w-3.5" />
+                <span className="font-mono">{formatTime(timer.timeMs)}</span>
               </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">
-                Your success rate
-              </span>
-              <span
-                className={`font-mono text-sm font-medium ${
-                  successRate >= 50 ? "text-amber-600" : "text-rose-600"
-                }`}
-              >
-                {successRate}%
-                <span className="text-muted-foreground text-xs ml-1">
-                  ({correctAttempts}/{totalAttempts})
-                </span>
-              </span>
-            </div>
-            {themes.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {themes.slice(0, 5).map((theme) => (
-                  <span
-                    key={theme}
-                    className="text-xs px-2 py-0.5 bg-muted rounded-full text-muted-foreground"
-                  >
-                    {formatTheme(theme)}
-                  </span>
-                ))}
-              </div>
             )}
-          </CardContent>
-        </Card>
+            <span className="rounded-full border px-3 py-1 font-mono">
+              {puzzleRating}
+            </span>
+            <span className={cn("rounded-full border px-3 py-1 font-medium", successRateToneClass)}>
+              {successRate}% success
+            </span>
+            <span className="rounded-full border px-3 py-1 text-muted-foreground">
+              {correctAttempts}/{totalAttempts} correct
+            </span>
+            {reviewMode === "walkthrough" && (
+              <span className="rounded-full border px-3 py-1 text-muted-foreground">
+                Move {walkthroughMoveIndex} of {solutionArray.length}
+              </span>
+            )}
+          </div>
 
-        {/* Action buttons */}
-        <div className="flex flex-col gap-2">
-          {/* Failed state: show solution or retry */}
-          {reviewMode === "failed" && (
-            <>
-              <Button onClick={initWalkthrough} className="w-full">
-                <Eye className="mr-2 h-4 w-4" />
-                Show Solution
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleRetry}
-                className="w-full"
-              >
-                <RotateCcw className="mr-2 h-4 w-4" />
-                Try Again
-              </Button>
-            </>
+          {themes.length > 0 && (
+            <div className="flex flex-wrap justify-center gap-2 text-xs text-muted-foreground">
+              {themes.slice(0, 5).map((theme) => (
+                <span key={theme} className="rounded-full border px-3 py-1">
+                  {formatTheme(theme)}
+                </span>
+              ))}
+              {themes.length > 5 && (
+                <span className="rounded-full border px-3 py-1">
+                  +{themes.length - 5} more
+                </span>
+              )}
+            </div>
           )}
 
-          {/* Walkthrough state: step through or auto-play */}
-          {reviewMode === "walkthrough" && (
-            <>
-              <div className="flex gap-2">
+          <div className="flex flex-wrap justify-center gap-2">
+            {reviewMode === "failed" && (
+              <>
+                <Button onClick={initWalkthrough}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  Show Solution
+                </Button>
+                <Button variant="outline" onClick={handleRetry}>
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Try Again
+                </Button>
+              </>
+            )}
+
+            {reviewMode === "walkthrough" && (
+              <>
                 <Button
                   onClick={stepForward}
                   disabled={walkthroughComplete || isAutoPlaying}
-                  className="flex-1"
                 >
                   <ChevronRight className="mr-2 h-4 w-4" />
                   {walkthroughComplete ? "Done" : "Next Move"}
@@ -516,6 +493,7 @@ export function ReviewPuzzleBoard({
                   disabled={walkthroughComplete}
                   size="icon"
                   title={isAutoPlaying ? "Pause" : "Auto-play"}
+                  aria-label={isAutoPlaying ? "Pause auto-play" : "Auto-play solution"}
                 >
                   {isAutoPlaying ? (
                     <Pause className="h-4 w-4" />
@@ -523,30 +501,29 @@ export function ReviewPuzzleBoard({
                     <Play className="h-4 w-4" />
                   )}
                 </Button>
-              </div>
-              <div className="text-center text-xs text-muted-foreground">
-                Move {walkthroughMoveIndex} of {solutionArray.length}
-              </div>
-              <Button
-                variant="outline"
-                onClick={handleRetry}
-                className="w-full"
-              >
-                <RotateCcw className="mr-2 h-4 w-4" />
-                Try Again
-              </Button>
-            </>
-          )}
+                <Button variant="outline" onClick={handleRetry}>
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Try Again
+                </Button>
+              </>
+            )}
 
-          {/* Complete state: retry */}
-          {reviewMode === "complete" && (
-            <Button variant="outline" onClick={handleRetry} className="w-full">
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Solve Again
-            </Button>
-          )}
-        </div>
-      </div>
+            {reviewMode === "complete" && (
+              <Button variant="outline" onClick={handleRetry}>
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Solve Again
+              </Button>
+            )}
+
+            {showNextPuzzleAction && (
+              <Button variant="outline" onClick={onNextPuzzle}>
+                <SkipForward className="mr-2 h-4 w-4" />
+                Next Puzzle
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -563,11 +540,14 @@ function ReviewStatusText({
   totalMoves: number;
 }) {
   if (reviewMode === "walkthrough") {
-    if (walkthroughIndex === 0)
+    if (walkthroughIndex === 0) {
       return <span>Starting position — step through the solution</span>;
-    if (walkthroughIndex >= totalMoves)
+    }
+
+    if (walkthroughIndex >= totalMoves) {
       return <span className="text-green-600">Solution complete</span>;
-    // Determine whose move it is in walkthrough
+    }
+
     return (
       <span className="text-blue-600">
         Solution move {walkthroughIndex} of {totalMoves}
@@ -587,7 +567,6 @@ function ReviewStatusText({
     return <span className="text-green-600">Solved correctly!</span>;
   }
 
-  // Solving mode — use standard status text
   switch (puzzleStatus) {
     case "loading":
       return <span>Loading puzzle...</span>;

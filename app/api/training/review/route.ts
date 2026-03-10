@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { ensureUserExists } from "@/lib/ensure-user";
+import {
+  resolveBoardTheme,
+  type BoardThemeId,
+} from "@/lib/chess/board-themes";
 
 export interface ReviewPuzzle {
   puzzleInSetId: string;
@@ -29,6 +33,7 @@ export interface ReviewResponse {
   puzzles: ReviewPuzzle[];
   themeWeaknesses: ThemeWeakness[];
   totalStruggledPuzzles: number;
+  boardTheme: BoardThemeId | null;
 }
 
 export interface ThemeWeakness {
@@ -203,6 +208,7 @@ export async function GET(request: NextRequest) {
       puzzles,
       themeWeaknesses,
       totalStruggledPuzzles,
+      boardTheme: user.boardTheme ? resolveBoardTheme(user.boardTheme) : null,
     };
 
     return NextResponse.json(response);

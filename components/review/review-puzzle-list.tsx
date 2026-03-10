@@ -1,26 +1,8 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
 import { ChevronRight } from "lucide-react";
 import type { ReviewPuzzle } from "@/app/api/training/review/route";
-
-// Theme badge colors
-const THEME_COLORS = [
-  "bg-violet-100 text-violet-700",
-  "bg-sky-100 text-sky-700",
-  "bg-amber-100 text-amber-700",
-  "bg-rose-100 text-rose-700",
-  "bg-emerald-100 text-emerald-700",
-  "bg-purple-100 text-purple-700",
-];
-
-function getThemeColor(theme: string): string {
-  let hash = 0;
-  for (let i = 0; i < theme.length; i++) {
-    hash = theme.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return THEME_COLORS[Math.abs(hash) % THEME_COLORS.length];
-}
+import { cn } from "@/lib/utils";
 
 function formatTheme(theme: string): string {
   return theme
@@ -59,73 +41,76 @@ export function ReviewPuzzleList({
 }: ReviewPuzzleListProps) {
   if (puzzles.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-12 text-center">
-          <p className="text-muted-foreground text-sm">
-            No struggled puzzles found matching your filters.
-          </p>
-          <p className="text-muted-foreground text-xs mt-1">
-            Try clearing the theme filter or keep training!
-          </p>
-        </CardContent>
-      </Card>
+      <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 px-4 py-8 text-center">
+        <p className="text-sm font-medium">No puzzles match this filter.</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Clear the theme filter or keep training to add more review material.
+        </p>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-2">
-      {puzzles.map((puzzle) => {
+    <div className="space-y-3">
+      {puzzles.map((puzzle, index) => {
         const isSelected = selectedPuzzleId === puzzle.puzzleInSetId;
-        const successColor =
-          puzzle.successRate >= 50 ? "text-amber-600" : "text-rose-600";
+        const successToneClass =
+          puzzle.successRate >= 50
+            ? "text-amber-700 dark:text-amber-300"
+            : "text-rose-700 dark:text-rose-300";
 
         return (
           <button
             key={puzzle.puzzleInSetId}
             onClick={() => onSelectPuzzle(puzzle)}
-            className={`w-full text-left transition-all rounded-lg border p-3 ${
-              isSelected
-                ? "border-foreground/20 bg-accent shadow-sm"
-                : "border-border hover:border-foreground/10 hover:bg-accent/50"
-            }`}
+            className={cn(
+              "group w-full rounded-xl border bg-card/90 p-3 text-left transition-all",
+              "hover:border-primary/30 hover:bg-accent/10",
+              isSelected &&
+                "border-primary/45 bg-accent/20 ring-1 ring-primary/15",
+            )}
           >
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="font-mono text-sm font-medium">
+            <div className="flex items-start gap-3">
+              <div className="flex-1 min-w-0 space-y-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="font-mono font-medium">
                     {puzzle.puzzle.rating}
                   </span>
-                  <span
-                    className={`font-mono text-xs font-medium ${successColor}`}
-                  >
-                    {puzzle.successRate}%
-                    <span className="text-muted-foreground ml-0.5">
-                      ({puzzle.correctAttempts}/{puzzle.totalAttempts})
-                    </span>
+                  <span className={cn("font-medium", successToneClass)}>
+                    {puzzle.successRate}% success
                   </span>
-                  {puzzle.lastAttemptAt && (
-                    <span className="text-xs text-muted-foreground ml-auto">
-                      {timeAgo(puzzle.lastAttemptAt)}
-                    </span>
-                  )}
+                  <span className="text-xs text-muted-foreground">
+                    #{index + 1}
+                  </span>
                 </div>
-                <div className="flex flex-wrap gap-1">
+
+                <div className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
+                  <span className="truncate">{puzzle.puzzleSetName}</span>
+                  <span>{puzzle.correctAttempts}/{puzzle.totalAttempts} correct</span>
+                  <span>Position {puzzle.position}</span>
+                  <span>
+                    {puzzle.lastAttemptAt
+                      ? `Last seen ${timeAgo(puzzle.lastAttemptAt)}`
+                      : "Not attempted recently"}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-x-2 gap-y-1 text-xs text-muted-foreground">
                   {puzzle.puzzle.themes.slice(0, 3).map((theme) => (
-                    <span
-                      key={theme}
-                      className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-medium ${getThemeColor(theme)}`}
-                    >
-                      {formatTheme(theme)}
-                    </span>
+                    <span key={theme}>{formatTheme(theme)}</span>
                   ))}
                   {puzzle.puzzle.themes.length > 3 && (
-                    <span className="text-[10px] text-muted-foreground">
-                      +{puzzle.puzzle.themes.length - 3}
-                    </span>
+                    <span>+{puzzle.puzzle.themes.length - 3} more</span>
                   )}
                 </div>
               </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+
+              <ChevronRight
+                className={cn(
+                  "mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5",
+                  isSelected && "text-primary",
+                )}
+              />
             </div>
           </button>
         );

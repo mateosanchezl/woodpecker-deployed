@@ -26,6 +26,21 @@ export function formatChangelogDate(date: string) {
 // Add new releases to the top of this list so index 0 stays the latest.
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    version: "2.7.1",
+    title: "Improved Missed-Puzzle Review",
+    description:
+      "Review now makes it easier to find missed puzzles and try them again.",
+    features: [
+      "Missed puzzles are easier to scan in one simple queue",
+      "Open any missed puzzle and retry it right away",
+      "Review controls now stay focused on retrying the puzzle or seeing the line",
+      "Your saved board theme still carries into review",
+    ],
+    date: "2026-03-10",
+    learnMoreUrl: "/training/review",
+    actionLabel: "Retry missed puzzles",
+  },
+  {
     version: "2.7.0",
     title: "Training Board Themes",
     description:

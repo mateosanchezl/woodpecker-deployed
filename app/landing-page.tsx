@@ -66,10 +66,26 @@ export default function LandingPage({
           {/* Playful Dotted Background */}
           <div className="absolute inset-0 -z-20 h-full w-full bg-[radial-gradient(var(--color-primary)_1px,transparent_1px)] bg-size-[24px_24px] opacity-10" />
           
-          {/* Soft Gradients */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-screen-2xl -z-10 pointer-events-none">
-            <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-accent/30 rounded-full blur-[100px] opacity-60" />
-            <div className="absolute bottom-0 left-1/4 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] opacity-60" />
+          {/* Soft Animated Gradients */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-screen-2xl -z-10 pointer-events-none overflow-hidden">
+            <motion.div 
+              animate={{ 
+                scale: [1, 1.2, 1],
+                opacity: [0.4, 0.6, 0.4],
+                x: [0, 50, 0]
+              }}
+              transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute -top-20 right-0 md:right-1/4 w-[500px] h-[500px] md:w-[700px] md:h-[700px] bg-accent/30 rounded-full blur-[120px]" 
+            />
+            <motion.div 
+              animate={{ 
+                scale: [1, 1.1, 1],
+                opacity: [0.5, 0.7, 0.5],
+                x: [0, -40, 0]
+              }}
+              transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+              className="absolute bottom-0 left-0 md:left-1/4 w-[400px] h-[400px] md:w-[600px] md:h-[600px] bg-primary/20 rounded-full blur-[120px]" 
+            />
           </div>
 
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -257,7 +273,7 @@ export default function LandingPage({
                  initial={{ opacity: 0, scale: 0.9 }} 
                  whileInView={{ opacity: 1, scale: 1 }} 
                  viewport={{ once: true }}
-                 className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-5 py-2 text-sm font-bold text-primary mb-6"
+                 className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-6 py-2.5 text-sm font-black text-primary mb-8 shadow-sm backdrop-blur-md"
                >
                  <Users className="h-5 w-5" />
                  Community Milestone
@@ -266,7 +282,7 @@ export default function LandingPage({
                  initial={{ opacity: 0, y: 20 }} 
                  whileInView={{ opacity: 1, y: 0 }} 
                  viewport={{ once: true }}
-                 className="text-6xl sm:text-8xl lg:text-[8rem] font-black tracking-tighter text-foreground mb-6"
+                 className="text-7xl sm:text-9xl lg:text-[10rem] font-black tracking-tighter text-foreground mb-6 leading-none drop-shadow-sm"
                >
                  {completedPuzzlesDisplay}
                </motion.h2>
@@ -275,24 +291,27 @@ export default function LandingPage({
                </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-10 max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-5xl mx-auto">
               {stats.map((stat, i) => (
                 <motion.div
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
+                  transition={{ delay: i * 0.15, type: "spring", stiffness: 100 }}
                   key={i}
-                  className="bg-background rounded-3xl p-8 border border-border shadow-sm text-center hover:shadow-md transition-shadow group"
+                  className="bg-background/80 backdrop-blur-xl rounded-[2rem] p-8 sm:p-10 border border-border/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] text-center hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all duration-500 hover:-translate-y-2 group relative overflow-hidden"
                 >
-                  <div className="h-14 w-14 mx-auto bg-primary/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                    <stat.icon className="h-7 w-7 text-primary" />
-                  </div>
-                  <div className="text-4xl font-black tracking-tight mb-2">
-                    {stat.value}
-                  </div>
-                  <div className="text-base text-muted-foreground font-semibold">
-                    {stat.label}
+                  <div className="absolute inset-0 bg-linear-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="relative z-10">
+                    <div className="h-16 w-16 mx-auto bg-primary/10 rounded-[1.25rem] flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary/20 transition-all duration-500">
+                      <stat.icon className="h-8 w-8 text-primary" />
+                    </div>
+                    <div className="text-4xl sm:text-5xl font-black tracking-tight mb-3 text-foreground">
+                      {stat.value}
+                    </div>
+                    <div className="text-base sm:text-lg text-muted-foreground font-bold uppercase tracking-wide">
+                      {stat.label}
+                    </div>
                   </div>
                 </motion.div>
               ))}
@@ -306,7 +325,7 @@ export default function LandingPage({
         {/* Enhanced CTA Section */}
         <section className="py-24 sm:py-32 relative overflow-hidden">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="relative rounded-[3rem] bg-foreground text-background p-10 sm:p-20 text-center shadow-2xl overflow-hidden mt-12 mb-12 lg:mb-20">
+        <div className="relative rounded-[3rem] bg-foreground text-background p-12 sm:p-24 text-center shadow-[0_40px_100px_rgba(0,0,0,0.15)] overflow-hidden mt-12 mb-12 lg:mb-20">
               {/* Playful abstract shapes in the CTA background */}
               <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-primary rounded-full blur-[80px] opacity-40 mix-blend-screen" />
               <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-96 h-96 bg-accent rounded-full blur-[80px] opacity-40 mix-blend-screen" />

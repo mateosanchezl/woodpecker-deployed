@@ -26,50 +26,60 @@ export function FeaturesSection() {
         <section id="how-it-works" className="py-24 sm:py-32 relative overflow-hidden">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center max-w-3xl mx-auto mb-16">
-                    <h2 className="text-3xl sm:text-5xl font-bold tracking-tight mb-6">
-                        Everything you need to <span className="text-primary">master tactics</span>
-                    </h2>
-                    <p className="text-lg text-muted-foreground">
-                        We've combined the most effective training method with modern technology to create the ultimate chess improvement tool.
-                    </p>
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                    >
+                        <h2 className="text-4xl sm:text-6xl font-black tracking-tight mb-6">
+                            Everything you need to <br className="hidden sm:block" />
+                            <span className="text-primary italic pr-2">master tactics</span>
+                        </h2>
+                        <p className="text-xl text-muted-foreground font-medium">
+                            We&apos;ve combined the most effective training method with modern technology to create the ultimate chess improvement tool.
+                        </p>
+                    </motion.div>
                 </div>
 
                 <Tabs defaultValue="method" className="w-full max-w-5xl mx-auto" onValueChange={setActiveTab}>
-                    <div className="flex justify-center mb-12 overflow-x-auto pb-4 sm:pb-0">
-                        <TabsList className="h-auto p-1 bg-muted border border-border/50 rounded-full">
+                    <div className="flex justify-center mb-12 overflow-x-auto pb-4 sm:pb-0 hide-scrollbar px-4">
+                        <TabsList className="h-auto p-1.5 bg-background/60 backdrop-blur-xl border border-border/50 rounded-full shadow-sm">
                             <TabsTrigger
                                 value="method"
-                                className="rounded-full px-6 py-3 text-base data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
+                                className="rounded-full px-5 sm:px-6 py-3 text-sm sm:text-base font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
                             >
-                                <Brain className="w-4 h-4 mr-2" />
-                                The Method
+                                <Brain className="w-4 h-4 sm:mr-2" />
+                                <span className="hidden sm:inline">The Method</span>
                             </TabsTrigger>
                             <TabsTrigger
                                 value="gamification"
-                                className="rounded-full px-6 py-3 text-base data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
+                                className="rounded-full px-5 sm:px-6 py-3 text-sm sm:text-base font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
                             >
-                                <Trophy className="w-4 h-4 mr-2" />
-                                Gamification
+                                <Trophy className="w-4 h-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Gamification</span>
                             </TabsTrigger>
                             <TabsTrigger
                                 value="analytics"
-                                className="rounded-full px-6 py-3 text-base data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
+                                className="rounded-full px-5 sm:px-6 py-3 text-sm sm:text-base font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
                             >
-                                <TrendingUp className="w-4 h-4 mr-2" />
-                                Analytics
+                                <TrendingUp className="w-4 h-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Analytics</span>
                             </TabsTrigger>
                             <TabsTrigger
                                 value="content"
-                                className="rounded-full px-6 py-3 text-base data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
+                                className="rounded-full px-5 sm:px-6 py-3 text-sm sm:text-base font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
                             >
-                                <Target className="w-4 h-4 mr-2" />
-                                Content
+                                <Target className="w-4 h-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Content</span>
                             </TabsTrigger>
                         </TabsList>
                     </div>
 
-                    <div className="relative min-h-[500px] rounded-3xl border border-border bg-card overflow-hidden shadow-2xl">
-                        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
+                    <div className="relative min-h-[500px] sm:min-h-[550px] rounded-[2.5rem] border border-border/60 bg-background/60 backdrop-blur-xl overflow-hidden shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)]">
+                        {/* Decorative inner glow */}
+                        <div className="absolute inset-0 bg-linear-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
+                        <div className="absolute -top-24 -right-24 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+                        <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
 
                         <AnimatePresence mode="wait">
                             {activeTab === "method" && (
@@ -155,25 +165,31 @@ function FeatureContent({ title, description, features, visual }: {
         >
             <div className="flex flex-col justify-center space-y-8">
                 <div>
-                    <h3 className="text-3xl font-bold mb-4">{title}</h3>
-                    <p className="text-lg text-muted-foreground leading-relaxed">
+                    <h3 className="text-3xl sm:text-4xl font-black mb-4 tracking-tight">{title}</h3>
+                    <p className="text-lg sm:text-xl text-muted-foreground leading-relaxed font-medium">
                         {description}
                     </p>
                 </div>
 
                 <div className="space-y-4">
                     {features.map((feature, i) => (
-                        <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-background/50 border border-border/50">
-                            <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                                <feature.icon className="w-5 h-5" />
+                        <motion.div 
+                            key={i} 
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.1 + 0.2 }}
+                            className="flex items-center gap-4 p-4 rounded-2xl bg-background/40 backdrop-blur-sm border border-border/40 shadow-sm hover:shadow-md transition-shadow"
+                        >
+                            <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
+                                <feature.icon className="w-6 h-6" />
                             </div>
-                            <span className="font-medium">{feature.text}</span>
-                        </div>
+                            <span className="font-bold text-foreground">{feature.text}</span>
+                        </motion.div>
                     ))}
                 </div>
             </div>
 
-            <div className="relative h-full min-h-[300px] lg:min-h-[400px] flex items-center justify-center p-4 sm:p-8 bg-muted/30 rounded-2xl border border-border/50 overflow-hidden">
+            <div className="relative h-full min-h-[350px] lg:min-h-[450px] flex items-center justify-center p-6 sm:p-10 bg-linear-to-br from-background/50 to-muted/30 rounded-[2rem] border border-border/50 overflow-hidden shadow-inner">
                 {visual}
             </div>
         </motion.div>
@@ -184,23 +200,34 @@ function MethodVisual() {
     return (
         <div className="w-full max-w-md space-y-6">
             {[
-                { cycle: 1, time: "60m", label: "Initial Solve", width: "100%", color: "bg-primary/40" },
-                { cycle: 2, time: "30m", label: "First Repetition", width: "50%", color: "bg-primary/60" },
-                { cycle: 3, time: "15m", label: "Reinforcement", width: "25%", color: "bg-primary/80" },
+                { cycle: 1, time: "60m", label: "Initial Solve", width: "100%", color: "bg-muted-foreground/30" },
+                { cycle: 2, time: "30m", label: "First Repetition", width: "50%", color: "bg-primary/40" },
+                { cycle: 3, time: "15m", label: "Reinforcement", width: "25%", color: "bg-primary/60" },
                 { cycle: 4, time: "7.5m", label: "Mastery", width: "12.5%", color: "bg-primary" },
             ].map((item, i) => (
-                <div key={i} className="relative">
-                    <div className="flex justify-between text-sm mb-2">
-                        <span className="font-medium">{item.label}</span>
-                        <span className="font-mono text-muted-foreground">{item.time}</span>
+                <div key={i} className="relative bg-background/50 p-4 rounded-2xl border border-border/50 shadow-sm">
+                    <div className="flex justify-between text-sm mb-3">
+                        <span className="font-bold text-foreground flex items-center gap-2">
+                            {i === 3 && <Zap className="w-4 h-4 text-primary fill-primary/20" />}
+                            {item.label}
+                        </span>
+                        <span className="font-mono font-bold text-muted-foreground">{item.time}</span>
                     </div>
-                    <div className="h-4 bg-secondary rounded-full overflow-hidden">
+                    <div className="h-3 bg-secondary rounded-full overflow-hidden">
                         <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: item.width }}
-                            transition={{ duration: 1, delay: 0.2 + (i * 0.1) }}
-                            className={cn("h-full rounded-full", item.color)}
-                        />
+                            transition={{ duration: 1, delay: 0.2 + (i * 0.1), ease: "easeOut" }}
+                            className={cn("h-full rounded-full relative overflow-hidden", item.color)}
+                        >
+                            {i === 3 && (
+                                <motion.div 
+                                    animate={{ x: ["-100%", "200%"] }}
+                                    transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                                    className="absolute top-0 bottom-0 w-full bg-linear-to-r from-transparent via-white/30 to-transparent"
+                                />
+                            )}
+                        </motion.div>
                     </div>
                 </div>
             ))}
@@ -211,71 +238,90 @@ function MethodVisual() {
 function GamificationVisual() {
     return (
         <div className="grid grid-cols-2 gap-4 w-full max-w-md">
-            <div className="col-span-2 bg-card p-4 rounded-xl border border-border shadow-sm flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-orange-500/10 text-orange-500 rounded-lg">
-                        <Flame className="w-6 h-6" />
+            <motion.div 
+                whileHover={{ y: -5 }}
+                className="col-span-2 bg-background/80 backdrop-blur-md p-5 rounded-2xl border border-border/50 shadow-md flex items-center justify-between transition-all"
+            >
+                <div className="flex items-center gap-4">
+                    <div className="p-3 bg-chart-2/15 text-chart-2 rounded-xl">
+                        <Flame className="w-7 h-7" />
                     </div>
                     <div>
-                        <div className="font-bold text-lg">12 Day Streak</div>
-                        <div className="text-xs text-muted-foreground">Keep it up!</div>
+                        <div className="font-black text-xl">12 Day Streak</div>
+                        <div className="text-sm font-medium text-muted-foreground">Keep it up!</div>
                     </div>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-1.5">
                     {[1, 1, 1, 1, 0].map((active, i) => (
-                        <div key={i} className={cn("w-2 h-8 rounded-full", active ? "bg-orange-500" : "bg-muted")} />
+                        <div key={i} className={cn("w-3 h-10 rounded-full", active ? "bg-chart-2 shadow-[0_0_10px_rgba(255,165,0,0.3)]" : "bg-muted")} />
                     ))}
                 </div>
-            </div>
+            </motion.div>
 
-            <div className="bg-card p-4 rounded-xl border border-border shadow-sm flex flex-col items-center justify-center text-center space-y-2">
-                <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500 mb-1">
-                    <Trophy className="w-6 h-6" />
+            <motion.div 
+                whileHover={{ y: -5 }}
+                className="bg-background/80 backdrop-blur-md p-6 rounded-2xl border border-border/50 shadow-md flex flex-col items-center justify-center text-center space-y-3 transition-all"
+            >
+                <div className="w-14 h-14 rounded-full bg-yellow-500/15 flex items-center justify-center text-yellow-600 mb-2 shadow-inner">
+                    <Trophy className="w-7 h-7" />
                 </div>
-                <div className="font-bold">Top 5%</div>
-                <div className="text-xs text-muted-foreground">Global League</div>
-            </div>
+                <div className="font-black text-lg">Top 5%</div>
+                <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Global League</div>
+            </motion.div>
 
-            <div className="bg-card p-4 rounded-xl border border-border shadow-sm flex flex-col items-center justify-center text-center space-y-2">
-                <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-500 mb-1">
-                    <Sparkles className="w-6 h-6" />
+            <motion.div 
+                whileHover={{ y: -5 }}
+                className="bg-background/80 backdrop-blur-md p-6 rounded-2xl border border-border/50 shadow-md flex flex-col items-center justify-center text-center space-y-3 transition-all"
+            >
+                <div className="w-14 h-14 rounded-full bg-chart-5/15 flex items-center justify-center text-chart-5 mb-2 shadow-inner">
+                    <Sparkles className="w-7 h-7" />
                 </div>
-                <div className="font-bold">Speed Demon</div>
-                <div className="text-xs text-muted-foreground">Achievement Unlocked</div>
-            </div>
+                <div className="font-black text-lg">Speed Demon</div>
+                <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Achievement</div>
+            </motion.div>
         </div>
     );
 }
 
 function AnalyticsVisual() {
     return (
-        <div className="w-full max-w-md bg-card p-6 rounded-xl border border-border shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-                <h4 className="font-semibold">Performance Trend</h4>
-                <select className="text-xs bg-transparent border-none text-muted-foreground outline-none">
-                    <option>Last 30 Days</option>
-                </select>
+        <div className="w-full max-w-md bg-background/80 backdrop-blur-md p-8 rounded-3xl border border-border/50 shadow-xl">
+            <div className="flex items-center justify-between mb-8">
+                <h4 className="font-black text-xl">Woodpecker Index</h4>
+                <div className="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full">
+                    Last 30 Days
+                </div>
             </div>
 
-            <div className="h-48 flex items-end justify-between gap-2">
+            <div className="h-48 flex items-end justify-between gap-3 relative">
+                {/* Background grid lines */}
+                <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20">
+                    {[1, 2, 3, 4].map(i => <div key={i} className="w-full h-px bg-border" />)}
+                </div>
+
                 {[35, 45, 40, 55, 60, 50, 65, 75, 70, 85, 80, 95].map((h, i) => (
                     <motion.div
                         key={i}
                         initial={{ height: 0 }}
                         animate={{ height: `${h}%` }}
-                        transition={{ duration: 0.5, delay: i * 0.05 }}
-                        className="w-full bg-primary/20 rounded-t-sm relative group"
+                        transition={{ duration: 0.6, delay: i * 0.05, type: "spring" }}
+                        className="w-full bg-primary/20 rounded-t-md relative group hover:bg-primary/30 transition-colors cursor-pointer"
                     >
-                        <div className="absolute bottom-0 left-0 w-full bg-primary rounded-t-sm transition-all duration-300 group-hover:bg-primary/80" style={{ height: '100%' }} />
+                        <motion.div 
+                            initial={{ height: 0 }}
+                            animate={{ height: "100%" }}
+                            transition={{ duration: 0.6, delay: i * 0.05, type: "spring" }}
+                            className="absolute bottom-0 left-0 w-full bg-primary rounded-t-md shadow-[0_0_10px_rgba(0,0,0,0.1)]" 
+                        />
                     </motion.div>
                 ))}
             </div>
 
-            <div className="flex justify-between mt-4 text-xs text-muted-foreground">
-                <span>Week 1</span>
-                <span>Week 2</span>
-                <span>Week 3</span>
-                <span>Week 4</span>
+            <div className="flex justify-between mt-6 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                <span>W1</span>
+                <span>W2</span>
+                <span>W3</span>
+                <span>W4</span>
             </div>
         </div>
     );
@@ -283,26 +329,28 @@ function AnalyticsVisual() {
 
 function ContentVisual() {
     return (
-        <div className="relative w-full max-w-[320px] aspect-square">
-            <div className="absolute inset-0 bg-gradient-radial from-primary/15 to-transparent rounded-xl" />
-            <div className="relative rounded-lg overflow-hidden shadow-2xl border border-border">
-                <Chessboard
-                    options={{
-                        position: "r1bqk2r/pp2bppp/2n2n2/2pp4/3P4/2N1BN2/PPP1BPPP/R2Q1RK1 w kq - 4 8",
-                        allowDragging: false,
-                        darkSquareStyle: { backgroundColor: 'oklch(0.6 0.1 145)' },
-                        lightSquareStyle: { backgroundColor: 'oklch(0.96 0.03 145)' },
-                        boardStyle: {
-                            borderRadius: '0px',
-                        },
-                    }}
-                />
-                <div className="absolute bottom-4 left-4 right-4 bg-background/95 p-3 rounded-lg border border-border shadow-lg">
-                    <div className="flex items-center gap-2 mb-1">
-                        <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-bold uppercase">Hard</span>
-                        <span className="text-xs font-medium">Sicilian Defense</span>
+        <div className="relative w-full max-w-[320px] aspect-square group">
+            <div className="absolute -inset-4 bg-primary/20 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-border/50 bg-background/50 p-2 backdrop-blur-sm transition-transform duration-500 group-hover:scale-[1.02]">
+                <div className="rounded-xl overflow-hidden ring-1 ring-border/50 shadow-inner">
+                    <Chessboard
+                        options={{
+                            position: "r1bqk2r/pp2bppp/2n2n2/2pp4/3P4/2N1BN2/PPP1BPPP/R2Q1RK1 w kq - 4 8",
+                            allowDragging: false,
+                            darkSquareStyle: { backgroundColor: 'oklch(0.6 0.1 145)' },
+                            lightSquareStyle: { backgroundColor: 'oklch(0.96 0.03 145)' },
+                            boardStyle: {
+                                borderRadius: '12px',
+                            },
+                        }}
+                    />
+                </div>
+                <div className="absolute bottom-6 left-6 right-6 bg-background/90 backdrop-blur-md p-4 rounded-xl border border-border shadow-xl transform transition-transform duration-500 group-hover:-translate-y-1">
+                    <div className="flex items-center gap-2 mb-1.5">
+                        <span className="px-2 py-1 rounded bg-chart-2/10 text-chart-2 text-[10px] font-black uppercase tracking-wider">Hard</span>
+                        <span className="text-sm font-bold">Sicilian Defense</span>
                     </div>
-                    <div className="text-xs text-muted-foreground">Find the best move for White</div>
+                    <div className="text-xs font-medium text-muted-foreground">Find the best move for White</div>
                 </div>
             </div>
         </div>

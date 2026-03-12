@@ -76,7 +76,7 @@ export function AchievementsDisplay({
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-3 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white">
+                <div className="p-3 rounded-2xl bg-linear-to-br from-amber-400 to-orange-500 text-white shadow-sm">
                   <Trophy className="h-6 w-6" />
                 </div>
                 <div>
@@ -97,7 +97,7 @@ export function AchievementsDisplay({
             {/* Progress bar */}
             <div className="mt-4 h-2 bg-muted rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-amber-400 to-orange-500 transition-all duration-500"
+                className="h-full bg-linear-to-r from-amber-400 to-orange-500 transition-all duration-500"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -148,10 +148,10 @@ function AchievementCard({ achievement, compact = false }: AchievementCardProps)
   return (
     <Card
       className={cn(
-        'transition-all hover:shadow-md',
+        'transition-all duration-300',
         achievement.isUnlocked
-          ? 'bg-gradient-to-br from-amber-50/50 to-yellow-50/50 dark:from-amber-950/20 dark:to-yellow-950/20 border-amber-200/50 dark:border-amber-800/50'
-          : 'opacity-60'
+          ? 'bg-linear-to-br from-amber-50/50 to-yellow-50/50 dark:from-amber-950/20 dark:to-yellow-950/20 border-amber-200/50 dark:border-amber-800/50 hover:shadow-md hover:-translate-y-0.5'
+          : 'opacity-60 grayscale hover:opacity-80 transition-opacity'
       )}
     >
       <CardContent className="pt-4 pb-4 flex flex-col items-center text-center">

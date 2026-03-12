@@ -49,8 +49,8 @@ export default function LeaderboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Leaderboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Leaderboard</h1>
+          <p className="text-lg text-muted-foreground mt-2">
             See how you stack up against other players
           </p>
         </div>
@@ -66,11 +66,11 @@ export default function LeaderboardPage() {
       )}
 
       {/* Leaderboard Table */}
-      <Card>
+      <Card className="overflow-hidden border-primary/10 shadow-sm transition-shadow hover:shadow-md duration-300">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base font-medium flex items-center gap-2">
-            <div className="rounded-lg bg-violet-100 p-1.5">
-              <Users className="h-4 w-4 text-violet-600" />
+          <CardTitle className="text-xl font-bold flex items-center gap-3">
+            <div className="rounded-2xl bg-violet-100 p-2.5 shadow-sm">
+              <Users className="h-5 w-5 text-violet-600" />
             </div>
             {period === 'weekly' ? 'This Week' : 'All Time'} Rankings
             {data?.pagination.total !== undefined && (

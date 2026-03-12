@@ -22,16 +22,16 @@ export function CurrentUserRank({
   const { entry, rank } = currentUser
 
   return (
-    <Card className="bg-primary/5 border-primary/20">
+    <Card className="bg-linear-to-r from-primary/10 to-primary/5 border-primary/20 shadow-sm transition-all hover:shadow-md">
       <CardContent className="py-4">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-3 flex-1">
-            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
-              <User className="h-5 w-5 text-primary" />
+          <div className="flex items-center gap-4 flex-1">
+            <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-primary/10 shadow-sm">
+              <User className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <p className="text-sm font-medium">Your Ranking</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-base font-semibold">Your Ranking</p>
+              <p className="text-sm text-muted-foreground mt-0.5">
                 {rank ? `#${rank}` : 'Unranked'} with {entry.puzzlesSolved}{' '}
                 puzzles solved
               </p>

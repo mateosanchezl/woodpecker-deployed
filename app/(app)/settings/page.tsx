@@ -278,8 +278,8 @@ export default function SettingsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Settings</h1>
+        <p className="text-lg text-muted-foreground mt-2">
           Manage your account preferences
         </p>
       </div>
@@ -290,12 +290,14 @@ export default function SettingsPage() {
             variant="outline"
             onClick={handleReset}
             disabled={updateSettings.isPending}
+            className="rounded-xl"
           >
             Reset
           </Button>
           <Button
             onClick={handleSave}
             disabled={updateSettings.isPending}
+            className="rounded-xl shadow-md shadow-primary/20 transition-transform active:scale-[0.98]"
           >
             {updateSettings.isPending ? 'Saving...' : 'Save changes'}
           </Button>
@@ -305,9 +307,9 @@ export default function SettingsPage() {
       {/* Privacy Settings */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-medium flex items-center gap-2">
-            <div className="rounded-lg bg-violet-100 p-1.5">
-              <Users className="h-4 w-4 text-violet-600" />
+          <CardTitle className="text-xl font-bold flex items-center gap-3">
+            <div className="rounded-2xl bg-violet-100 p-2.5 shadow-sm">
+              <Users className="h-5 w-5 text-violet-600" />
             </div>
             Privacy
           </CardTitle>
@@ -349,9 +351,9 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-medium flex items-center gap-2">
-            <div className="rounded-lg bg-emerald-100 p-1.5">
-              <Clock3 className="h-4 w-4 text-emerald-700" />
+          <CardTitle className="text-xl font-bold flex items-center gap-3">
+            <div className="rounded-2xl bg-emerald-100 p-2.5 shadow-sm">
+              <Clock3 className="h-5 w-5 text-emerald-700" />
             </div>
             Training Session
           </CardTitle>
@@ -383,9 +385,9 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-medium flex items-center gap-2">
-            <div className="rounded-lg bg-sky-100 p-1.5">
-              <Palette className="h-4 w-4 text-sky-700" />
+          <CardTitle className="text-xl font-bold flex items-center gap-3">
+            <div className="rounded-2xl bg-sky-100 p-2.5 shadow-sm">
+              <Palette className="h-5 w-5 text-sky-700" />
             </div>
             Board Appearance
           </CardTitle>
@@ -417,9 +419,9 @@ export default function SettingsPage() {
       {/* Training Preferences */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-medium flex items-center gap-2">
-            <div className="rounded-lg bg-amber-100 p-1.5">
-              <Target className="h-4 w-4 text-amber-600" />
+          <CardTitle className="text-xl font-bold flex items-center gap-3">
+            <div className="rounded-2xl bg-amber-100 p-2.5 shadow-sm">
+              <Target className="h-5 w-5 text-amber-600" />
             </div>
             Training Preferences
           </CardTitle>
@@ -502,9 +504,9 @@ export default function SettingsPage() {
       {/* Account Info */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-medium flex items-center gap-2">
-            <div className="rounded-lg bg-slate-100 p-1.5">
-              <Settings className="h-4 w-4 text-slate-600" />
+          <CardTitle className="text-xl font-bold flex items-center gap-3">
+            <div className="rounded-2xl bg-slate-100 p-2.5 shadow-sm">
+              <Settings className="h-5 w-5 text-slate-600" />
             </div>
             Account
           </CardTitle>

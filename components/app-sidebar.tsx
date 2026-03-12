@@ -68,17 +68,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     <Sidebar {...props}>
       <SidebarHeader className="gap-0 border-b border-sidebar-border/60">
         <div className="flex items-center justify-between px-3 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl">
+          <Link href="/dashboard" className="flex items-center gap-2 group transition-transform hover:scale-105">
+            <div className="relative h-10 w-10 overflow-hidden rounded-md">
               <Image
-                src="/darklogo.png"
-                width={48}
-                height={48}
-                sizes="48px"
+                src="/pecklogoicon.png"
                 alt="Peck Logo"
+                fill
+                sizes="40px"
+                className="object-contain"
               />
             </div>
-          </div>
+            <span className="font-serif text-2xl font-black tracking-tighter">
+              Peck
+            </span>
+          </Link>
           <StreakBadge />
         </div>
         <UserLevelDisplay />

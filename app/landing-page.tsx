@@ -3,38 +3,20 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { SignedIn, SignedOut } from "@clerk/nextjs";
 import {
   ArrowRight,
-  Brain,
   Target,
   Trophy,
   Sparkles,
   Zap,
-  Repeat,
   CheckCircle2,
   TrendingUp,
   Users,
-  Clock,
+  Repeat,
+  Flame,
 } from "lucide-react";
 import { motion } from "framer-motion";
-
 import { Chessboard } from "react-chessboard";
-
-const fadeInUp = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.5 },
-};
-
-const staggerContainer = {
-  animate: {
-    transition: {
-      staggerChildren: 0.1,
-    },
-  },
-};
-
 import { FeaturesSection } from "@/components/landing/features-section";
 import { LandingNavbar } from "@/components/landing/navbar";
 
@@ -47,6 +29,20 @@ const formatLargeNumber = (value: number) => {
     notation: "compact",
     maximumFractionDigits: 1,
   }).format(value);
+};
+
+const fadeInUp = {
+  initial: { opacity: 0, y: 24 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] },
+};
+
+const staggerContainer = {
+  animate: {
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
 };
 
 export default function LandingPage({
@@ -66,44 +62,41 @@ export default function LandingPage({
 
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative py-16 sm:py-24 lg:py-32 overflow-hidden">
-          {/* Abstract Background Shapes - using opacity gradient instead of blur for performance */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl -z-10 pointer-events-none">
-            <div
-              className="absolute top-20 left-10 w-72 h-72 bg-gradient-radial from-primary/10 to-transparent rounded-full"
-              style={{ animationDuration: "4s" }}
-            />
-            <div
-              className="absolute bottom-20 right-10 w-96 h-96 bg-gradient-radial from-accent/20 to-transparent rounded-full"
-              style={{ animationDuration: "6s" }}
-            />
+        <section className="relative py-20 sm:py-32 lg:py-40 overflow-hidden">
+          {/* Playful Dotted Background */}
+          <div className="absolute inset-0 -z-20 h-full w-full bg-[radial-gradient(var(--color-primary)_1px,transparent_1px)] bg-size-[24px_24px] opacity-10" />
+          
+          {/* Soft Gradients */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-screen-2xl -z-10 pointer-events-none">
+            <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-accent/30 rounded-full blur-[100px] opacity-60" />
+            <div className="absolute bottom-0 left-1/4 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] opacity-60" />
           </div>
 
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
+            <div className="flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
               <motion.div
-                className="flex-1 text-center lg:text-left"
+                className="flex-1 text-center lg:text-left z-10"
                 initial="initial"
                 animate="animate"
                 variants={staggerContainer}
               >
                 <motion.div
                   variants={fadeInUp}
-                  className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary mb-8"
+                  className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary mb-8 shadow-sm backdrop-blur-sm"
                 >
                   <Sparkles className="h-4 w-4" />
-                  <span>Free • The Scientific Way to Master Chess</span>
+                  <span>The Scientific Way to Master Chess</span>
                 </motion.div>
 
                 <motion.h1
                   variants={fadeInUp}
-                  className="text-5xl sm:text-7xl lg:text-8xl font-bold tracking-tighter leading-[0.9] mb-8"
+                  className="text-5xl sm:text-7xl lg:text-8xl font-bold tracking-tighter leading-[1.05] mb-8 text-foreground"
                 >
-                  Don't just solve. <br />
-                  <span className="text-primary relative inline-block italic">
-                    Internalize.
+                  Don&apos;t just solve. <br />
+                  <span className="relative inline-block mt-2">
+                    <span className="relative z-10 text-primary italic pr-4">Internalize.</span>
                     <svg
-                      className="absolute -bottom-2 left-0 w-full h-3 text-primary/30"
+                      className="absolute -bottom-2 left-0 w-full h-4 text-chart-2/80"
                       viewBox="0 0 100 10"
                       preserveAspectRatio="none"
                     >
@@ -112,6 +105,7 @@ export default function LandingPage({
                         stroke="currentColor"
                         strokeWidth="4"
                         fill="none"
+                        strokeLinecap="round"
                       />
                     </svg>
                   </span>
@@ -119,35 +113,29 @@ export default function LandingPage({
 
                 <motion.p
                   variants={fadeInUp}
-                  className="text-xl text-muted-foreground max-w-2xl mx-auto lg:mx-0 mb-10 leading-relaxed"
+                  className="text-xl sm:text-2xl text-muted-foreground max-w-2xl mx-auto lg:mx-0 mb-10 leading-relaxed font-medium"
                 >
-                  The Woodpecker Method isn't about solving new puzzles every
-                  day. It's about solving the{" "}
-                  <span className="font-semibold text-foreground">
-                    same best puzzles
-                  </span>{" "}
-                  faster and faster until the patterns are burned into your
-                  subconscious.
+                  Stop grinding random puzzles. Build pure tactical intuition by solving the <span className="text-foreground font-bold">same high-quality set</span> faster and faster until the patterns become instinct.
                 </motion.p>
 
                 <motion.div
                   variants={fadeInUp}
-                  className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4"
+                  className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-5"
                 >
                   <Link href="/sign-up" className="w-full sm:w-auto">
                     <Button
                       size="lg"
-                      className="w-full h-14 px-8 text-lg rounded-2xl shadow-xl shadow-primary/20 hover:shadow-2xl hover:shadow-primary/30 transition-all hover:-translate-y-1"
+                      className="w-full sm:w-auto h-16 px-10 text-lg rounded-full shadow-xl shadow-primary/25 hover:shadow-2xl hover:shadow-primary/40 transition-all hover:-translate-y-1 font-bold"
                     >
                       Start Free Training
-                      <ArrowRight className="ml-2 h-5 w-5" />
+                      <ArrowRight className="ml-2 h-6 w-6" />
                     </Button>
                   </Link>
                   <Link href="#how-it-works" className="w-full sm:w-auto">
                     <Button
                       variant="outline"
                       size="lg"
-                      className="w-full h-14 px-8 text-lg rounded-2xl border-2 hover:bg-accent/50"
+                      className="w-full sm:w-auto h-16 px-10 text-lg rounded-full border-2 hover:bg-primary/5 hover:text-primary transition-colors font-bold bg-background/50 backdrop-blur-sm"
                     >
                       How It Works
                     </Button>
@@ -156,18 +144,18 @@ export default function LandingPage({
 
                 <motion.div
                   variants={fadeInUp}
-                  className="mt-12 flex items-center justify-center lg:justify-start gap-8 text-sm text-muted-foreground"
+                  className="mt-12 flex flex-wrap items-center justify-center lg:justify-start gap-6 text-sm font-semibold text-muted-foreground"
                 >
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                  <div className="flex items-center gap-2 bg-background/50 px-3 py-1.5 rounded-full">
+                    <CheckCircle2 className="h-5 w-5 text-primary" />
                     <span>Free Forever</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                  <div className="flex items-center gap-2 bg-background/50 px-3 py-1.5 rounded-full">
+                    <CheckCircle2 className="h-5 w-5 text-primary" />
                     <span>No Credit Card</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                  <div className="flex items-center gap-2 bg-background/50 px-3 py-1.5 rounded-full">
+                    <CheckCircle2 className="h-5 w-5 text-primary" />
                     <span>1.5M+ Puzzles</span>
                   </div>
                 </motion.div>
@@ -175,164 +163,81 @@ export default function LandingPage({
 
               {/* Visual Element */}
               <motion.div
-                className="flex-1 w-full max-w-md lg:max-w-full relative"
-                initial={{ opacity: 0, scale: 0.9, rotate: -2 }}
+                className="flex-1 w-full max-w-lg lg:max-w-full relative"
+                initial={{ opacity: 0, scale: 0.95, rotate: -1 }}
                 animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
+                transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
               >
-                <div className="relative rounded-3xl overflow-hidden border border-border shadow-2xl bg-card p-8 flex flex-col justify-center">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
+                {/* Floating Elements */}
+                <motion.div 
+                  animate={{ y: [0, -12, 0] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute -top-8 -right-4 md:-right-8 z-30 bg-background/90 backdrop-blur-md rounded-2xl p-4 shadow-xl border border-border flex items-center gap-4"
+                >
+                  <div className="h-12 w-12 rounded-full bg-chart-2/15 flex items-center justify-center text-chart-2">
+                    <Flame className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Streak</div>
+                    <div className="text-base font-bold text-foreground">14 Days</div>
+                  </div>
+                </motion.div>
+
+                <motion.div 
+                  animate={{ y: [0, 12, 0] }}
+                  transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                  className="absolute -bottom-10 -left-4 md:-left-10 z-30 bg-background/90 backdrop-blur-md rounded-2xl p-4 shadow-xl border border-border flex items-center gap-4"
+                >
+                  <div className="h-12 w-12 rounded-full bg-primary/15 flex items-center justify-center text-primary">
+                    <Repeat className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Cycle 3</div>
+                    <div className="text-base font-bold text-foreground">50% Faster</div>
+                  </div>
+                </motion.div>
+
+                <div className="relative rounded-[2rem] overflow-hidden border border-border/50 shadow-2xl bg-card p-6 md:p-10 flex flex-col justify-center">
+                  <div className="absolute inset-0 bg-linear-to-br from-primary/5 via-transparent to-accent/5" />
 
                   {/* Chessboard Layer */}
-                  <div className="relative z-20 mb-6">
-                    <div className="relative w-full max-w-[360px] mx-auto">
-                      {/* Board glow effect - using gradient instead of blur for performance */}
-                      <div className="absolute -inset-3 bg-gradient-radial from-primary/15 to-transparent rounded-2xl opacity-60" />
-
-                      <div className="relative aspect-square w-full rounded-xl overflow-hidden shadow-2xl ring-1 ring-border/50">
+                  <div className="relative z-20 mb-8">
+                    <div className="relative w-full max-w-[400px] mx-auto">
+                      <div className="absolute -inset-4 bg-primary/10 blur-2xl rounded-full opacity-60" />
+                      
+                      <div className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-2xl ring-1 ring-border/50 bg-background/50 p-2">
                         <Chessboard
                           options={{
-                            position:
-                              "6k1/p4pp1/2p1pb2/1q5p/N1Q5/1P2P1P1/P2r1P1P/2R3K1 w - - 1 26",
+                            position: "6k1/p4pp1/2p1pb2/1q5p/N1Q5/1P2P1P1/P2r1P1P/2R3K1 w - - 1 26",
                             allowDragging: false,
-                            darkSquareStyle: {
-                              backgroundColor: "oklch(0.6 0.1 145)",
-                            },
-                            lightSquareStyle: {
-                              backgroundColor: "oklch(0.96 0.03 145)",
-                            },
-                            boardStyle: {
-                              borderRadius: "12px",
-                            },
-                            // Highlight the winning move squares
+                            darkSquareStyle: { backgroundColor: "oklch(0.6 0.1 145)" },
+                            lightSquareStyle: { backgroundColor: "oklch(0.96 0.03 145)" },
+                            boardStyle: { borderRadius: "12px" },
                             squareStyles: {
-                              c4: {
-                                backgroundColor: "rgba(255, 255, 0, 0.35)",
-                              },
-                              c1: {
-                                backgroundColor: "rgba(255, 255, 0, 0.25)",
-                              },
-                            },
+                              c4: { backgroundColor: "rgba(255, 255, 0, 0.4)" },
+                              c1: { backgroundColor: "rgba(255, 255, 0, 0.3)" },
+                            }
                           }}
                         />
                       </div>
 
                       {/* "White to move" indicator */}
-                      <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-background border border-border shadow-lg">
-                        <span className="text-sm font-medium text-muted-foreground">
-                          White to move
-                        </span>
+                      <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 px-5 py-2 rounded-full bg-background border border-border shadow-lg font-bold text-sm text-foreground flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-white border border-gray-300 shadow-sm" />
+                        White to move
                       </div>
                     </div>
                   </div>
 
-                  {/* Abstract Representation of Cycles */}
-                  <div className="relative z-10 space-y-6 bg-card rounded-xl p-6 border border-border/50 shadow-sm">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                          <TrendingUp className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-sm">
-                            Woodpecker Progress
-                          </h3>
-                          <p className="text-xs text-muted-foreground">
-                            Set #142 • 150 Puzzles
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-primary leading-none">
-                          8x
-                        </div>
-                        <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                          Faster
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      {/* Cycle 1 */}
-                      <div className="group">
-                        <div className="flex justify-between text-xs mb-1.5">
-                          <span className="text-muted-foreground font-medium group-hover:text-foreground transition-colors">
-                            Cycle 1
-                          </span>
-                          <span className="font-mono text-muted-foreground">
-                            45m 00s
-                          </span>
-                        </div>
-                        <div className="h-2 bg-secondary/50 rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: "100%" }}
-                            transition={{ duration: 1, delay: 0.5 }}
-                            className="h-full bg-muted-foreground/20 rounded-full"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Cycle 2 */}
-                      <div className="group">
-                        <div className="flex justify-between text-xs mb-1.5">
-                          <span className="text-muted-foreground font-medium group-hover:text-foreground transition-colors">
-                            Cycle 2
-                          </span>
-                          <span className="font-mono text-muted-foreground">
-                            22m 30s
-                          </span>
-                        </div>
-                        <div className="h-2 bg-secondary/50 rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: "50%" }}
-                            transition={{ duration: 1, delay: 0.8 }}
-                            className="h-full bg-primary/30 rounded-full"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Cycle 3 */}
-                      <div className="group">
-                        <div className="flex justify-between text-xs mb-1.5">
-                          <span className="text-muted-foreground font-medium group-hover:text-foreground transition-colors">
-                            Cycle 3
-                          </span>
-                          <span className="font-mono text-muted-foreground">
-                            11m 15s
-                          </span>
-                        </div>
-                        <div className="h-2 bg-secondary/50 rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: "25%" }}
-                            transition={{ duration: 1, delay: 1.1 }}
-                            className="h-full bg-primary/60 rounded-full"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Cycle 4 - Highlighted */}
-                      <div className="relative pt-1">
-                        <div className="flex justify-between text-xs mb-1.5">
-                          <span className="text-primary font-bold flex items-center gap-1.5">
-                            <Zap className="h-3 w-3 fill-current" />
-                            Cycle 4
-                          </span>
-                          <span className="font-mono font-bold text-primary">
-                            05m 30s
-                          </span>
-                        </div>
-                        <div className="h-2.5 bg-secondary/50 rounded-full overflow-hidden ring-2 ring-primary/10 ring-offset-1 ring-offset-card">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: "12%" }}
-                            transition={{ duration: 1, delay: 1.4 }}
-                            className="h-full bg-gradient-to-r from-primary to-primary/80 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.2)] shadow-primary"
-                          />
-                        </div>
-                      </div>
+                  {/* Clean Concept Indicator */}
+                  <div className="relative z-10 bg-background/80 backdrop-blur-sm rounded-2xl p-6 border border-border shadow-sm text-center">
+                    <p className="text-lg font-bold text-foreground mb-3">The Woodpecker Cycle</p>
+                    <div className="flex items-center justify-center gap-3 sm:gap-4 text-sm font-semibold text-muted-foreground">
+                      <span className="flex items-center gap-1.5"><Target className="h-4 w-4 text-primary" /> Accuracy</span>
+                      <ArrowRight className="h-4 w-4 opacity-30" />
+                      <span className="flex items-center gap-1.5"><Repeat className="h-4 w-4 text-primary" /> Repetition</span>
+                      <ArrowRight className="h-4 w-4 opacity-30" />
+                      <span className="flex items-center gap-1.5 text-foreground"><Zap className="h-4 w-4 text-chart-2" /> Intuition</span>
                     </div>
                   </div>
                 </div>
@@ -341,41 +246,55 @@ export default function LandingPage({
           </div>
         </section>
 
-        {/* Completed Puzzles Banner */}
-        <section className="border-y border-primary/20 bg-primary/10">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
-            <div className="mx-auto max-w-3xl rounded-2xl border border-primary/30 bg-background/70 px-6 py-6 sm:px-10 sm:py-8 text-center shadow-sm">
-              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1 text-sm font-medium text-primary">
-                <Users className="h-4 w-4" />
-                Community Milestone
-              </div>
-              <div className="mt-4 text-4xl sm:text-5xl font-bold tracking-tight text-primary">
-                {completedPuzzlesDisplay}
-              </div>
-              <p className="mt-2 text-sm sm:text-base text-muted-foreground font-medium">
-                Puzzles completed by Peck users
-              </p>
+        {/* Milestone & Stats Combined Section */}
+        <section className="relative py-24 bg-card border-y border-border overflow-hidden">
+          {/* Subtle background lines */}
+          <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "repeating-linear-gradient(45deg, var(--color-foreground) 0, var(--color-foreground) 1px, transparent 0, transparent 50%)", backgroundSize: "10px 10px" }} />
+          
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div className="flex flex-col items-center justify-center text-center mb-20">
+               <motion.div 
+                 initial={{ opacity: 0, scale: 0.9 }} 
+                 whileInView={{ opacity: 1, scale: 1 }} 
+                 viewport={{ once: true }}
+                 className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-5 py-2 text-sm font-bold text-primary mb-6"
+               >
+                 <Users className="h-5 w-5" />
+                 Community Milestone
+               </motion.div>
+               <motion.h2 
+                 initial={{ opacity: 0, y: 20 }} 
+                 whileInView={{ opacity: 1, y: 0 }} 
+                 viewport={{ once: true }}
+                 className="text-6xl sm:text-8xl lg:text-[8rem] font-black tracking-tighter text-foreground mb-6"
+               >
+                 {completedPuzzlesDisplay}
+               </motion.h2>
+               <p className="text-xl sm:text-2xl text-muted-foreground font-medium">
+                 Puzzles completed and <span className="italic text-foreground">internalized</span> by Peck users.
+               </p>
             </div>
-          </div>
-        </section>
 
-        {/* Stats Strip */}
-        <section className="border-y border-border bg-muted/30">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-2 md:grid-cols-3 divide-x divide-border/50">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-10 max-w-5xl mx-auto">
               {stats.map((stat, i) => (
-                <div
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
                   key={i}
-                  className="py-8 px-4 text-center group hover:bg-background/50 transition-colors"
+                  className="bg-background rounded-3xl p-8 border border-border shadow-sm text-center hover:shadow-md transition-shadow group"
                 >
-                  <stat.icon className="h-6 w-6 mx-auto mb-3 text-muted-foreground group-hover:text-primary transition-colors" />
-                  <div className="text-2xl sm:text-3xl font-bold tracking-tight">
+                  <div className="h-14 w-14 mx-auto bg-primary/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                    <stat.icon className="h-7 w-7 text-primary" />
+                  </div>
+                  <div className="text-4xl font-black tracking-tight mb-2">
                     {stat.value}
                   </div>
-                  <div className="text-sm text-muted-foreground font-medium mt-1">
+                  <div className="text-base text-muted-foreground font-semibold">
                     {stat.label}
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
@@ -384,29 +303,37 @@ export default function LandingPage({
         {/* Features Section */}
         <FeaturesSection />
 
-        {/* CTA Section */}
-        <section className="py-24 relative overflow-hidden">
-          <div className="absolute inset-0 bg-primary/5 -z-10" />
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="rounded-3xl bg-primary text-primary-foreground p-8 sm:p-16 text-center relative overflow-hidden">
-              {/* Decorative circles - using gradient instead of blur for performance */}
-              <div className="absolute top-0 left-0 w-64 h-64 bg-gradient-radial from-white/10 to-transparent rounded-full -translate-x-1/2 -translate-y-1/2" />
-              <div className="absolute bottom-0 right-0 w-64 h-64 bg-gradient-radial from-black/10 to-transparent rounded-full translate-x-1/2 translate-y-1/2" />
-
-              <div className="relative z-10 max-w-2xl mx-auto">
-                <h2 className="text-3xl sm:text-5xl font-bold mb-6">
-                  Ready to transform your chess?
+        {/* Enhanced CTA Section */}
+        <section className="py-24 sm:py-32 relative overflow-hidden">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="relative rounded-[3rem] bg-foreground text-background p-10 sm:p-20 text-center shadow-2xl overflow-hidden mt-12 mb-12 lg:mb-20">
+              {/* Playful abstract shapes in the CTA background */}
+              <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-primary rounded-full blur-[80px] opacity-40 mix-blend-screen" />
+              <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-96 h-96 bg-accent rounded-full blur-[80px] opacity-40 mix-blend-screen" />
+              
+              <div className="relative z-10 max-w-3xl mx-auto">
+                <div className="flex justify-center mb-8">
+                  <div className="relative h-16 w-16 overflow-hidden rounded-xl bg-background/10 p-2 backdrop-blur-sm border border-background/20 shadow-xl">
+                    <Image
+                      src="/pecklogoicon.png"
+                      alt="Peck Logo"
+                      fill
+                      sizes="64px"
+                      className="object-contain drop-shadow-md p-1"
+                    />
+                  </div>
+                </div>
+                <h2 className="text-4xl sm:text-6xl font-black mb-6 tracking-tight">
+                  Ready to transform your <span className="text-primary italic">tactical vision?</span>
                 </h2>
-                <p className="text-primary-foreground/80 text-lg mb-10">
-                  Join players who have switched from random solving to
-                  deliberate practice.
+                <p className="text-background/80 text-xl sm:text-2xl mb-12 font-medium">
+                  Join ambitious players who have switched from random puzzle solving to deliberate, scientific practice.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <div className="flex flex-col sm:flex-row gap-5 justify-center">
                   <Link href="/sign-up">
                     <Button
                       size="lg"
-                      variant="secondary"
-                      className="w-full sm:w-auto h-14 px-8 text-lg font-semibold shadow-xl"
+                      className="w-full sm:w-auto h-16 px-10 text-lg font-bold shadow-xl rounded-full bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 transition-all"
                     >
                       Start Free Training
                     </Button>
@@ -415,13 +342,13 @@ export default function LandingPage({
                     <Button
                       size="lg"
                       variant="outline"
-                      className="w-full sm:w-auto h-14 px-8 text-lg bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10"
+                      className="w-full sm:w-auto h-16 px-10 text-lg font-bold rounded-full bg-transparent border-background/30 text-background hover:bg-background/10 hover:text-background"
                     >
                       Log In
                     </Button>
                   </Link>
                 </div>
-                <p className="mt-6 text-sm text-primary-foreground/60">
+                <p className="mt-8 text-sm font-semibold text-background/50">
                   Free forever • No credit card required
                 </p>
               </div>
@@ -431,72 +358,46 @@ export default function LandingPage({
 
         {/* Footer */}
         <footer className="py-12 border-t border-border bg-background">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-2 font-bold text-xl">
-              <Image
-                src="/pecklogoicon.png"
-                alt="Peck Logo"
-                width={32}
-                height={32}
-                className="h-8 w-8"
-              />
-              <span>Peck</span>
-            </div>
-            <div className="text-sm text-muted-foreground">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-8">
+            <Link href="/" className="flex items-center gap-2 group">
+              <div className="relative h-10 w-10 overflow-hidden rounded-md transition-transform group-hover:scale-105">
+                <Image
+                  src="/pecklogoicon.png"
+                  alt="Peck Logo"
+                  fill
+                  sizes="40px"
+                  className="object-contain"
+                />
+              </div>
+              <span className="font-serif text-2xl font-black tracking-tighter">
+                Peck
+              </span>
+            </Link>
+            <div className="text-sm font-medium text-muted-foreground">
               © {new Date().getFullYear()} Peck. All rights reserved.
             </div>
-            <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
-              <Link
-                href="/features"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Features
-              </Link>
-              <Link
-                href="/pricing"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Pricing
-              </Link>
-              <Link
-                href="/about"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                About
-              </Link>
-              <Link
-                href="/faq"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                FAQ
-              </Link>
-              <Link
-                href="/blog"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Blog
-              </Link>
-              <Link
-                href="/woodpecker-method"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Woodpecker Method
-              </Link>
-              <Link
-                href="/privacy"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Privacy
-              </Link>
-              <Link
-                href="/terms"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Terms
-              </Link>
+            <div className="flex flex-wrap justify-center gap-x-8 gap-y-4">
+              {[
+                { label: "Features", href: "/features" },
+                { label: "Pricing", href: "/pricing" },
+                { label: "About", href: "/about" },
+                { label: "FAQ", href: "/faq" },
+                { label: "Blog", href: "/blog" },
+                { label: "Method", href: "/woodpecker-method" },
+                { label: "Privacy", href: "/privacy" },
+                { label: "Terms", href: "/terms" },
+              ].map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {link.label}
+                </Link>
+              ))}
               <a
                 href="mailto:support@peckchess.com"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
               >
                 Contact
               </a>

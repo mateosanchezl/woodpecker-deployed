@@ -44,44 +44,45 @@ export function LandingNavbar() {
   });
 
   return (
-    <motion.header
-      className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out border-b py-2",
-        isScrolled
-          ? "bg-background/80 backdrop-blur-md border-border/40 shadow-sm"
-          : "bg-transparent border-transparent",
-      )}
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      transition={{ duration: 0.3 }}
-    >
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-14">
+    <div className="fixed top-0 left-0 right-0 z-50 flex justify-center w-full px-4 pt-4 pb-2 pointer-events-none">
+      <motion.header
+        className={cn(
+          "pointer-events-auto w-full max-w-5xl transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] py-2.5 px-4 rounded-full",
+          isScrolled
+            ? "bg-background/70 backdrop-blur-xl border border-border/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+            : "bg-transparent border-transparent",
+        )}
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <div className="w-full">
+          <div className="flex items-center justify-between h-12">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="relative h-20 w-20 overflow-hidden rounded-md transition-transform group-hover:scale-105">
+            <div className="relative h-10 w-10 overflow-hidden rounded-md transition-transform group-hover:scale-105">
               <Image
-                src="/darklogo.png"
-                alt=""
+                src="/pecklogoicon.png"
+                alt="Peck Logo"
                 fill
-                sizes="48px"
+                sizes="40px"
                 className="object-contain"
               />
             </div>
-            <span className="font-serif text-2xl font-bold tracking-tighter">
+            <span className="font-serif text-2xl font-black tracking-tighter">
               Peck
             </span>
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-1">
+          <nav className="hidden lg:flex items-center gap-1 bg-background/60 backdrop-blur-xl rounded-full px-2 py-1.5 border border-border/40 shadow-sm">
             {navItems.map((item) => (
               <Link
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  "px-4 py-2 text-sm font-medium rounded-full transition-colors hover:bg-muted/50 text-muted-foreground hover:text-foreground",
-                  "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                  "px-4 py-2 text-sm font-bold rounded-full transition-all hover:bg-background hover:shadow-sm text-muted-foreground hover:text-foreground",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
                 )}
               >
                 {item.name}
@@ -90,21 +91,19 @@ export function LandingNavbar() {
           </nav>
 
           {/* Auth Buttons */}
-          <div className="hidden sm:flex items-center gap-3">
+          <div className="hidden sm:flex items-center gap-2">
             <SignedOut>
               <Link href="/sign-in">
                 <Button
                   variant="ghost"
-                  size="sm"
-                  className="rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  className="rounded-full font-bold text-muted-foreground hover:text-foreground hover:bg-background/50 h-10 px-5"
                 >
-                  Log in
+                  Log In
                 </Button>
               </Link>
               <Link href="/sign-up">
                 <Button
-                  size="sm"
-                  className="rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all hover:-translate-y-0.5"
+                  className="rounded-full bg-foreground text-background hover:bg-foreground/90 font-bold shadow-lg h-10 px-6 transition-all hover:scale-105"
                 >
                   Start Training
                 </Button>
@@ -113,8 +112,7 @@ export function LandingNavbar() {
             <SignedIn>
               <Link href="/dashboard">
                 <Button
-                  size="sm"
-                  className="rounded-full shadow-md hover:shadow-lg transition-all"
+                  className="rounded-full bg-foreground text-background hover:bg-foreground/90 font-bold shadow-lg h-10 px-6 transition-all hover:scale-105"
                 >
                   Go to Dashboard
                 </Button>
@@ -135,12 +133,12 @@ export function LandingNavbar() {
                 <SheetHeader className="text-left mb-6">
                   <SheetTitle className="flex items-center gap-2">
                     <Image
-                      src="/darklogo.png"
-                      alt=""
-                      width={24}
-                      height={24}
+                      src="/pecklogoicon.png"
+                      alt="Peck Logo"
+                      width={28}
+                      height={28}
                     />
-                    Peck
+                    <span className="font-serif font-black">Peck</span>
                   </SheetTitle>
                 </SheetHeader>
                 <div className="flex flex-col gap-6">
@@ -194,5 +192,6 @@ export function LandingNavbar() {
         </div>
       </div>
     </motion.header>
+    </div>
   );
 }

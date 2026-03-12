@@ -26,6 +26,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { StreakBadge } from "@/components/sidebar/streak-badge";
 import { UserLevelDisplay } from "@/components/sidebar/user-level-display";
@@ -33,50 +34,31 @@ import { ReviewPromptModal } from "@/components/review/review-prompt-modal";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const data = {
-  navMain: [
-    {
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: LayoutDashboard,
-    },
-    {
-      title: "Training",
-      url: "/training",
-      icon: BookOpen,
-    },
-    {
-      title: "Review",
-      url: "/training/review",
-      icon: RefreshCcw,
-    },
-    {
-      title: "Progress",
-      url: "/progress",
-      icon: Trophy,
-    },
-    {
-      title: "Achievements",
-      url: "/achievements",
-      icon: Award,
-    },
-    {
-      title: "Changelog",
-      url: "/changelog",
-      icon: ScrollText,
-    },
-    {
-      title: "Leaderboard",
-      url: "/leaderboard",
-      icon: Users,
-    },
-    {
-      title: "Settings",
-      url: "/settings",
-      icon: Settings,
-    },
-  ],
-};
+import { cn } from "@/lib/utils";
+
+const navCategories = [
+  {
+    label: "Main",
+    items: [
+      { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+      { title: "Training", url: "/training", icon: BookOpen },
+      { title: "Review", url: "/training/review", icon: RefreshCcw },
+      { title: "Progress", url: "/progress", icon: Trophy },
+    ],
+  },
+  {
+    label: "Community",
+    items: [
+      { title: "Achievements", url: "/achievements", icon: Award },
+      { title: "Changelog", url: "/changelog", icon: ScrollText },
+      { title: "Leaderboard", url: "/leaderboard", icon: Users },
+    ],
+  },
+  {
+    label: "Account",
+    items: [{ title: "Settings", url: "/settings", icon: Settings }],
+  },
+];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
@@ -84,55 +66,71 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar {...props}>
-      <SidebarHeader>
-        <div className="flex items-center justify-between px-4 py-2">
-          <div className="flex items-center gap-2 font-bold text-xl tracking-tight">
-            <Image
-              src="/darklogo.png"
-              alt="Peck"
-              width={32}
-              height={32}
-              sizes="32px"
-              className="h-8 w-8"
-            />
+      <SidebarHeader className="gap-0 border-b border-sidebar-border/60">
+        <div className="flex items-center justify-between px-3 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl">
+              <Image
+                src="/darklogo.png"
+                width={48}
+                height={48}
+                sizes="48px"
+                alt="Peck Logo"
+              />
+            </div>
           </div>
           <StreakBadge />
         </div>
         <UserLevelDisplay />
       </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Platform</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="flex justify-between">
-              <div>
-                {data.navMain.map((item) => (
-                  <SidebarMenuItem key={item.title} className="h-10">
-                    <SidebarMenuButton asChild isActive={pathname === item.url}>
-                      <Link href={item.url}>
-                        <item.icon />
-                        <span>{item.title}</span>
+      <SidebarContent className="py-1">
+        {navCategories.map((category, idx) => (
+          <SidebarGroup key={category.label} className="px-2">
+            {idx > 0 && <SidebarSeparator className="mb-2" />}
+            <SidebarGroupLabel className="px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+              {category.label}
+            </SidebarGroupLabel>
+            <SidebarGroupContent className="px-1">
+              <SidebarMenu className="flex flex-col gap-0.5">
+                {category.items.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname === item.url}
+                      className="group rounded-xl transition-all duration-200"
+                    >
+                      <Link href={item.url} className="flex items-center gap-3">
+                        <item.icon className={cn(
+                          "transition-all duration-200",
+                          pathname === item.url 
+                            ? "text-primary scale-110" 
+                            : "opacity-70 group-hover:scale-110 group-hover:text-foreground group-hover:opacity-100"
+                        )} />
+                        <span className="font-medium">{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
-              </div>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="border-t border-sidebar-border/60 p-3">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={() => setIsReviewModalOpen(true)}>
-              <MessageSquare />
-              <span>Have Feedback?</span>
+            <SidebarMenuButton
+              onClick={() => setIsReviewModalOpen(true)}
+              className="group rounded-xl transition-all duration-200 hover:bg-primary/5 hover:text-primary"
+            >
+              <MessageSquare className="opacity-70 transition-all duration-200 group-hover:scale-110 group-hover:text-primary group-hover:opacity-100" />
+              <span className="font-medium">Have Feedback?</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <div className="flex items-center justify-center p-4 text-xs font-medium text-muted-foreground/70 hover:text-muted-foreground transition-colors">
+        <div className="flex items-center justify-center gap-1.5 pt-4 pb-2 text-[11px] font-medium text-muted-foreground/60 transition-colors hover:text-muted-foreground">
           <span>Built with</span>
-          <span className="mx-1 text-red-500">❤️</span>
+          <span className="text-primary animate-pulse">♥</span>
           <span>by Mateo</span>
         </div>
       </SidebarFooter>

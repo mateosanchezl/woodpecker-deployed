@@ -22,7 +22,7 @@ export default function MarketingLayout({
           <div className="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-2 font-bold text-xl">
               <Image
-                src="/darklogo.png"
+                src="/pecklogoicon.png"
                 alt=""
                 width={32}
                 height={32}

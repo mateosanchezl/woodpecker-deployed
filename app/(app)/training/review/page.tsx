@@ -137,18 +137,20 @@ export default function ReviewPage() {
 
   if (!data || data.totalStruggledPuzzles === 0) {
     return (
-      <div className="flex min-h-100 flex-col items-center justify-center gap-4 p-4">
-        <Brain className="h-12 w-12 text-green-600" />
-        <div className="text-center">
-          <h2 className="text-lg font-semibold">Nothing to review yet!</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
+      <div className="flex min-h-100 flex-col items-center justify-center gap-6 p-4">
+        <div className="mx-auto bg-green-500/10 w-20 h-20 rounded-full flex items-center justify-center mb-2 animate-in fade-in zoom-in duration-500">
+          <Brain className="h-10 w-10 text-green-600" />
+        </div>
+        <div className="text-center max-w-md">
+          <h2 className="text-2xl font-bold tracking-tight">Nothing to review yet!</h2>
+          <p className="mt-2 text-base text-muted-foreground">
             Keep training — puzzles you struggle with will appear here for
             focused practice.
           </p>
         </div>
         <Link href="/training">
-          <Button>
-            <ArrowLeft className="mr-2 h-4 w-4" />
+          <Button size="lg" className="rounded-xl gap-2 mt-4 shadow-sm hover:shadow-md transition-all">
+            <ArrowLeft className="h-4 w-4" />
             Back to Training
           </Button>
         </Link>
@@ -161,17 +163,17 @@ export default function ReviewPage() {
       <div className="mx-auto flex max-w-7xl flex-col gap-6 p-4 lg:p-6">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">
               Improvement Area
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-2 text-lg text-muted-foreground">
               {data.totalStruggledPuzzles} puzzle
               {data.totalStruggledPuzzles !== 1 ? "s" : ""} sorted by lowest
               success rate first, then by staleness.
             </p>
           </div>
 
-          <Button asChild variant="outline" size="sm">
+          <Button asChild variant="outline" className="rounded-xl">
             <Link href="/training">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Training

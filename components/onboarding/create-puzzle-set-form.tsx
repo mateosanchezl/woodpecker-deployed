@@ -202,7 +202,7 @@ export function CreatePuzzleSetForm({
                   />
                   <Label
                     htmlFor={`cycles-${preset.value}`}
-                    className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary cursor-pointer transition-colors"
+                    className="flex flex-col items-center justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 peer-data-[state=checked]:text-primary cursor-pointer transition-all duration-200"
                   >
                     <span className="font-semibold">{preset.label}</span>
                     <span className="text-xs text-muted-foreground text-center mt-1">
@@ -234,7 +234,7 @@ export function CreatePuzzleSetForm({
         </CardContent>
       </Card>
 
-      <Button type="submit" className="w-full gap-2" size="lg" disabled={isSubmitting}>
+      <Button type="submit" className="w-full gap-2 rounded-xl h-12 text-base transition-transform active:scale-[0.98] shadow-md shadow-primary/20" size="lg" disabled={isSubmitting}>
         {isSubmitting ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />

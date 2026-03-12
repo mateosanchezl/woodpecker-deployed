@@ -443,8 +443,8 @@ function TrainingPageInner({
   return (
     <div className="py-4 space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold">Training</h1>
-        <p className="text-muted-foreground mt-1">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Training</h1>
+        <p className="text-muted-foreground mt-2 text-lg">
           Select a puzzle set to begin or continue training
         </p>
       </div>
@@ -520,50 +520,61 @@ function ContinueTrainingCard({
   const hasActiveCycle = set.currentCycleId !== null
 
   return (
-    <Card className="border-primary/50 bg-primary/5">
-      <CardHeader className="pb-2">
-        <div className="flex items-start justify-between">
+    <Card className="border-primary/50 shadow-md shadow-primary/5 bg-linear-to-br from-card to-primary/5 overflow-hidden transition-all hover:shadow-lg hover:border-primary/80 duration-300 relative group">
+      <div className="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-primary/0 via-primary/50 to-primary/0" />
+      <CardHeader className="pb-3 relative z-10">
+        <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
-            <CardTitle className="text-xl">{set.name}</CardTitle>
-            <CardDescription>
-              {set.size} puzzles at ~{set.targetRating} rating
-              {set.focusTheme ? ` · ${getTrainingThemeLabel(set.focusTheme)}` : ''}
+            <CardTitle className="text-2xl group-hover:text-primary transition-colors">{set.name}</CardTitle>
+            <CardDescription className="flex flex-wrap gap-1.5 items-center mt-1">
+              <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                {set.size} puzzles
+              </span>
+              <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                ~{set.targetRating}
+              </span>
+              {set.focusTheme && (
+                <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                  {getTrainingThemeLabel(set.focusTheme)}
+                </span>
+              )}
             </CardDescription>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl shrink-0 opacity-50 hover:opacity-100 transition-opacity">
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="rounded-xl">
               <DropdownMenuItem
                 variant="destructive"
                 onClick={onDelete}
                 disabled={isDeleting}
+                className="rounded-lg"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-4 w-4 mr-2" />
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-          <div className="flex items-center gap-1">
-            <Target className="h-4 w-4" />
+      <CardContent className="relative z-10 space-y-6">
+        <div className="flex flex-wrap items-center gap-4 text-sm font-medium text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <Target className="h-4 w-4 text-amber-500" />
             <span>{set.targetCycles} cycles</span>
           </div>
           {set.currentCycle && (
-            <div className="flex items-center gap-1">
-              <TrendingUp className="h-4 w-4" />
+            <div className="flex items-center gap-1.5">
+              <TrendingUp className="h-4 w-4 text-blue-500" />
               <span>On cycle {set.currentCycle}</span>
             </div>
           )}
           {set.lastTrainedAt && (
-            <div className="flex items-center gap-1">
-              <Clock className="h-4 w-4" />
+            <div className="flex items-center gap-1.5">
+              <Clock className="h-4 w-4 text-emerald-500" />
               <span>{formatRelativeTime(set.lastTrainedAt)}</span>
             </div>
           )}
@@ -572,20 +583,21 @@ function ContinueTrainingCard({
         {hasActiveCycle ? (
           <Button
             size="lg"
-            className="w-full"
+            className="w-full gap-2 rounded-xl h-12 text-base transition-transform active:scale-[0.98] shadow-md shadow-primary/20"
             onClick={() => onContinue(set.currentCycleId!)}
           >
-            <Play className="mr-2 h-4 w-4" />
+            <Play className="h-5 w-5 fill-current" />
             Continue Training
           </Button>
         ) : (
           <Button
             size="lg"
-            className="w-full"
+            className="w-full gap-2 rounded-xl h-12 text-base transition-transform active:scale-[0.98]"
             onClick={onStart}
             disabled={isStarting}
+            variant="secondary"
           >
-            <Play className="mr-2 h-4 w-4" />
+            <Play className="h-5 w-5" />
             {isStarting ? 'Starting...' : `Start Cycle ${(set.completedCycles || 0) + 1}`}
           </Button>
         )}
@@ -614,67 +626,68 @@ function PuzzleSetCard({
   const hasActiveCycle = set.currentCycleId !== null
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex items-start justify-between">
+    <Card className="overflow-hidden transition-all hover:shadow-md hover:border-primary/20 duration-300 group flex flex-col">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-4">
           <div className="space-y-1 min-w-0 flex-1">
-            <CardTitle className="text-lg truncate">{set.name}</CardTitle>
-            <CardDescription>
-              {set.size} puzzles at ~{set.targetRating} rating
-              {set.focusTheme ? ` · ${getTrainingThemeLabel(set.focusTheme)}` : ''}
+            <CardTitle className="text-lg truncate group-hover:text-primary transition-colors">{set.name}</CardTitle>
+            <CardDescription className="flex flex-wrap gap-1.5 items-center mt-1">
+              <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                {set.size} puzzles
+              </span>
+              <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                ~{set.targetRating}
+              </span>
+              {set.focusTheme && (
+                <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                  {getTrainingThemeLabel(set.focusTheme)}
+                </span>
+              )}
             </CardDescription>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl shrink-0 opacity-50 hover:opacity-100 transition-opacity">
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="rounded-xl">
               <DropdownMenuItem
                 variant="destructive"
                 onClick={onDelete}
                 disabled={isDeleting}
+                className="rounded-lg"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-4 w-4 mr-2" />
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-          <div className="flex items-center gap-1">
-            <Target className="h-4 w-4" />
+      <CardContent className="space-y-5 flex-1 flex flex-col justify-end">
+        <div className="flex items-center gap-5 text-sm font-medium text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <Target className="h-4 w-4 text-amber-500" />
             <span>{set.targetCycles} cycles</span>
           </div>
           {set.currentCycle && (
-            <div className="flex items-center gap-1">
-              <TrendingUp className="h-4 w-4" />
+            <div className="flex items-center gap-1.5">
+              <TrendingUp className="h-4 w-4 text-blue-500" />
               <span>Cycle {set.currentCycle}</span>
             </div>
           )}
         </div>
 
-        {hasActiveCycle ? (
-          <Button
-            className="w-full"
-            onClick={() => onContinue(set.currentCycleId!)}
-          >
-            <Play className="mr-2 h-4 w-4" />
-            Continue Training
-          </Button>
-        ) : (
-          <Button
-            className="w-full"
-            onClick={onStart}
-            disabled={isStarting}
-          >
-            <Play className="mr-2 h-4 w-4" />
-            {isStarting ? 'Starting...' : `Start Cycle ${(set.completedCycles || 0) + 1}`}
-          </Button>
-        )}
+        <Button
+          className="w-full gap-2 rounded-xl h-11 mt-2 transition-transform active:scale-[0.98]"
+          onClick={() => hasActiveCycle ? onContinue(set.currentCycleId!) : onStart()}
+          disabled={!hasActiveCycle && isStarting}
+          variant={hasActiveCycle ? "default" : "secondary"}
+        >
+          <Play className="h-4 w-4" />
+          {hasActiveCycle ? 'Continue Training' : (isStarting ? 'Starting...' : `Start Cycle ${(set.completedCycles || 0) + 1}`)}
+        </Button>
       </CardContent>
     </Card>
   )
@@ -747,41 +760,45 @@ function QuickStartCard({
   error: string | null
 }) {
   return (
-    <div className="py-4">
-      <Card className="max-w-xl mx-auto">
-        <CardHeader className="text-center space-y-2">
-          <CardTitle>Start Training Now</CardTitle>
-          <CardDescription>
+    <div className="py-12">
+      <Card className="max-w-2xl mx-auto border-primary/20 shadow-lg shadow-primary/5 bg-linear-to-b from-card to-primary/5 overflow-hidden relative">
+        <div className="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-primary/0 via-primary to-primary/0 opacity-50" />
+        <CardHeader className="text-center space-y-3 pb-6 pt-10">
+          <div className="mx-auto bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mb-2 animate-in fade-in zoom-in duration-500">
+            <Play className="h-8 w-8 text-primary ml-1" />
+          </div>
+          <CardTitle className="text-3xl font-bold tracking-tight">Start Your First Set</CardTitle>
+          <CardDescription className="text-base text-muted-foreground max-w-md mx-auto">
             You repeat a fixed set in cycles. Each cycle gets faster as patterns become automatic.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button onClick={onQuickStart} disabled={isStarting} className="gap-2">
+        <CardContent className="space-y-6 pb-10">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Button onClick={onQuickStart} disabled={isStarting} size="lg" className="gap-2 w-full sm:w-auto rounded-xl text-base px-8 h-12 transition-transform hover:scale-105 active:scale-95 shadow-md shadow-primary/20">
               {isStarting ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-5 w-5 animate-spin" />
                   Setting up...
                 </>
               ) : (
                 <>
-                  <Play className="h-4 w-4" />
+                  <Play className="h-5 w-5 fill-current" />
                   Start Training Now
                 </>
               )}
             </Button>
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" size="lg" className="gap-2 w-full sm:w-auto rounded-xl text-base px-8 h-12 hover:bg-primary/5">
               <Link href="/training/new">Customize First Set</Link>
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground text-center">
+          <p className="text-sm text-muted-foreground text-center mt-6">
             Want the full method?{' '}
-            <Link href="/woodpecker-method" className="underline underline-offset-2">
+            <Link href="/woodpecker-method" className="underline underline-offset-4 hover:text-primary transition-colors font-medium">
               Learn the Woodpecker Method
             </Link>
           </p>
           {error && (
-            <p className="text-sm text-red-600 text-center">{error}</p>
+            <p className="text-sm text-red-600 text-center font-medium">{error}</p>
           )}
         </CardContent>
       </Card>
@@ -825,40 +842,40 @@ function StreakBanner() {
   return (
     <div
       className={cn(
-        'flex items-center gap-3 px-4 py-3 rounded-lg',
+        'flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-300',
         hasStreak
-          ? 'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800'
-          : 'bg-muted/50 border border-border',
+          ? 'bg-linear-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200/50 dark:border-amber-800/50 shadow-sm hover:shadow-md'
+          : 'bg-muted/50 border border-border hover:bg-muted/80',
         streak.isAtRisk && 'animate-pulse'
       )}
     >
       <div
         className={cn(
-          'p-2 rounded-full',
+          'p-2.5 rounded-full',
           hasStreak
-            ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white'
-            : 'bg-muted'
+            ? 'bg-linear-to-br from-amber-400 to-orange-500 text-white shadow-sm'
+            : 'bg-muted-foreground/10 text-muted-foreground'
         )}
       >
-        <Flame className={cn('h-4 w-4', !hasStreak && 'text-muted-foreground')} />
+        <Flame className="h-5 w-5" />
       </div>
       <div className="flex-1">
         <p className={cn(
           'text-sm font-medium',
-          streak.isAtRisk && 'text-amber-700 dark:text-amber-300'
+          streak.isAtRisk ? 'text-amber-700 dark:text-amber-300' : 'text-foreground'
         )}>
           {message}
         </p>
       </div>
       {hasStreak && (
-        <div className="text-right">
+        <div className="text-right flex items-baseline gap-1.5 bg-background/50 px-3 py-1 rounded-lg">
           <span className={cn(
-            'text-lg font-bold tabular-nums',
+            'text-2xl font-bold tabular-nums',
             'text-amber-600 dark:text-amber-400'
           )}>
             {streak.currentStreak}
           </span>
-          <span className="text-sm text-muted-foreground ml-1">
+          <span className="text-sm font-medium text-muted-foreground">
             {streak.currentStreak === 1 ? 'day' : 'days'}
           </span>
         </div>

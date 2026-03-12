@@ -434,7 +434,7 @@ export default function LandingPage({
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-2 font-bold text-xl">
               <Image
-                src="/darklogo.png"
+                src="/pecklogoicon.png"
                 alt="Peck Logo"
                 width={32}
                 height={32}

@@ -26,6 +26,20 @@ export function formatChangelogDate(date: string) {
 // Add new releases to the top of this list so index 0 stays the latest.
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    version: "2.7.2",
+    title: "UI Improvements",
+    description:
+      "A small UI polish pass across navigation, training, and setup.",
+    features: [
+      "Cleaner navigation and sidebar grouping",
+      "Refreshed training and dashboard cards",
+      "Polished setup and progress UI",
+    ],
+    date: "2026-03-12",
+    learnMoreUrl: "/training",
+    actionLabel: "Open training",
+  },
+  {
     version: "2.7.1",
     title: "Improved Missed-Puzzle Review",
     description:

@@ -59,16 +59,16 @@ export function LandingNavbar() {
         <div className="flex items-center justify-between h-14">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="relative h-8 w-8 overflow-hidden rounded-md transition-transform group-hover:scale-105">
+            <div className="relative h-20 w-20 overflow-hidden rounded-md transition-transform group-hover:scale-105">
               <Image
                 src="/darklogo.png"
                 alt=""
                 fill
-                sizes="32px"
+                sizes="48px"
                 className="object-contain"
               />
             </div>
-            <span className="font-serif text-xl font-bold tracking-tight">
+            <span className="font-serif text-2xl font-bold tracking-tighter">
               Peck
             </span>
           </Link>

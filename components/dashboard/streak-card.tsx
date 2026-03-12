@@ -34,8 +34,10 @@ export function StreakCard() {
   return (
     <Card
       className={cn(
-        'relative overflow-hidden transition-all',
-        hasStreak && 'bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-amber-200 dark:border-amber-800',
+        'relative overflow-hidden transition-all hover:shadow-md duration-300 group',
+        hasStreak 
+          ? 'bg-linear-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-amber-200 dark:border-amber-800/50 hover:border-amber-300 dark:hover:border-amber-700' 
+          : 'hover:border-primary/20',
         streak.isAtRisk && 'animate-pulse'
       )}
     >
@@ -69,7 +71,7 @@ export function StreakCard() {
           <div className={cn(
             'p-3 rounded-full',
             hasStreak
-              ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white'
+              ? 'bg-linear-to-br from-amber-400 to-orange-500 text-white'
               : 'bg-muted'
           )}>
             <Flame className={cn(

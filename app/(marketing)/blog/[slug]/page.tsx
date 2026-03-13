@@ -104,7 +104,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
       />
 
-      <article className="mx-auto">
+      <article className="container max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
         {/* Back link */}
         <Link
           href="/blog"
@@ -115,41 +115,43 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         </Link>
 
         {/* Header */}
-        <header className="mb-10">
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-4">
+        <header className="mb-16">
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tighter leading-[1.1] mb-6">
             {post.title}
           </h1>
-          <p className="text-lg text-muted-foreground mb-6">
+          <p className="text-xl sm:text-2xl text-muted-foreground font-medium mb-8 leading-relaxed">
             {post.description}
           </p>
-          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <Calendar className="h-4 w-4" />
+          <div className="flex flex-wrap items-center gap-6 text-sm font-bold text-muted-foreground uppercase tracking-widest">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-primary" />
               <time dateTime={post.date}>{formatDate(post.date)}</time>
             </div>
             {post.updated && post.updated !== post.date && (
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 <span>Updated {formatDate(post.updated)}</span>
               </div>
             )}
-            <div className="flex items-center gap-1.5">
-              <Clock className="h-4 w-4" />
+            <div className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-primary" />
               <span>{Math.ceil(post.metadata.readingTime)} min read</span>
             </div>
             {post.metadata.wordCount > 0 && (
-              <span>{post.metadata.wordCount.toLocaleString()} words</span>
+              <div className="flex items-center gap-2">
+                <span>{post.metadata.wordCount.toLocaleString()} words</span>
+              </div>
             )}
           </div>
 
           {/* Tags */}
           {post.tags.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2 mt-4">
-              <Tag className="h-4 w-4 text-muted-foreground" />
+            <div className="flex flex-wrap items-center gap-3 mt-8">
+              <Tag className="h-5 w-5 text-primary" />
               {post.tags.map((tag: string) => (
                 <Link key={tag} href={`/blog/tags/${tag}`}>
                   <Badge
                     variant="secondary"
-                    className="hover:bg-primary/10 hover:text-primary transition-colors"
+                    className="text-sm px-4 py-1.5 rounded-full hover:bg-primary hover:text-primary-foreground transition-colors"
                   >
                     {tag}
                   </Badge>

@@ -64,7 +64,7 @@ export default function DocsPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
-      <div className="overflow-x-hidden">
+      <div className="overflow-x-hidden container max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Docs index hero */}
         <section className="relative py-16 sm:py-24 border-b border-border/40">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-64 bg-gradient-radial from-primary/10 to-transparent -z-10 pointer-events-none" />

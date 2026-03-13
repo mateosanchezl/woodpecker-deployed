@@ -56,24 +56,26 @@ export default async function TagPage({ params }: TagPageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
 
-      <div>
+      <div className="container max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
         {/* Header */}
-        <div className="mb-10">
+        <div className="mb-16">
           <Link
             href="/blog"
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
+            className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors mb-8"
           >
             <ArrowLeft className="h-4 w-4" />
             All posts
           </Link>
 
-          <div className="flex items-center gap-3 mb-4">
-            <Tag className="h-6 w-6 text-primary" />
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight capitalize">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 bg-primary/10 rounded-2xl">
+              <Tag className="h-8 w-8 text-primary" />
+            </div>
+            <h1 className="text-[4rem] sm:text-[5rem] font-black tracking-tighter leading-none capitalize">
               {decodedTag}
             </h1>
           </div>
-          <p className="text-muted-foreground">
+          <p className="text-xl font-medium text-muted-foreground">
             {posts.length} {posts.length === 1 ? "article" : "articles"} tagged
             with &ldquo;{decodedTag}&rdquo;
           </p>

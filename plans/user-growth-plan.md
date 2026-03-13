@@ -15,7 +15,7 @@
 
 - `2. Make signup promise the first session clearly`
 - Wrap the sign-up page in light marketing copy instead of showing only the Clerk widget.
-- Keep the copy concrete: `Free forever`, `No credit card`, `You’ll start with a 100-puzzle starter set`, `Train by theme or level`.
+- Keep the copy concrete: `Free`, `No credit card`, `You’ll start with a 100-puzzle starter set`, `Train by theme or level`.
 - Preserve the selected preset through signup so a visitor who clicks `Train Forks` lands directly in a forks starter set, not a generic flow.
 
 - `3. Remove logged-out dead ends`

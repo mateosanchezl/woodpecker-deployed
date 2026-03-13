@@ -12,83 +12,66 @@ export default function MarketingLayout({
       <LandingNavbar />
 
       <main className="flex-1">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12 sm:pt-32 sm:pb-16 lg:pt-32 lg:pb-20">
-          <div className="max-w-4xl mx-auto">{children}</div>
-        </div>
+        {children}
       </main>
 
-      <footer className="border-t border-border bg-background">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-2 font-bold text-xl">
-              <Image
-                src="/pecklogoicon.png"
-                alt=""
-                width={32}
-                height={32}
-                sizes="32px"
-                className="h-8 w-8"
-              />
-              <span>Peck</span>
+      <footer className="py-16 bg-background border-t border-border">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
+            <div className="col-span-1 lg:col-span-2">
+              <Link href="/" className="inline-flex items-center gap-4 group mb-6">
+                <div className="relative h-12 w-12 overflow-hidden rounded-xl bg-card border border-border shadow-sm transition-transform group-hover:rotate-12">
+                  <Image
+                    src="/pecklogoicon.png"
+                    alt="Peck Logo"
+                    fill
+                    sizes="48px"
+                    className="object-contain p-2"
+                  />
+                </div>
+                <span className="font-serif text-4xl font-black tracking-tighter">
+                  Peck
+                </span>
+              </Link>
+              <p className="text-xl font-medium text-muted-foreground max-w-sm">
+                The scientific way to master chess tactics through spaced repetition.
+              </p>
             </div>
-            <div className="text-sm text-muted-foreground">
+            
+            <div className="flex flex-col gap-4">
+              <h4 className="font-bold text-sm uppercase tracking-widest text-foreground/50 mb-2">Product</h4>
+              {[
+                { label: "Features", href: "/features" },
+                { label: "Pricing", href: "/pricing" },
+                { label: "The Method", href: "/woodpecker-method" },
+              ].map((link) => (
+                <Link key={link.href} href={link.href} className="text-lg font-bold text-foreground hover:text-primary transition-colors">
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <h4 className="font-bold text-sm uppercase tracking-widest text-foreground/50 mb-2">Company</h4>
+              {[
+                { label: "About", href: "/about" },
+                { label: "Blog", href: "/blog" },
+                { label: "Contact", href: "mailto:support@peckchess.com" },
+              ].map((link) => (
+                <Link key={link.href} href={link.href} className="text-lg font-bold text-foreground hover:text-primary transition-colors">
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="text-sm font-bold text-muted-foreground">
               © {new Date().getFullYear()} Peck. All rights reserved.
             </div>
-            <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
-              <Link
-                href="/features"
-                className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
-              >
-                Features
-              </Link>
-              <Link
-                href="/pricing"
-                className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
-              >
-                Pricing
-              </Link>
-              <Link
-                href="/about"
-                className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
-              >
-                About
-              </Link>
-              <Link
-                href="/faq"
-                className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
-              >
-                FAQ
-              </Link>
-              <Link
-                href="/blog"
-                className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
-              >
-                Blog
-              </Link>
-              <Link
-                href="/woodpecker-method"
-                className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
-              >
-                Woodpecker Method
-              </Link>
-              <Link
-                href="/privacy"
-                className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
-              >
-                Privacy
-              </Link>
-              <Link
-                href="/terms"
-                className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
-              >
-                Terms
-              </Link>
-              <a
-                href="mailto:support@peckchess.com"
-                className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
-              >
-                Contact
-              </a>
+            <div className="flex gap-8 text-sm font-bold text-muted-foreground">
+              <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+              <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
             </div>
           </div>
         </div>

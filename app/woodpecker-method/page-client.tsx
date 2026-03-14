@@ -3,6 +3,7 @@ import Link from "next/link";
 import { MotionDiv } from "@/components/marketing/motion-div";
 import { Button } from "@/components/ui/button";
 import { LandingNavbar } from "@/components/landing/navbar";
+import { XIcon } from "@/components/icons/x-icon";
 import {
   ArrowRight,
   CheckCircle2,
@@ -14,6 +15,7 @@ import {
   Zap,
   BookOpen,
 } from "lucide-react";
+import { SOCIAL_LINKS } from "@/lib/site-config";
 
 export default function WoodpeckerMethodPageContent() {
   return (
@@ -401,6 +403,16 @@ export default function WoodpeckerMethodPageContent() {
                   {link.label}
                 </Link>
               ))}
+              <a
+                href={SOCIAL_LINKS.x.href}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={`Follow Peck on X (${SOCIAL_LINKS.x.handle})`}
+                className="inline-flex items-center gap-3 text-lg font-bold text-foreground hover:text-primary transition-colors"
+              >
+                <XIcon className="size-4" />
+                <span>{SOCIAL_LINKS.x.handle}</span>
+              </a>
             </div>
           </div>
 

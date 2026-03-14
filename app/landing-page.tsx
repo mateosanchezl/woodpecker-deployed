@@ -16,6 +16,8 @@ import { motion } from "framer-motion";
 import { Chessboard } from "react-chessboard";
 import { FeaturesSection } from "@/components/landing/features-section";
 import { LandingNavbar } from "@/components/landing/navbar";
+import { XIcon } from "@/components/icons/x-icon";
+import { SOCIAL_LINKS } from "@/lib/site-config";
 
 type LandingPageProps = {
   completedPuzzlesCount: number;
@@ -431,6 +433,16 @@ export default function LandingPage({
                     {link.label}
                   </Link>
                 ))}
+                <a
+                  href={SOCIAL_LINKS.x.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`Follow Peck on X (${SOCIAL_LINKS.x.handle})`}
+                  className="inline-flex items-center gap-3 text-lg font-bold text-foreground hover:text-primary transition-colors"
+                >
+                  <XIcon className="size-4" />
+                  <span>{SOCIAL_LINKS.x.handle}</span>
+                </a>
               </div>
             </div>
 

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { LandingNavbar } from "@/components/landing/navbar";
+import { XIcon } from "@/components/icons/x-icon";
+import { SOCIAL_LINKS } from "@/lib/site-config";
 
 export default function LegalLayout({
   children,
@@ -41,6 +43,16 @@ export default function LegalLayout({
                   className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
                 >
                   Contact
+                </a>
+                <a
+                  href={SOCIAL_LINKS.x.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`Follow Peck on X (${SOCIAL_LINKS.x.handle})`}
+                  className="inline-flex items-center gap-1.5 hover:text-foreground transition-colors underline-offset-4 hover:underline"
+                >
+                  <XIcon className="size-3.5" />
+                  <span>{SOCIAL_LINKS.x.handle}</span>
                 </a>
               </div>
             </div>

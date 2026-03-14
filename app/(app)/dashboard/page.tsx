@@ -6,6 +6,7 @@ import { StreakCard } from "@/components/dashboard/streak-card";
 import { XpCard } from "@/components/dashboard/xp-card";
 import { UpdateNotification } from "@/components/dashboard/update-notification";
 import { DashboardFeedbackPrompt } from "@/components/dashboard/dashboard-feedback-prompt";
+import { DashboardXFollowPrompt } from "@/components/dashboard/dashboard-x-follow-prompt";
 import {
   Card,
   CardContent,
@@ -94,6 +95,7 @@ export default function DashboardPage() {
   return (
     <>
       <DashboardFeedbackPrompt />
+      <DashboardXFollowPrompt />
       {showQuickStart ? (
         <div className="max-w-2xl mx-auto py-12 w-full">
           <Card className="border-primary/20 shadow-lg shadow-primary/5 bg-linear-to-b from-card to-primary/5 overflow-hidden relative">

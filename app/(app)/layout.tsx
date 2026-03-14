@@ -1,21 +1,17 @@
 import type { Metadata } from "next";
+import { XIcon } from "@/components/icons/x-icon";
 import { AppSidebar } from "@/components/app-sidebar";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Separator } from "@/components/ui/separator";
 import {
   Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { UserButton } from "@clerk/nextjs";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { SOCIAL_LINKS } from "@/lib/site-config";
 
 /**
  * Metadata for protected app pages
@@ -45,8 +41,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4">{children}</div>
-        <footer className="border-t py-4 px-4 text-center text-xs text-muted-foreground">
-          Peck Chess
+        <footer className="border-t px-4 py-4 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <span>Peck Chess</span>
+            <span aria-hidden="true">•</span>
+            <a
+              href={SOCIAL_LINKS.x.href}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`Follow Peck on X (${SOCIAL_LINKS.x.handle})`}
+              className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
+            >
+              <XIcon className="size-3.5" />
+              <span>{SOCIAL_LINKS.x.handle}</span>
+            </a>
+          </div>
         </footer>
       </SidebarInset>
     </SidebarProvider>

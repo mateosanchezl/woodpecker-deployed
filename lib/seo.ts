@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SITE_CONFIG, SOCIAL_LINKS } from "@/lib/site-config";
 
 /**
  * SEO Constants and Utilities for Peck Chess Training
@@ -43,17 +44,7 @@ export const TARGET_KEYWORDS = {
 // Site Constants
 // =============================================================================
 
-export const SITE_CONFIG = {
-  name: "Peck",
-  tagline: "Free Woodpecker Method Chess Training",
-  // Primary keyword in description
-  description:
-    "Free Woodpecker Method chess training app. Master chess tactics through intensive puzzle repetition. Build pattern recognition and calculation speed with the scientifically-proven Woodpecker Method.",
-  url: "https://peckchess.com",
-  locale: "en_US",
-  twitterHandle: "@peckchess",
-  email: "support@peckchess.com",
-} as const;
+export { SITE_CONFIG } from "@/lib/site-config";
 
 const DEFAULT_SOCIAL_IMAGE = {
   url: "/opengraph-image",
@@ -403,7 +394,7 @@ export function generateOrganizationSchema() {
     description: "Free Woodpecker Method chess training platform",
     email: SITE_CONFIG.email,
     sameAs: [
-      `https://twitter.com/${SITE_CONFIG.twitterHandle.replace("@", "")}`,
+      SOCIAL_LINKS.x.href,
     ],
   };
 }

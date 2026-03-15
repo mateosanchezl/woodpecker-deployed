@@ -1,5 +1,5 @@
 import { currentUser } from "@clerk/nextjs/server";
-import { Prisma } from "@prisma/client";
+import { Prisma, type User } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 interface ClerkIdentityInput {
@@ -90,6 +90,18 @@ export async function upsertUserFromClerkIdentity(input: ClerkIdentityInput) {
   return persistUser(input);
 }
 
+export async function getSelectedAppUserByClerkId<T extends Prisma.UserSelect>(
+  clerkId: string,
+  select: T,
+): Promise<Prisma.UserGetPayload<{ select: T }> | null> {
+  const user = await prisma.user.findUnique({
+    where: { clerkId },
+    select,
+  });
+
+  return user as Prisma.UserGetPayload<{ select: T }> | null;
+}
+
 /**
  * Ensures the authenticated Clerk user has a local database row.
  *
@@ -97,13 +109,28 @@ export async function upsertUserFromClerkIdentity(input: ClerkIdentityInput) {
  * @returns The user from the database
  * @throws Error if user cannot be created (e.g., missing email)
  */
-export async function ensureUserExists(clerkId: string) {
-  let user = await prisma.user.findUnique({
-    where: { clerkId },
-  });
+export async function provisionAppUser(clerkId: string): Promise<User>;
+export async function provisionAppUser<T extends Prisma.UserSelect>(
+  clerkId: string,
+  select: T,
+): Promise<Prisma.UserGetPayload<{ select: T }>>;
+export async function provisionAppUser<T extends Prisma.UserSelect>(
+  clerkId: string,
+  select?: T,
+): Promise<User | Prisma.UserGetPayload<{ select: T }>> {
+  if (select) {
+    const existingUser = await getSelectedAppUserByClerkId(clerkId, select);
+    if (existingUser) {
+      return existingUser;
+    }
+  } else {
+    const existingUser = await prisma.user.findUnique({
+      where: { clerkId },
+    });
 
-  if (user) {
-    return user;
+    if (existingUser) {
+      return existingUser;
+    }
   }
 
   const clerkUser = await currentUser();
@@ -128,7 +155,7 @@ export async function ensureUserExists(clerkId: string) {
     ? `${clerkUser.firstName}${clerkUser.lastName ? ` ${clerkUser.lastName}` : ""}`
     : null;
 
-  user = await upsertUserFromClerkIdentity({
+  const user = await upsertUserFromClerkIdentity({
     clerkId,
     email: primaryEmail.emailAddress,
     name,
@@ -136,5 +163,18 @@ export async function ensureUserExists(clerkId: string) {
 
   console.log(`User provisioned from authenticated session: ${clerkId}`);
 
-  return user;
+  if (!select) {
+    return user;
+  }
+
+  const selectedUser = await getSelectedAppUserByClerkId(clerkId, select);
+  if (!selectedUser) {
+    throw new Error("Provisioned user could not be reloaded");
+  }
+
+  return selectedUser;
+}
+
+export async function ensureUserExists(clerkId: string) {
+  return provisionAppUser(clerkId);
 }

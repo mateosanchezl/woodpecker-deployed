@@ -35,13 +35,15 @@ const CATEGORY_ORDER: AchievementCategory[] = [
 interface AchievementsDisplayProps {
   showHeader?: boolean
   compact?: boolean
+  enabled?: boolean
 }
 
 export function AchievementsDisplay({
   showHeader = true,
   compact = false,
+  enabled = true,
 }: AchievementsDisplayProps) {
-  const { data, isLoading, error } = useAchievements()
+  const { data, isLoading, error } = useAchievements(enabled)
 
   if (isLoading) {
     return <AchievementsDisplaySkeleton showHeader={showHeader} compact={compact} />

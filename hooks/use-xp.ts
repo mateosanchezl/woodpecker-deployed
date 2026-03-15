@@ -1,15 +1,7 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import { useAppUser } from '@/hooks/use-app-user'
 import { getLevelProgress, getLevelTitle } from '@/lib/xp'
-
-interface UserData {
-  user: {
-    totalXp: number
-    currentLevel: number
-    weeklyXp: number
-  }
-}
 
 export interface XpData {
   totalXp: number
@@ -33,16 +25,7 @@ export interface XpData {
  * Hook for fetching the current user's XP and level data.
  */
 export function useXp() {
-  return useQuery<UserData, Error, XpData>({
-    queryKey: ['user'],
-    queryFn: async () => {
-      const res = await fetch('/api/user')
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to fetch XP data')
-      }
-      return res.json()
-    },
+  return useAppUser<XpData>({
     select: (data) => {
       const { totalXp, currentLevel, weeklyXp } = data.user
 
@@ -54,6 +37,5 @@ export function useXp() {
         levelTitle: getLevelTitle(currentLevel),
       }
     },
-    staleTime: 60000, // 1 minute
   })
 }

@@ -1,8 +1,9 @@
 'use client'
 
 import { useCallback } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
+import { useAppUser } from '@/hooks/use-app-user'
 import { CreatePuzzleSetForm } from '@/components/onboarding/create-puzzle-set-form'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -10,25 +11,11 @@ import { ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import type { TrainingTheme } from '@/lib/chess/training-themes'
 
-interface UserData {
-  user: {
-    estimatedRating: number
-  }
-}
-
 export default function NewPuzzleSetPage() {
   const router = useRouter()
   const queryClient = useQueryClient()
 
-  // Fetch user data for rating
-  const { data: userData, isLoading } = useQuery<UserData>({
-    queryKey: ['user'],
-    queryFn: async () => {
-      const res = await fetch('/api/user')
-      if (!res.ok) throw new Error('Failed to fetch user')
-      return res.json()
-    },
-  })
+  const { data: userData, isLoading } = useAppUser()
 
   // Create puzzle set mutation
   const createPuzzleSetMutation = useMutation({

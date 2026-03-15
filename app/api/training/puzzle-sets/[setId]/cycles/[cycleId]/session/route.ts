@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { withRouteMetrics } from "@/lib/metrics/request-metrics";
-import { fetchTrainingSessionForUser } from "@/lib/training/session";
+import { fetchTrainingSessionSnapshot } from "@/lib/training/session";
 
 interface RouteContext {
   params: Promise<{ setId: string; cycleId: string }>;
@@ -21,7 +21,7 @@ export async function GET(_request: Request, context: RouteContext) {
 
       const { setId, cycleId } = await context.params;
 
-      const session = await fetchTrainingSessionForUser({
+      const session = await fetchTrainingSessionSnapshot({
         clerkId,
         setId,
         cycleId,

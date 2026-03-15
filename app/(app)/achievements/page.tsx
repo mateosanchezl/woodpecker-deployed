@@ -1,8 +1,11 @@
 'use client'
 
+import { useAppUser } from '@/hooks/use-app-user'
 import { AchievementsDisplay } from '@/components/achievements/achievements-display'
 
 export default function AchievementsPage() {
+  const { data: appUser } = useAppUser()
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -14,7 +17,7 @@ export default function AchievementsPage() {
       </div>
 
       {/* Achievements Grid */}
-      <AchievementsDisplay />
+      <AchievementsDisplay enabled={!!appUser?.user} />
     </div>
   )
 }

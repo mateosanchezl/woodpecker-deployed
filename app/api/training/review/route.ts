@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
-import { ensureUserExists } from "@/lib/ensure-user";
 import {
   resolveBoardTheme,
   type BoardThemeId,
 } from "@/lib/chess/board-themes";
+import { withRouteMetrics } from "@/lib/metrics/request-metrics";
 
 export interface ReviewPuzzle {
   puzzleInSetId: string;
@@ -55,65 +55,90 @@ export interface ThemeWeakness {
  *   - maxSuccessRate: upper bound on success rate, 0-100 (default 75)
  */
 export async function GET(request: NextRequest) {
-  try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  return withRouteMetrics("training.review.get", async () => {
+    try {
+      const { userId } = await auth();
+      if (!userId) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
 
-    const user = await ensureUserExists(userId);
+      const { searchParams } = new URL(request.url);
+      const themeFilter = searchParams.get("theme");
+      const limit = Math.min(
+        parseInt(searchParams.get("limit") || "50", 10),
+        100,
+      );
+      const maxSuccessRate = parseInt(
+        searchParams.get("maxSuccessRate") || "75",
+        10,
+      );
 
-    const { searchParams } = new URL(request.url);
-    const themeFilter = searchParams.get("theme");
-    const limit = Math.min(
-      parseInt(searchParams.get("limit") || "50", 10),
-      100,
-    );
-    const maxSuccessRate = parseInt(
-      searchParams.get("maxSuccessRate") || "75",
-      10,
-    );
-
-    // Fetch all puzzle-in-set records with attempts where user has struggled
-    const puzzlesInSets = await prisma.puzzleInSet.findMany({
-      where: {
-        puzzleSet: {
-          userId: user.id,
-        },
-        totalAttempts: { gt: 0 },
-      },
-      include: {
-        puzzle: {
-          select: {
-            id: true,
-            fen: true,
-            moves: true,
-            rating: true,
-            themes: true,
-            difficulty: true,
-          },
-        },
-        puzzleSet: {
-          select: {
-            id: true,
-            name: true,
-            cycles: {
-              orderBy: { cycleNumber: "desc" },
-              take: 1,
-              select: { id: true },
+      const user = await prisma.user.findUnique({
+        where: { clerkId: userId },
+        select: {
+          boardTheme: true,
+          puzzleSets: {
+            select: {
+              id: true,
+              name: true,
+              cycles: {
+                orderBy: { cycleNumber: "desc" },
+                take: 1,
+                select: { id: true },
+              },
+              puzzles: {
+                where: {
+                  totalAttempts: { gt: 0 },
+                  ...(themeFilter
+                    ? {
+                        puzzle: {
+                          themes: { has: themeFilter },
+                        },
+                      }
+                    : {}),
+                },
+                select: {
+                  id: true,
+                  position: true,
+                  totalAttempts: true,
+                  correctAttempts: true,
+                  averageTime: true,
+                  puzzle: {
+                    select: {
+                      id: true,
+                      fen: true,
+                      moves: true,
+                      rating: true,
+                      themes: true,
+                      difficulty: true,
+                    },
+                  },
+                  attempts: {
+                    orderBy: { attemptedAt: "desc" },
+                    take: 1,
+                    select: { attemptedAt: true },
+                  },
+                },
+                orderBy: {
+                  totalAttempts: "desc",
+                },
+              },
             },
           },
         },
-        attempts: {
-          orderBy: { attemptedAt: "desc" },
-          take: 1,
-          select: { attemptedAt: true },
-        },
-      },
-      orderBy: {
-        totalAttempts: "desc",
-      },
-    });
+      });
+
+      const puzzlesInSets =
+        user?.puzzleSets.flatMap((puzzleSet) =>
+          puzzleSet.puzzles.map((puzzleInSet) => ({
+            ...puzzleInSet,
+            puzzleSet: {
+              id: puzzleSet.id,
+              name: puzzleSet.name,
+              cycles: puzzleSet.cycles,
+            },
+          })),
+        ) ?? [];
 
     // Compute success rate and filter — exclude puzzles with perfect scores
     const scoredPuzzles = puzzlesInSets
@@ -204,19 +229,22 @@ export async function GET(request: NextRequest) {
       latestCycleId: pis.puzzleSet.cycles[0]?.id ?? "",
     }));
 
-    const response: ReviewResponse = {
-      puzzles,
-      themeWeaknesses,
-      totalStruggledPuzzles,
-      boardTheme: user.boardTheme ? resolveBoardTheme(user.boardTheme) : null,
-    };
+      const response: ReviewResponse = {
+        puzzles,
+        themeWeaknesses,
+        totalStruggledPuzzles,
+        boardTheme: user?.boardTheme
+          ? resolveBoardTheme(user.boardTheme)
+          : null,
+      };
 
-    return NextResponse.json(response);
-  } catch (error) {
-    console.error("Error fetching review puzzles:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
-  }
+      return NextResponse.json(response);
+    } catch (error) {
+      console.error("Error fetching review puzzles:", error);
+      return NextResponse.json(
+        { error: "Internal server error" },
+        { status: 500 },
+      );
+    }
+  });
 }

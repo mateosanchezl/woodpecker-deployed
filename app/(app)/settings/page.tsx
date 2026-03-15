@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useAppUser, type AppUserResponse } from '@/hooks/use-app-user'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -16,21 +17,6 @@ import {
 } from '@/lib/chess/board-themes'
 import { toast } from 'sonner'
 import { Settings, Users, Eye, EyeOff, Target, Clock3, Palette } from 'lucide-react'
-
-interface UserData {
-  user: {
-    id: string
-    email: string
-    name: string | null
-    estimatedRating: number
-    preferredSetSize: number
-    targetCycles: number
-    autoStartNextPuzzle: boolean
-    boardTheme?: string | null
-    showOnLeaderboard: boolean
-    hasCompletedOnboarding: boolean
-  }
-}
 
 interface UpdateSettingsInput {
   estimatedRating?: number
@@ -139,14 +125,7 @@ export default function SettingsPage() {
   const [draftSettings, setDraftSettings] = useState<SettingsDraft | null>(null)
   const lastLoadedSettingsRef = useRef<SettingsDraft | null>(null)
 
-  const { data, isLoading } = useQuery<UserData>({
-    queryKey: ['user'],
-    queryFn: async () => {
-      const res = await fetch('/api/user')
-      if (!res.ok) throw new Error('Failed to fetch user')
-      return res.json()
-    },
-  })
+  const { data, isLoading } = useAppUser()
 
   const loadedEstimatedRating = data?.user?.estimatedRating
   const loadedPreferredSetSize = data?.user?.preferredSetSize
@@ -173,7 +152,7 @@ export default function SettingsPage() {
       return res.json()
     },
     onSuccess: (response) => {
-      queryClient.setQueryData<UserData>(['user'], oldData => {
+      queryClient.setQueryData<AppUserResponse>(['user'], oldData => {
         if (!oldData?.user) {
           return oldData
         }

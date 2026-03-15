@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { useAppUser } from "@/hooks/use-app-user";
 import { StreakCard } from "@/components/dashboard/streak-card";
 import { XpCard } from "@/components/dashboard/xp-card";
 import { UpdateNotification } from "@/components/dashboard/update-notification";
@@ -28,20 +29,6 @@ import {
 import Link from "next/link";
 import { getTrainingThemeLabel } from "@/lib/chess/training-themes";
 
-interface UserData {
-  user: {
-    id: string;
-    email: string;
-    name: string | null;
-    estimatedRating: number;
-    preferredSetSize: number;
-    targetCycles: number;
-    hasCompletedOnboarding: boolean;
-    puzzleSetCount: number;
-    createdAt: string;
-  };
-}
-
 interface PuzzleSetsData {
   sets: Array<{
     id: string;
@@ -63,15 +50,7 @@ interface PuzzleSetsData {
 export default function DashboardPage() {
   const router = useRouter();
 
-  // Fetch user data
-  const { data: userData, isLoading: userLoading } = useQuery<UserData>({
-    queryKey: ["user"],
-    queryFn: async () => {
-      const res = await fetch("/api/user");
-      if (!res.ok) throw new Error("Failed to fetch user");
-      return res.json();
-    },
-  });
+  const { data: userData, isLoading: userLoading } = useAppUser();
 
   // Fetch puzzle sets
   const { data: puzzleSetsData, isLoading: setsLoading } =
@@ -82,7 +61,7 @@ export default function DashboardPage() {
         if (!res.ok) throw new Error("Failed to fetch puzzle sets");
         return res.json();
       },
-      enabled: !!userData,
+      enabled: !!userData?.user,
     });
 
   // Loading state

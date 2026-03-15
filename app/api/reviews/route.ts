@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { Resend } from "resend";
 import { prisma } from "@/lib/prisma";
-import { ensureUserExists } from "@/lib/ensure-user";
+import { provisionAppUser } from "@/lib/ensure-user";
 import { appReviewSchema } from "@/lib/validations/reviews";
+import { withRouteMetrics } from "@/lib/metrics/request-metrics";
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -80,37 +81,39 @@ async function sendReviewNotification(params: {
  * Returns the current user's app review (if any).
  */
 export async function GET() {
-  try {
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  return withRouteMetrics("reviews.get", async () => {
+    try {
+      const { userId: clerkId } = await auth();
+      if (!clerkId) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+
+      const user = await provisionAppUser(clerkId, { id: true });
+
+      const review = await prisma.appReview.findUnique({
+        where: { userId: user.id },
+      });
+
+      return NextResponse.json({
+        review: review
+          ? {
+              id: review.id,
+              rating: review.rating,
+              headline: review.headline,
+              comment: review.comment,
+              createdAt: review.createdAt.toISOString(),
+              updatedAt: review.updatedAt.toISOString(),
+            }
+          : null,
+      });
+    } catch (error) {
+      console.error("Error fetching app review:", error);
+      return NextResponse.json(
+        { error: "Internal server error" },
+        { status: 500 },
+      );
     }
-
-    const user = await ensureUserExists(clerkId);
-
-    const review = await prisma.appReview.findUnique({
-      where: { userId: user.id },
-    });
-
-    return NextResponse.json({
-      review: review
-        ? {
-            id: review.id,
-            rating: review.rating,
-            headline: review.headline,
-            comment: review.comment,
-            createdAt: review.createdAt.toISOString(),
-            updatedAt: review.updatedAt.toISOString(),
-          }
-        : null,
-    });
-  } catch (error) {
-    console.error("Error fetching app review:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
-  }
+  });
 }
 
 /**
@@ -118,72 +121,74 @@ export async function GET() {
  * Creates or updates the current user's app review.
  */
 export async function POST(request: NextRequest) {
-  try {
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  return withRouteMetrics("reviews.post", async () => {
+    try {
+      const { userId: clerkId } = await auth();
+      if (!clerkId) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
 
-    const user = await ensureUserExists(clerkId);
+      const user = await provisionAppUser(clerkId);
 
-    const body = await request.json();
-    const validation = appReviewSchema.safeParse(body);
+      const body = await request.json();
+      const validation = appReviewSchema.safeParse(body);
 
-    if (!validation.success) {
+      if (!validation.success) {
+        return NextResponse.json(
+          { error: "Invalid request body", details: validation.error.message },
+          { status: 400 },
+        );
+      }
+
+      const existingReview = await prisma.appReview.findUnique({
+        where: { userId: user.id },
+        select: { id: true },
+      });
+
+      const normalizedHeadline = validation.data.headline?.trim() || null;
+      const normalizedComment = validation.data.comment.trim();
+
+      const review = await prisma.appReview.upsert({
+        where: { userId: user.id },
+        create: {
+          userId: user.id,
+          rating: validation.data.rating,
+          headline: normalizedHeadline,
+          comment: normalizedComment,
+        },
+        update: {
+          rating: validation.data.rating,
+          headline: normalizedHeadline,
+          comment: normalizedComment,
+        },
+      });
+
+      await sendReviewNotification({
+        action: existingReview ? "updated" : "created",
+        clerkId,
+        userId: user.id,
+        userEmail: user.email,
+        userName: user.name,
+        rating: review.rating,
+        comment: review.comment,
+      });
+
+      return NextResponse.json({
+        review: {
+          id: review.id,
+          rating: review.rating,
+          headline: review.headline,
+          comment: review.comment,
+          createdAt: review.createdAt.toISOString(),
+          updatedAt: review.updatedAt.toISOString(),
+        },
+      });
+    } catch (error) {
+      console.error("Error saving app review:", error);
       return NextResponse.json(
-        { error: "Invalid request body", details: validation.error.message },
-        { status: 400 },
+        { error: "Internal server error" },
+        { status: 500 },
       );
     }
-
-    const existingReview = await prisma.appReview.findUnique({
-      where: { userId: user.id },
-      select: { id: true },
-    });
-
-    const normalizedHeadline = validation.data.headline?.trim() || null;
-    const normalizedComment = validation.data.comment.trim();
-
-    const review = await prisma.appReview.upsert({
-      where: { userId: user.id },
-      create: {
-        userId: user.id,
-        rating: validation.data.rating,
-        headline: normalizedHeadline,
-        comment: normalizedComment,
-      },
-      update: {
-        rating: validation.data.rating,
-        headline: normalizedHeadline,
-        comment: normalizedComment,
-      },
-    });
-
-    await sendReviewNotification({
-      action: existingReview ? "updated" : "created",
-      clerkId,
-      userId: user.id,
-      userEmail: user.email,
-      userName: user.name,
-      rating: review.rating,
-      comment: review.comment,
-    });
-
-    return NextResponse.json({
-      review: {
-        id: review.id,
-        rating: review.rating,
-        headline: review.headline,
-        comment: review.comment,
-        createdAt: review.createdAt.toISOString(),
-        updatedAt: review.updatedAt.toISOString(),
-      },
-    });
-  } catch (error) {
-    console.error("Error saving app review:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
-  }
+  });
 }

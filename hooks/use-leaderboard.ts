@@ -10,10 +10,11 @@ interface UseLeaderboardOptions {
   period: LeaderboardPeriod
   limit?: number
   offset?: number
+  enabled?: boolean
 }
 
 export function useLeaderboard(options: UseLeaderboardOptions) {
-  const { period, limit = 50, offset = 0 } = options
+  const { period, limit = 50, offset = 0, enabled = true } = options
 
   return useQuery<LeaderboardResponse>({
     queryKey: ['leaderboard', period, limit, offset],
@@ -30,6 +31,7 @@ export function useLeaderboard(options: UseLeaderboardOptions) {
       }
       return res.json()
     },
+    enabled,
     staleTime: 5 * 60 * 1000, // 5 minutes - aggressive caching
     gcTime: 10 * 60 * 1000, // 10 minutes garbage collection
     refetchOnWindowFocus: false,

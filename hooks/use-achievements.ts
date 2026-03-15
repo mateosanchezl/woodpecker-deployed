@@ -6,7 +6,7 @@ import type { AchievementsResponse } from '@/lib/validations/achievements'
 /**
  * Hook for fetching the current user's achievements.
  */
-export function useAchievements() {
+export function useAchievements(enabled = true) {
   return useQuery<AchievementsResponse>({
     queryKey: ['achievements'],
     queryFn: async () => {
@@ -17,6 +17,7 @@ export function useAchievements() {
       }
       return res.json()
     },
+    enabled,
     staleTime: 300000, // 5 minutes
   })
 }

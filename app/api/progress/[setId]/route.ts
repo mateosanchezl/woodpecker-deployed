@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
-import { ensureUserExists } from '@/lib/ensure-user'
+import { withRouteMetrics } from '@/lib/metrics/request-metrics'
 import type { ProgressResponse, CycleStats, ThemePerformance, ProblemPuzzle } from '@/lib/validations/progress'
 
 interface RouteContext {
@@ -35,52 +35,50 @@ export async function GET(
   request: NextRequest,
   context: RouteContext
 ) {
-  try {
-    const { userId } = await auth()
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withRouteMetrics('progress.get', async () => {
+    try {
+      const { userId } = await auth()
+      if (!userId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
 
-    const { setId } = await context.params
+      const { setId } = await context.params
 
-    const user = await ensureUserExists(userId)
-
-    // Fetch puzzle set with all related data
-    const puzzleSet = await prisma.puzzleSet.findUnique({
-      where: { id: setId },
-      include: {
-        cycles: {
-          orderBy: { cycleNumber: 'asc' },
+      const puzzleSet = await prisma.puzzleSet.findFirst({
+        where: {
+          id: setId,
+          user: {
+            clerkId: userId,
+          },
         },
-        puzzles: {
-          include: {
-            puzzle: {
-              select: {
-                id: true,
-                fen: true,
-                rating: true,
-                themes: true,
+        include: {
+          cycles: {
+            orderBy: { cycleNumber: 'asc' },
+          },
+          puzzles: {
+            include: {
+              puzzle: {
+                select: {
+                  id: true,
+                  fen: true,
+                  rating: true,
+                  themes: true,
+                },
               },
-            },
-            attempts: {
-              select: {
-                isCorrect: true,
-                timeSpent: true,
+              attempts: {
+                select: {
+                  isCorrect: true,
+                  timeSpent: true,
+                },
               },
             },
           },
         },
-      },
-    })
+      })
 
-    if (!puzzleSet) {
-      return NextResponse.json({ error: 'Puzzle set not found' }, { status: 404 })
-    }
-
-    // Verify ownership
-    if (puzzleSet.userId !== user.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
+      if (!puzzleSet) {
+        return NextResponse.json({ error: 'Puzzle set not found' }, { status: 404 })
+      }
 
     // Calculate cycle stats
     const cycles: CycleStats[] = puzzleSet.cycles
@@ -192,33 +190,34 @@ export async function GET(
       .sort((a, b) => a.successRate - b.successRate)
       .slice(0, 15)
 
-    const response: ProgressResponse = {
-      set: {
-        id: puzzleSet.id,
-        name: puzzleSet.name,
-        size: puzzleSet.size,
-        targetRating: puzzleSet.targetRating,
-        targetCycles: puzzleSet.targetCycles,
-      },
-      summary: {
-        totalAttempts,
-        completedCycles,
-        overallAccuracy,
-        averageTimePerPuzzle,
-        totalTimeSpent,
-        bestCycleTime,
-      },
-      cycles,
-      themePerformance,
-      problemPuzzles,
-    }
+      const response: ProgressResponse = {
+        set: {
+          id: puzzleSet.id,
+          name: puzzleSet.name,
+          size: puzzleSet.size,
+          targetRating: puzzleSet.targetRating,
+          targetCycles: puzzleSet.targetCycles,
+        },
+        summary: {
+          totalAttempts,
+          completedCycles,
+          overallAccuracy,
+          averageTimePerPuzzle,
+          totalTimeSpent,
+          bestCycleTime,
+        },
+        cycles,
+        themePerformance,
+        problemPuzzles,
+      }
 
-    return NextResponse.json(response)
-  } catch (error) {
-    console.error('Error fetching progress:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
+      return NextResponse.json(response)
+    } catch (error) {
+      console.error('Error fetching progress:', error)
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      )
+    }
+  })
 }

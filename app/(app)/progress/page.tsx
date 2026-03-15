@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
+import { useAppUser } from '@/hooks/use-app-user'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SetSelector } from '@/components/progress/set-selector'
@@ -27,6 +28,7 @@ export default function ProgressPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const selectedSetId = searchParams.get('setId')
+  const { data: appUser, isLoading: userLoading } = useAppUser()
 
   // Fetch puzzle sets for selector
   const { data: setsData, isLoading: setsLoading } = useQuery<PuzzleSetsData>({
@@ -36,6 +38,7 @@ export default function ProgressPage() {
       if (!res.ok) throw new Error('Failed to fetch puzzle sets')
       return res.json()
     },
+    enabled: !!appUser?.user,
   })
 
   // Auto-select first set if none selected
@@ -51,14 +54,14 @@ export default function ProgressPage() {
     data: progressData,
     isLoading: progressLoading,
     error: progressError,
-  } = useProgressData(selectedSetId)
+  } = useProgressData(selectedSetId, { enabled: !!appUser?.user })
 
   const handleSetChange = (setId: string) => {
     router.push(`/progress?setId=${setId}`)
   }
 
   // Loading state
-  if (setsLoading) {
+  if (userLoading || setsLoading) {
     return <ProgressSkeleton />
   }
 

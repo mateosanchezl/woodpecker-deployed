@@ -3,6 +3,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { useAppUser } from "@/hooks/use-app-user";
 import { ReviewPuzzleBoard } from "@/components/review/review-puzzle-board";
 import { ReviewPuzzleList } from "@/components/review/review-puzzle-list";
 import { ThemeWeaknessChips } from "@/components/review/theme-weakness-chips";
@@ -45,6 +46,7 @@ export default function ReviewPage() {
   const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
   const [selectedPuzzleId, setSelectedPuzzleId] = useState<string | null>(null);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const { data: appUser, isLoading: isLoadingUser } = useAppUser();
 
   const { data, isLoading, error, refetch } = useQuery<ReviewResponse>({
     queryKey: ["review-puzzles", selectedTheme],
@@ -57,6 +59,7 @@ export default function ReviewPage() {
       if (!res.ok) throw new Error("Failed to fetch review puzzles");
       return res.json();
     },
+    enabled: !!appUser?.user,
   });
 
   const effectiveSelectedPuzzleId = useMemo(() => {
@@ -118,7 +121,7 @@ export default function ReviewPage() {
     setSelectedPuzzleId(nextPuzzle.puzzleInSetId);
   }, [data, selectedPuzzleIndex]);
 
-  if (isLoading) {
+  if (isLoadingUser || isLoading) {
     return <ReviewPageSkeleton />;
   }
 

@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { withRouteMetrics } from "@/lib/metrics/request-metrics";
 import { nextPuzzleQuerySchema } from "@/lib/validations/training";
 import {
-  fetchTrainingSessionForUser,
+  fetchTrainingSessionSnapshot,
   toLegacyNextPuzzleResponse,
 } from "@/lib/training/session";
 
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         );
       }
 
-      const session = await fetchTrainingSessionForUser({
+      const session = await fetchTrainingSessionSnapshot({
         clerkId,
         setId,
         cycleId: validation.data.cycleId,

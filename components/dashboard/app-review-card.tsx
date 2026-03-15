@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Star, Sparkles, Send } from "lucide-react";
+import { useAppUser } from "@/hooks/use-app-user";
 import {
   Card,
   CardContent,
@@ -37,6 +38,7 @@ interface AppReviewCardProps {
 export function AppReviewCard({ onSubmitted }: AppReviewCardProps) {
   const [draft, setDraft] = useState<SaveReviewInput | null>(null);
   const queryClient = useQueryClient();
+  const { data: appUser } = useAppUser();
 
   const { data: existingReview, isLoading } = useQuery<ReviewResponse>({
     queryKey: ["app-review"],
@@ -47,6 +49,7 @@ export function AppReviewCard({ onSubmitted }: AppReviewCardProps) {
       }
       return response.json() as Promise<ReviewResponse>;
     },
+    enabled: !!appUser?.user,
   });
 
   const currentRating = draft?.rating ?? existingReview?.review?.rating ?? 0;

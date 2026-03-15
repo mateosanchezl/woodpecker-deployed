@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useAppUser } from '@/hooks/use-app-user'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { LeaderboardTable } from '@/components/leaderboard/leaderboard-table'
@@ -12,14 +13,18 @@ import type { LeaderboardPeriod } from '@/lib/validations/leaderboard'
 
 export default function LeaderboardPage() {
   const [period, setPeriod] = useState<LeaderboardPeriod>('alltime')
+  const { data: appUser, isLoading: isLoadingUser } = useAppUser()
 
-  const { data, isLoading, error } = useLeaderboard({ period })
+  const { data, isLoading, error } = useLeaderboard({
+    period,
+    enabled: !!appUser?.user,
+  })
 
   // Check if current user is visible in the table
   const isCurrentUserVisible =
     data?.entries.some((entry) => entry.isCurrentUser) ?? false
 
-  if (isLoading) {
+  if (isLoadingUser || isLoading) {
     return <LeaderboardSkeleton />
   }
 

@@ -4,6 +4,11 @@ interface RequestMetricContext {
   prismaOperations: number;
 }
 
+interface RouteMetricSummary {
+  durationMs: number;
+  prismaOperations: number;
+}
+
 interface RouteSample {
   durationMs: number;
   prismaOperations: number;
@@ -69,6 +74,26 @@ export function incrementPrismaOperationCount(): void {
   store.prismaOperations += 1;
 }
 
+function applyMetricHeaders(
+  response: Response,
+  routeName: string,
+  summary: RouteMetricSummary,
+) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  response.headers.set("x-route-metrics-route", routeName);
+  response.headers.set(
+    "x-route-metrics-duration-ms",
+    summary.durationMs.toFixed(2),
+  );
+  response.headers.set(
+    "x-route-metrics-prisma-ops",
+    String(summary.prismaOperations),
+  );
+}
+
 export async function withRouteMetrics<T>(
   routeName: string,
   operation: () => Promise<T>,
@@ -76,17 +101,25 @@ export async function withRouteMetrics<T>(
   const start = Date.now();
 
   return requestMetricContext.run({ prismaOperations: 0 }, async () => {
+    let result: T | undefined;
+
     try {
-      return await operation();
+      result = await operation();
+      return result;
     } finally {
       const store = requestMetricContext.getStore();
       const durationMs = Number((Date.now() - start).toFixed(2));
       const prismaOperations = store?.prismaOperations ?? 0;
       const stats = pushSample(routeName, { durationMs, prismaOperations });
+      const summary = { durationMs, prismaOperations };
 
       console.info(
         `[route-metrics] ${routeName} durationMs=${durationMs} prismaOps=${prismaOperations} p50=${stats.p50.toFixed(2)} p95=${stats.p95.toFixed(2)}`,
       );
+
+      if (result instanceof Response) {
+        applyMetricHeaders(result, routeName, summary);
+      }
     }
   });
 }

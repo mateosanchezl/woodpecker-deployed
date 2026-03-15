@@ -29,6 +29,30 @@ interface SessionPuzzleRecord {
   };
 }
 
+export interface TrainingSessionSnapshotRow {
+  cycleId: string;
+  puzzleSetId: string;
+  cycleNumber: number;
+  totalPuzzles: number;
+  attemptedCount: number;
+  nextPosition: number;
+  solvedCorrect: number;
+  solvedIncorrect: number;
+  skipped: number;
+  totalTime: number | null;
+  completedAt: Date | null;
+  puzzleInSetId: string | null;
+  position: number | null;
+  totalAttempts: number | null;
+  correctAttempts: number | null;
+  averageTime: number | null;
+  puzzleId: string | null;
+  fen: string | null;
+  moves: string | null;
+  rating: number | null;
+  themes: string[] | null;
+}
+
 export interface SessionPuzzlePayload {
   puzzle: {
     id: string;
@@ -122,70 +146,114 @@ export function buildTrainingSessionPayload(
   };
 }
 
-export async function fetchTrainingSessionForUser(params: {
+export function mapTrainingSessionSnapshotRows(
+  rows: TrainingSessionSnapshotRow[],
+): TrainingSessionPayload | null {
+  if (rows.length === 0) {
+    return null;
+  }
+
+  const [firstRow] = rows;
+  const cycle: SessionCycleData = {
+    id: firstRow.cycleId,
+    puzzleSetId: firstRow.puzzleSetId,
+    cycleNumber: firstRow.cycleNumber,
+    totalPuzzles: firstRow.totalPuzzles,
+    attemptedCount: firstRow.attemptedCount,
+    nextPosition: firstRow.nextPosition,
+    solvedCorrect: firstRow.solvedCorrect,
+    solvedIncorrect: firstRow.solvedIncorrect,
+    skipped: firstRow.skipped,
+    totalTime: firstRow.totalTime,
+    completedAt: firstRow.completedAt,
+  };
+
+  const upcomingPuzzles: SessionPuzzleRecord[] = rows
+    .filter((row): row is TrainingSessionSnapshotRow & { puzzleInSetId: string } =>
+      row.puzzleInSetId !== null,
+    )
+    .map((row) => ({
+      id: row.puzzleInSetId,
+      position: row.position ?? cycle.nextPosition,
+      totalAttempts: row.totalAttempts ?? 0,
+      correctAttempts: row.correctAttempts ?? 0,
+      averageTime: row.averageTime,
+      puzzle: {
+        id: row.puzzleId ?? "",
+        fen: row.fen ?? "",
+        moves: row.moves ?? "",
+        rating: row.rating ?? 0,
+        themes: row.themes ?? [],
+      },
+    }));
+
+  return buildTrainingSessionPayload(cycle, upcomingPuzzles);
+}
+
+export async function fetchTrainingSessionSnapshot(params: {
   clerkId: string;
   setId: string;
   cycleId: string;
 }): Promise<TrainingSessionPayload | null> {
   const { clerkId, setId, cycleId } = params;
 
-  const cycle = await prisma.cycle.findFirst({
-    where: {
-      id: cycleId,
-      puzzleSetId: setId,
-      puzzleSet: {
-        user: { clerkId },
-      },
-    },
-    select: {
-      id: true,
-      puzzleSetId: true,
-      cycleNumber: true,
-      totalPuzzles: true,
-      attemptedCount: true,
-      nextPosition: true,
-      solvedCorrect: true,
-      solvedIncorrect: true,
-      skipped: true,
-      totalTime: true,
-      completedAt: true,
-    },
-  });
+  const rows = await prisma.$queryRaw<TrainingSessionSnapshotRow[]>`
+    SELECT
+      c.id AS "cycleId",
+      c."puzzleSetId",
+      c."cycleNumber",
+      c."totalPuzzles",
+      c."attemptedCount",
+      c."nextPosition",
+      c."solvedCorrect",
+      c."solvedIncorrect",
+      c."skipped",
+      c."totalTime",
+      c."completedAt",
+      upcoming."puzzleInSetId",
+      upcoming.position,
+      upcoming."totalAttempts",
+      upcoming."correctAttempts",
+      upcoming."averageTime",
+      upcoming."puzzleId",
+      upcoming.fen,
+      upcoming.moves,
+      upcoming.rating,
+      upcoming.themes
+    FROM "Cycle" c
+    JOIN "PuzzleSet" ps ON ps.id = c."puzzleSetId"
+    JOIN "User" u ON u.id = ps."userId"
+    LEFT JOIN LATERAL (
+      SELECT
+        pis.id AS "puzzleInSetId",
+        pis.position,
+        pis."totalAttempts",
+        pis."correctAttempts",
+        pis."averageTime",
+        p.id AS "puzzleId",
+        p.fen,
+        p.moves,
+        p.rating,
+        p.themes
+      FROM "PuzzleInSet" pis
+      JOIN "Puzzle" p ON p.id = pis."puzzleId"
+      WHERE pis."puzzleSetId" = ps.id
+        AND c."completedAt" IS NULL
+        AND c."nextPosition" <= c."totalPuzzles"
+        AND pis.position >= c."nextPosition"
+      ORDER BY pis.position ASC
+      LIMIT 2
+    ) upcoming ON true
+    WHERE c.id = ${cycleId}
+      AND c."puzzleSetId" = ${setId}
+      AND u."clerkId" = ${clerkId}
+    ORDER BY upcoming.position ASC NULLS LAST;
+  `;
 
-  if (!cycle) return null;
-
-  const isCycleComplete =
-    cycle.completedAt !== null || cycle.nextPosition > cycle.totalPuzzles;
-
-  const upcomingPuzzles = isCycleComplete
-    ? []
-    : await prisma.puzzleInSet.findMany({
-        where: {
-          puzzleSetId: setId,
-          position: { gte: cycle.nextPosition },
-        },
-        orderBy: { position: "asc" },
-        take: 2,
-        select: {
-          id: true,
-          position: true,
-          totalAttempts: true,
-          correctAttempts: true,
-          averageTime: true,
-          puzzle: {
-            select: {
-              id: true,
-              fen: true,
-              moves: true,
-              rating: true,
-              themes: true,
-            },
-          },
-        },
-      });
-
-  return buildTrainingSessionPayload(cycle, upcomingPuzzles);
+  return mapTrainingSessionSnapshotRows(rows);
 }
+
+export const fetchTrainingSessionForUser = fetchTrainingSessionSnapshot;
 
 export function toLegacyNextPuzzleResponse(session: TrainingSessionPayload) {
   return {

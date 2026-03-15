@@ -6,7 +6,10 @@ import type { ProgressResponse } from '@/lib/validations/progress'
 /**
  * Hook for fetching progress data for a puzzle set.
  */
-export function useProgressData(puzzleSetId: string | null) {
+export function useProgressData(
+  puzzleSetId: string | null,
+  options?: { enabled?: boolean }
+) {
   return useQuery<ProgressResponse>({
     queryKey: ['progress', puzzleSetId],
     queryFn: async () => {
@@ -20,7 +23,7 @@ export function useProgressData(puzzleSetId: string | null) {
       }
       return res.json()
     },
-    enabled: !!puzzleSetId,
+    enabled: !!puzzleSetId && (options?.enabled ?? true),
     staleTime: 120000, // 2 minutes - progress only changes after attempts
   })
 }

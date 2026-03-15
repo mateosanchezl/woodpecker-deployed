@@ -545,6 +545,21 @@ export async function checkRisingStarAchievement(
   return { newlyUnlocked };
 }
 
+export async function checkRisingStarAchievementByClerkId(
+  clerkId: string,
+): Promise<AchievementCheckResult> {
+  const user = await prisma.user.findUnique({
+    where: { clerkId },
+    select: { id: true },
+  });
+
+  if (!user) {
+    return { newlyUnlocked: [] };
+  }
+
+  return checkRisingStarAchievement(user.id);
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -609,6 +624,39 @@ export async function getUserAchievements(userId: string): Promise<{
 }> {
   const userAchievements = await prisma.userAchievement.findMany({
     where: { userId },
+    select: { achievementId: true, unlockedAt: true },
+  });
+
+  const unlockedMap = new Map(
+    userAchievements.map((ua) => [ua.achievementId, ua.unlockedAt]),
+  );
+
+  const achievements = ACHIEVEMENT_DEFINITIONS.map((def) => ({
+    ...def,
+    unlockedAt: unlockedMap.get(def.id) ?? null,
+    isUnlocked: unlockedMap.has(def.id),
+  }));
+
+  return {
+    achievements,
+    totalUnlocked: userAchievements.length,
+    totalAchievements: ACHIEVEMENT_DEFINITIONS.length,
+  };
+}
+
+export async function getUserAchievementsByClerkId(clerkId: string): Promise<{
+  achievements: Array<
+    AchievementDefinition & { unlockedAt: Date | null; isUnlocked: boolean }
+  >;
+  totalUnlocked: number;
+  totalAchievements: number;
+}> {
+  const userAchievements = await prisma.userAchievement.findMany({
+    where: {
+      user: {
+        clerkId,
+      },
+    },
     select: { achievementId: true, unlockedAt: true },
   });
 

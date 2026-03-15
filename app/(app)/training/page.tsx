@@ -4,6 +4,7 @@ import { useState, useCallback, Suspense, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useAppUser, type AppUserResponse } from '@/hooks/use-app-user'
 import { TrainingSession } from '@/components/training/training-session'
 import {
   useTrainingSession,
@@ -52,13 +53,6 @@ interface PuzzleSetData {
   lastTrainedAt: string | null
 }
 
-interface UserPreferenceData {
-  user: {
-    autoStartNextPuzzle: boolean
-    boardTheme?: string | null
-  }
-}
-
 /**
  * Training page - main entry point for puzzle training.
  * Shows puzzle sets and allows starting/continuing training cycles.
@@ -100,6 +94,13 @@ function TrainingPageInner({
   const router = useRouter()
   const queryClient = useQueryClient()
 
+  const {
+    data: userData,
+    isLoading: isLoadingUserPreferences,
+    error: userPreferencesError,
+    refetch: refetchUserPreferences,
+  } = useAppUser()
+
   // Fetch user's active puzzle sets
   const { data: puzzleSets, isLoading: loadingSets } = useQuery<{
     sets: PuzzleSetData[]
@@ -112,24 +113,7 @@ function TrainingPageInner({
       }
       return res.json()
     },
-  })
-
-  const {
-    data: userData,
-    isLoading: isLoadingUserPreferences,
-    error: userPreferencesError,
-    refetch: refetchUserPreferences,
-  } = useQuery<UserPreferenceData>({
-    queryKey: ['user'],
-    queryFn: async () => {
-      const res = await fetch('/api/user')
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to fetch user')
-      }
-      return res.json()
-    },
-    staleTime: 60000,
+    enabled: !!userData?.user,
   })
 
   const [selectedSetId, setSelectedSetId] = useState<string | null>(urlSetId)
@@ -195,10 +179,10 @@ function TrainingPageInner({
   const createCycleMutation = useCreateCycle()
 
   const updateAutoStartNextPuzzleMutation = useMutation<
-    UserPreferenceData,
+    AppUserResponse,
     Error,
     boolean,
-    { previousUserData?: UserPreferenceData }
+    { previousUserData?: AppUserResponse }
   >({
     mutationFn: async (autoStartNextPuzzle) => {
       const res = await fetch('/api/user', {
@@ -210,14 +194,14 @@ function TrainingPageInner({
         const error = await res.json()
         throw new Error(error.error || 'Failed to update training pace')
       }
-      return res.json()
+      return res.json() as Promise<AppUserResponse>
     },
     onMutate: async (autoStartNextPuzzle) => {
       await queryClient.cancelQueries({ queryKey: ['user'] })
 
-      const previousUserData = queryClient.getQueryData<UserPreferenceData>(['user'])
+      const previousUserData = queryClient.getQueryData<AppUserResponse>(['user'])
 
-      queryClient.setQueryData<UserPreferenceData>(['user'], oldData => {
+      queryClient.setQueryData<AppUserResponse>(['user'], oldData => {
         if (!oldData?.user) {
           return oldData
         }

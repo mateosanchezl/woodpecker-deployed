@@ -31,6 +31,172 @@ interface RouteContext {
   params: Promise<{ setId: string; cycleId: string }>;
 }
 
+interface AttemptContextRow {
+  cycleId: string;
+  puzzleSetId: string;
+  cycleNumber: number;
+  totalPuzzles: number;
+  solvedCorrect: number;
+  solvedIncorrect: number;
+  skipped: number;
+  totalTime: number | null;
+  completedAt: Date | null;
+  nextPosition: number;
+  attemptedCount: number;
+  userId: string;
+  userEmail: string | null;
+  totalCorrectAttempts: number;
+  weeklyCorrectAttempts: number;
+  weeklyCorrectStartDate: Date | null;
+  totalXp: number;
+  weeklyXp: number;
+  weeklyXpStartDate: Date | null;
+  currentStreak: number;
+  longestStreak: number;
+  lastTrainedDate: Date | null;
+  expectedPuzzleInSetId: string | null;
+  puzzlePosition: number | null;
+  puzzleTotalAttempts: number | null;
+  puzzleCorrectAttempts: number | null;
+  puzzleAverageTime: number | null;
+  lastAttemptIsCorrect: boolean | null;
+  lastAttemptTime: number | null;
+  puzzleId: string | null;
+  fen: string | null;
+  moves: string | null;
+  rating: number | null;
+  themes: string[] | null;
+}
+
+async function fetchAttemptWriteContext(
+  tx: Pick<typeof prisma, '$queryRaw'>,
+  params: {
+    clerkId: string;
+    setId: string;
+    cycleId: string;
+  },
+) {
+  const { clerkId, setId, cycleId } = params;
+  const rows = await tx.$queryRaw<AttemptContextRow[]>`
+    SELECT
+      c.id AS "cycleId",
+      c."puzzleSetId",
+      c."cycleNumber",
+      c."totalPuzzles",
+      c."solvedCorrect",
+      c."solvedIncorrect",
+      c."skipped",
+      c."totalTime",
+      c."completedAt",
+      c."nextPosition",
+      c."attemptedCount",
+      u.id AS "userId",
+      u.email AS "userEmail",
+      u."totalCorrectAttempts",
+      u."weeklyCorrectAttempts",
+      u."weeklyCorrectStartDate",
+      u."totalXp",
+      u."weeklyXp",
+      u."weeklyXpStartDate",
+      u."currentStreak",
+      u."longestStreak",
+      u."lastTrainedDate",
+      expected."puzzleInSetId" AS "expectedPuzzleInSetId",
+      expected.position AS "puzzlePosition",
+      expected."totalAttempts" AS "puzzleTotalAttempts",
+      expected."correctAttempts" AS "puzzleCorrectAttempts",
+      expected."averageTime" AS "puzzleAverageTime",
+      expected."lastAttemptIsCorrect",
+      expected."lastAttemptTime",
+      expected."puzzleId",
+      expected.fen,
+      expected.moves,
+      expected.rating,
+      expected.themes
+    FROM "Cycle" c
+    JOIN "PuzzleSet" ps ON ps.id = c."puzzleSetId"
+    JOIN "User" u ON u.id = ps."userId"
+    LEFT JOIN LATERAL (
+      SELECT
+        pis.id AS "puzzleInSetId",
+        pis.position,
+        pis."totalAttempts",
+        pis."correctAttempts",
+        pis."averageTime",
+        pis."lastAttemptIsCorrect",
+        pis."lastAttemptTime",
+        p.id AS "puzzleId",
+        p.fen,
+        p.moves,
+        p.rating,
+        p.themes
+      FROM "PuzzleInSet" pis
+      JOIN "Puzzle" p ON p.id = pis."puzzleId"
+      WHERE pis."puzzleSetId" = ps.id
+        AND pis.position = c."nextPosition"
+      LIMIT 1
+    ) expected ON true
+    WHERE c.id = ${cycleId}
+      AND c."puzzleSetId" = ${setId}
+      AND u."clerkId" = ${clerkId}
+    LIMIT 1;
+  `;
+  const row = rows[0];
+  if (!row) {
+    return null;
+  }
+
+  return {
+    cycleWithUser: {
+      id: row.cycleId,
+      puzzleSetId: row.puzzleSetId,
+      cycleNumber: row.cycleNumber,
+      totalPuzzles: row.totalPuzzles,
+      solvedCorrect: row.solvedCorrect,
+      solvedIncorrect: row.solvedIncorrect,
+      skipped: row.skipped,
+      totalTime: row.totalTime,
+      completedAt: row.completedAt,
+      nextPosition: row.nextPosition,
+      attemptedCount: row.attemptedCount,
+      puzzleSet: {
+        id: row.puzzleSetId,
+        user: {
+          id: row.userId,
+          email: row.userEmail,
+          totalCorrectAttempts: row.totalCorrectAttempts,
+          weeklyCorrectAttempts: row.weeklyCorrectAttempts,
+          weeklyCorrectStartDate: row.weeklyCorrectStartDate,
+          totalXp: row.totalXp,
+          weeklyXp: row.weeklyXp,
+          weeklyXpStartDate: row.weeklyXpStartDate,
+          currentStreak: row.currentStreak,
+          longestStreak: row.longestStreak,
+          lastTrainedDate: row.lastTrainedDate,
+        },
+      },
+    },
+    expectedPuzzleInSet: row.expectedPuzzleInSetId
+      ? {
+          id: row.expectedPuzzleInSetId,
+          position: row.puzzlePosition ?? row.nextPosition,
+          totalAttempts: row.puzzleTotalAttempts ?? 0,
+          correctAttempts: row.puzzleCorrectAttempts ?? 0,
+          averageTime: row.puzzleAverageTime,
+          lastAttemptIsCorrect: row.lastAttemptIsCorrect,
+          lastAttemptTime: row.lastAttemptTime,
+          puzzle: {
+            id: row.puzzleId ?? "",
+            fen: row.fen ?? "",
+            moves: row.moves ?? "",
+            rating: row.rating ?? 0,
+            themes: row.themes ?? [],
+          },
+        }
+      : null,
+  };
+}
+
 function formatAlertValue(value: string | number | boolean | null) {
   if (value === null) return "n/a";
   if (typeof value === "boolean") return value ? "yes" : "no";
@@ -155,52 +321,17 @@ export async function POST(request: NextRequest, context: RouteContext) {
       const now = new Date();
 
       const result = await prisma.$transaction(async (tx) => {
-        const cycleWithUser = await tx.cycle.findFirst({
-          where: {
-            id: cycleId,
-            puzzleSetId: setId,
-            puzzleSet: {
-              user: { clerkId },
-            },
-          },
-          select: {
-            id: true,
-            puzzleSetId: true,
-            cycleNumber: true,
-            totalPuzzles: true,
-            solvedCorrect: true,
-            solvedIncorrect: true,
-            skipped: true,
-            totalTime: true,
-            completedAt: true,
-            nextPosition: true,
-            attemptedCount: true,
-            puzzleSet: {
-              select: {
-                id: true,
-                user: {
-                  select: {
-                    id: true,
-                    email: true,
-                    totalCorrectAttempts: true,
-                    weeklyCorrectAttempts: true,
-                    weeklyCorrectStartDate: true,
-                    totalXp: true,
-                    weeklyXp: true,
-                    weeklyXpStartDate: true,
-                    currentStreak: true,
-                    longestStreak: true,
-                    lastTrainedDate: true,
-                  },
-                },
-              },
-            },
-          },
+        const attemptContext = await fetchAttemptWriteContext(tx, {
+          clerkId,
+          setId,
+          cycleId,
         });
 
-        if (!cycleWithUser) {
+        if (!attemptContext) {
           return { status: "not_found" as const };
         }
+
+        const { cycleWithUser, expectedPuzzleInSet } = attemptContext;
 
         if (
           cycleWithUser.completedAt !== null ||
@@ -208,33 +339,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
         ) {
           return { status: "cycle_complete" as const };
         }
-
-        const expectedPuzzleInSet = await tx.puzzleInSet.findUnique({
-          where: {
-            puzzleSetId_position: {
-              puzzleSetId: setId,
-              position: cycleWithUser.nextPosition,
-            },
-          },
-          select: {
-            id: true,
-            position: true,
-            totalAttempts: true,
-            correctAttempts: true,
-            averageTime: true,
-            lastAttemptIsCorrect: true,
-            lastAttemptTime: true,
-            puzzle: {
-              select: {
-                id: true,
-                fen: true,
-                moves: true,
-                rating: true,
-                themes: true,
-              },
-            },
-          },
-        });
 
         if (!expectedPuzzleInSet) {
           return { status: "expected_puzzle_missing" as const };

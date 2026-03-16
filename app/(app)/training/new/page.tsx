@@ -1,33 +1,22 @@
 'use client'
 
 import { useCallback } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { CreatePuzzleSetForm } from '@/components/onboarding/create-puzzle-set-form'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
+import { useAppBootstrap, APP_BOOTSTRAP_QUERY_KEY } from '@/hooks/use-app-bootstrap'
 import type { TrainingTheme } from '@/lib/chess/training-themes'
-
-interface UserData {
-  user: {
-    estimatedRating: number
-  }
-}
 
 export default function NewPuzzleSetPage() {
   const router = useRouter()
   const queryClient = useQueryClient()
 
-  // Fetch user data for rating
-  const { data: userData, isLoading } = useQuery<UserData>({
-    queryKey: ['user'],
-    queryFn: async () => {
-      const res = await fetch('/api/user')
-      if (!res.ok) throw new Error('Failed to fetch user')
-      return res.json()
-    },
+  const { data: user, isLoading } = useAppBootstrap({
+    select: (data) => data.user,
   })
 
   // Create puzzle set mutation
@@ -52,8 +41,7 @@ export default function NewPuzzleSetPage() {
       return res.json()
     },
     onSuccess: async (data) => {
-      queryClient.invalidateQueries({ queryKey: ['puzzle-sets'] })
-      queryClient.invalidateQueries({ queryKey: ['user'] })
+      queryClient.invalidateQueries({ queryKey: APP_BOOTSTRAP_QUERY_KEY })
       toast.success('Puzzle set created successfully!')
       try {
         const cycleRes = await fetch(
@@ -113,7 +101,7 @@ export default function NewPuzzleSetPage() {
       </Button>
 
       <CreatePuzzleSetForm
-        userRating={userData?.user.estimatedRating || 1200}
+        userRating={user?.estimatedRating || 1200}
         onSubmit={handleSubmit}
         isSubmitting={createPuzzleSetMutation.isPending}
       />

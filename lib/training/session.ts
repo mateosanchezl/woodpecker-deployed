@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
-interface SessionCycleData {
+export interface SessionCycleData {
   id: string;
   puzzleSetId: string;
   cycleNumber: number;
@@ -14,7 +14,7 @@ interface SessionCycleData {
   completedAt: Date | null;
 }
 
-interface SessionPuzzleRecord {
+export interface SessionPuzzleRecord {
   id: string;
   position: number;
   totalAttempts: number;
@@ -122,6 +122,39 @@ export function buildTrainingSessionPayload(
   };
 }
 
+export async function fetchUpcomingTrainingPuzzles(params: {
+  puzzleSetId: string;
+  nextPosition: number;
+  take?: number;
+}): Promise<SessionPuzzleRecord[]> {
+  const { puzzleSetId, nextPosition, take = 2 } = params;
+
+  return prisma.puzzleInSet.findMany({
+    where: {
+      puzzleSetId,
+      position: { gte: nextPosition },
+    },
+    orderBy: { position: "asc" },
+    take,
+    select: {
+      id: true,
+      position: true,
+      totalAttempts: true,
+      correctAttempts: true,
+      averageTime: true,
+      puzzle: {
+        select: {
+          id: true,
+          fen: true,
+          moves: true,
+          rating: true,
+          themes: true,
+        },
+      },
+    },
+  });
+}
+
 export async function fetchTrainingSessionForUser(params: {
   clerkId: string;
   setId: string;
@@ -159,29 +192,9 @@ export async function fetchTrainingSessionForUser(params: {
 
   const upcomingPuzzles = isCycleComplete
     ? []
-    : await prisma.puzzleInSet.findMany({
-        where: {
-          puzzleSetId: setId,
-          position: { gte: cycle.nextPosition },
-        },
-        orderBy: { position: "asc" },
-        take: 2,
-        select: {
-          id: true,
-          position: true,
-          totalAttempts: true,
-          correctAttempts: true,
-          averageTime: true,
-          puzzle: {
-            select: {
-              id: true,
-              fen: true,
-              moves: true,
-              rating: true,
-              themes: true,
-            },
-          },
-        },
+    : await fetchUpcomingTrainingPuzzles({
+        puzzleSetId: setId,
+        nextPosition: cycle.nextPosition,
       });
 
   return buildTrainingSessionPayload(cycle, upcomingPuzzles);

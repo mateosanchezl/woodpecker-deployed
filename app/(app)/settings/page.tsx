@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -14,23 +14,9 @@ import {
   resolveBoardTheme,
   type BoardThemeId,
 } from '@/lib/chess/board-themes'
+import { useAppBootstrap, updateBootstrapCache } from '@/hooks/use-app-bootstrap'
 import { toast } from 'sonner'
 import { Settings, Users, Eye, EyeOff, Target, Clock3, Palette } from 'lucide-react'
-
-interface UserData {
-  user: {
-    id: string
-    email: string
-    name: string | null
-    estimatedRating: number
-    preferredSetSize: number
-    targetCycles: number
-    autoStartNextPuzzle: boolean
-    boardTheme?: string | null
-    showOnLeaderboard: boolean
-    hasCompletedOnboarding: boolean
-  }
-}
 
 interface UpdateSettingsInput {
   estimatedRating?: number
@@ -139,21 +125,16 @@ export default function SettingsPage() {
   const [draftSettings, setDraftSettings] = useState<SettingsDraft | null>(null)
   const lastLoadedSettingsRef = useRef<SettingsDraft | null>(null)
 
-  const { data, isLoading } = useQuery<UserData>({
-    queryKey: ['user'],
-    queryFn: async () => {
-      const res = await fetch('/api/user')
-      if (!res.ok) throw new Error('Failed to fetch user')
-      return res.json()
-    },
+  const { data: user, isLoading } = useAppBootstrap({
+    select: (bootstrap) => bootstrap.user,
   })
 
-  const loadedEstimatedRating = data?.user?.estimatedRating
-  const loadedPreferredSetSize = data?.user?.preferredSetSize
-  const loadedTargetCycles = data?.user?.targetCycles
-  const loadedAutoStartNextPuzzle = data?.user?.autoStartNextPuzzle
-  const loadedBoardTheme = data?.user?.boardTheme
-  const loadedShowOnLeaderboard = data?.user?.showOnLeaderboard
+  const loadedEstimatedRating = user?.estimatedRating
+  const loadedPreferredSetSize = user?.preferredSetSize
+  const loadedTargetCycles = user?.targetCycles
+  const loadedAutoStartNextPuzzle = user?.autoStartNextPuzzle
+  const loadedBoardTheme = user?.boardTheme
+  const loadedShowOnLeaderboard = user?.showOnLeaderboard
 
   const updateSettings = useMutation<
     UpdateSettingsResponse,
@@ -173,22 +154,20 @@ export default function SettingsPage() {
       return res.json()
     },
     onSuccess: (response) => {
-      queryClient.setQueryData<UserData>(['user'], oldData => {
-        if (!oldData?.user) {
-          return oldData
+      updateBootstrapCache(queryClient, (current) => {
+        const nextUser = {
+          ...current.user,
+          ...response.user,
+          boardTheme: response.user.boardTheme ?? current.user.boardTheme,
         }
 
         return {
-          ...oldData,
-          user: {
-            ...oldData.user,
-            ...response.user,
-          },
+          ...current,
+          user: nextUser,
         }
       })
 
       queryClient.invalidateQueries({ queryKey: ['leaderboard'] })
-      queryClient.invalidateQueries({ queryKey: ['user'] })
       toast.success('Settings saved')
     },
     onError: (error) => {
@@ -240,7 +219,7 @@ export default function SettingsPage() {
     loadedShowOnLeaderboard,
   ])
 
-  const savedSettings = data?.user ? createSettingsDraft(data.user) : null
+  const savedSettings = user ? createSettingsDraft(user) : null
   const currentSettings = draftSettings ?? savedSettings ?? DEFAULT_SETTINGS
   const isDirty =
     savedSettings !== null &&
@@ -515,11 +494,11 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="grid gap-1">
             <Label className="text-sm text-muted-foreground">Email</Label>
-            <p className="text-sm font-medium">{data?.user.email}</p>
+            <p className="text-sm font-medium">{user?.email}</p>
           </div>
           <div className="grid gap-1">
             <Label className="text-sm text-muted-foreground">Name</Label>
-            <p className="text-sm font-medium">{data?.user.name || 'Not set'}</p>
+            <p className="text-sm font-medium">{user?.name || 'Not set'}</p>
           </div>
         </CardContent>
       </Card>

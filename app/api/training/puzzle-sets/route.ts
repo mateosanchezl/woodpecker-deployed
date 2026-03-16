@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { Prisma } from '@prisma/client'
+import { serializePuzzleSets } from '@/lib/app-bootstrap'
 import { prisma } from '@/lib/prisma'
-import { ensureUserExists } from '@/lib/ensure-user'
+import { withUserProvisionFallback } from '@/lib/ensure-user'
 import { createPuzzleSetSchema } from '@/lib/validations/training'
 import { selectRandomPuzzlesForSet } from '@/lib/training/puzzle-selection'
 
@@ -16,8 +17,6 @@ export async function GET() {
     if (!clerkId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    await ensureUserExists(clerkId)
 
     // Get all puzzle sets with their latest cycle.
     const puzzleSets = await prisma.puzzleSet.findMany({
@@ -35,43 +34,8 @@ export async function GET() {
       orderBy: [{ createdAt: 'desc' }],
     })
 
-    const setsWithActivity = puzzleSets.map(set => {
-      const latestCycle = set.cycles[0]
-      const isCurrentCycleComplete = latestCycle?.completedAt !== null
-      const lastTrainedAt = set.lastTrainedAt || latestCycle?.startedAt || null
-
-      return {
-        id: set.id,
-        name: set.name,
-        size: set.size,
-        focusTheme: set.focusTheme,
-        targetCycles: set.targetCycles,
-        targetRating: set.targetRating,
-        minRating: set.minRating,
-        maxRating: set.maxRating,
-        isActive: set.isActive,
-        createdAt: set.createdAt.toISOString(),
-        // Current cycle info
-        currentCycle: latestCycle?.cycleNumber || null,
-        currentCycleId: latestCycle && !isCurrentCycleComplete ? latestCycle.id : null,
-        completedCycles: isCurrentCycleComplete
-          ? latestCycle?.cycleNumber ?? 0
-          : (latestCycle?.cycleNumber ?? 1) - 1,
-        // Last activity timestamp
-        lastTrainedAt: lastTrainedAt?.toISOString() || null,
-      }
-    })
-
-    // Sort by lastTrainedAt (most recent first), nulls last
-    setsWithActivity.sort((a, b) => {
-      if (!a.lastTrainedAt && !b.lastTrainedAt) return 0
-      if (!a.lastTrainedAt) return 1
-      if (!b.lastTrainedAt) return -1
-      return new Date(b.lastTrainedAt).getTime() - new Date(a.lastTrainedAt).getTime()
-    })
-
     return NextResponse.json({
-      sets: setsWithActivity,
+      sets: serializePuzzleSets(puzzleSets),
     })
   } catch (error) {
     console.error('Error fetching puzzle sets:', error)
@@ -93,7 +57,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const user = await ensureUserExists(clerkId)
+    const user = await withUserProvisionFallback(clerkId, () =>
+      prisma.user.findUnique({
+        where: { clerkId },
+        select: { id: true },
+      })
+    )
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
 
     // Parse and validate request body
     const body = await request.json()

@@ -9,6 +9,10 @@ import type {
   TrainingSession,
   TrainingSessionResponse,
 } from '@/lib/validations/training'
+import {
+  APP_BOOTSTRAP_QUERY_KEY,
+  updateBootstrapCache,
+} from '@/hooks/use-app-bootstrap'
 
 interface ApiError extends Error {
   status?: number
@@ -18,14 +22,6 @@ interface UseTrainingSessionOptions {
   puzzleSetId: string
   cycleId: string | null
   autoStartNextPuzzle: boolean
-}
-
-type UserCacheData = {
-  user: {
-    totalXp?: number
-    currentLevel?: number
-    weeklyXp?: number
-  } & Record<string, unknown>
 }
 
 type AttemptMutationContext = {
@@ -230,23 +226,35 @@ export function useTrainingSession(
 
       if (response.xp) {
         const xp = response.xp
-        queryClient.setQueryData<UserCacheData>(['user'], (oldData) => {
-          if (!oldData?.user) {
-            return oldData
-          }
+        updateBootstrapCache(queryClient, (current) => {
+          const currentWeeklyXp =
+            typeof current.user.weeklyXp === 'number' ? current.user.weeklyXp : 0
 
           return {
-            ...oldData,
+            ...current,
             user: {
-              ...oldData.user,
+              ...current.user,
               totalXp: xp.newTotal,
               currentLevel: xp.newLevel,
-              weeklyXp:
-                (typeof oldData.user.weeklyXp === 'number' ? oldData.user.weeklyXp : 0) +
-                xp.gained,
+              weeklyXp: currentWeeklyXp + xp.gained,
             },
           }
         })
+      }
+
+      const streak = response.streak
+      if (streak) {
+        updateBootstrapCache(queryClient, (current) => ({
+          ...current,
+          user: {
+            ...current.user,
+            currentStreak: streak.current,
+            longestStreak: streak.longest,
+            lastTrainedDate: streak.incremented
+              ? new Date().toISOString()
+              : current.user.lastTrainedDate,
+          },
+        }))
       }
 
       const shouldQueueResolvedSession =
@@ -266,7 +274,7 @@ export function useTrainingSession(
       }
 
       if (response.isLastPuzzle) {
-        queryClient.invalidateQueries({ queryKey: ['user'] })
+        queryClient.invalidateQueries({ queryKey: APP_BOOTSTRAP_QUERY_KEY })
       }
 
       if (response.unlockedAchievements && response.unlockedAchievements.length > 0) {
@@ -373,7 +381,7 @@ export function useCreateCycle() {
     },
     onSuccess: (data, puzzleSetId) => {
       queryClient.invalidateQueries({ queryKey: ['puzzle-set', puzzleSetId] })
-      queryClient.invalidateQueries({ queryKey: ['puzzle-sets'] })
+      queryClient.invalidateQueries({ queryKey: APP_BOOTSTRAP_QUERY_KEY })
 
       if (data.session) {
         queryClient.setQueryData(

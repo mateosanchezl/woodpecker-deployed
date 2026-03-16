@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
-import { ensureUserExists } from "@/lib/ensure-user";
+import { withUserProvisionFallback } from "@/lib/ensure-user";
 import {
   resolveBoardTheme,
   type BoardThemeId,
@@ -61,7 +61,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await ensureUserExists(userId);
+    const user = await withUserProvisionFallback(userId, () =>
+      prisma.user.findUnique({
+        where: { clerkId: userId },
+        select: {
+          id: true,
+          boardTheme: true,
+        },
+      }),
+    );
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
 
     const { searchParams } = new URL(request.url);
     const themeFilter = searchParams.get("theme");

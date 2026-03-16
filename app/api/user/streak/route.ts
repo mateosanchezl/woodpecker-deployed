@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { ensureUserExists } from '@/lib/ensure-user'
+import { prisma } from '@/lib/prisma'
+import { withUserProvisionFallback } from '@/lib/ensure-user'
 import { formatStreakResponse, getStreakStatus } from '@/lib/streak'
 
 /**
  * GET /api/user/streak
- * Returns the current user's streak data.
+ * Deprecated compatibility shim. The app now reads streak data from /api/bootstrap.
  */
 export async function GET() {
   try {
@@ -14,28 +15,32 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const user = await ensureUserExists(clerkId)
-
-    // Check if streak is still valid (hasn't been broken since last calculation)
-    const status = getStreakStatus(
-      user.lastTrainedDate,
-      user.currentStreak
+    const user = await withUserProvisionFallback(clerkId, () =>
+      prisma.user.findUnique({
+        where: { clerkId },
+        select: {
+          currentStreak: true,
+          longestStreak: true,
+          lastTrainedDate: true,
+        },
+      })
     )
 
-    // If more than 1 day has passed since last training, streak is broken
-    // But we don't update the DB here - we just report the effective streak
-    let effectiveStreak = user.currentStreak
-    if (status.daysSinceLastTrain > 1) {
-      effectiveStreak = 0
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    const response = formatStreakResponse(
-      effectiveStreak,
-      user.longestStreak,
-      user.lastTrainedDate
-    )
+    const status = getStreakStatus(user.lastTrainedDate, user.currentStreak)
 
-    return NextResponse.json(response)
+    const effectiveStreak = status.daysSinceLastTrain > 1 ? 0 : user.currentStreak
+
+    return NextResponse.json(
+      formatStreakResponse(
+        effectiveStreak,
+        user.longestStreak,
+        user.lastTrainedDate
+      )
+    )
   } catch (error) {
     console.error('Error fetching streak:', error)
     return NextResponse.json(

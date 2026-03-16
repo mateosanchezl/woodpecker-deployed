@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { Resend } from "resend";
 import { prisma } from "@/lib/prisma";
-import { ensureUserExists } from "@/lib/ensure-user";
+import { withUserProvisionFallback } from "@/lib/ensure-user";
 import { appReviewSchema } from "@/lib/validations/reviews";
 
 const resend = process.env.RESEND_API_KEY
@@ -86,10 +86,8 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await ensureUserExists(clerkId);
-
-    const review = await prisma.appReview.findUnique({
-      where: { userId: user.id },
+    const review = await prisma.appReview.findFirst({
+      where: { user: { clerkId } },
     });
 
     return NextResponse.json({
@@ -124,7 +122,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await ensureUserExists(clerkId);
+    const user = await withUserProvisionFallback(clerkId, () =>
+      prisma.user.findUnique({
+        where: { clerkId },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+        },
+      }),
+    );
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
 
     const body = await request.json();
     const validation = appReviewSchema.safeParse(body);

@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { ensureUserExists } from "@/lib/ensure-user";
+import { withUserProvisionFallback } from "@/lib/ensure-user";
 import { leaderboardQuerySchema } from "@/lib/validations/leaderboard";
 import { getISOWeekStart } from "@/lib/leaderboard";
 import { checkRisingStarAchievement } from "@/lib/achievements";
@@ -35,7 +35,28 @@ export async function GET(request: NextRequest) {
     const { period, limit, offset } = parseResult.data;
 
     // Get current user
-    const currentUser = await ensureUserExists(clerkId);
+    const currentUser = await withUserProvisionFallback(clerkId, () =>
+      prisma.user.findUnique({
+        where: { clerkId },
+        select: {
+          id: true,
+          name: true,
+          estimatedRating: true,
+          totalCorrectAttempts: true,
+          weeklyCorrectAttempts: true,
+          totalXp: true,
+          currentLevel: true,
+          weeklyXp: true,
+          weeklyXpStartDate: true,
+          weeklyCorrectStartDate: true,
+          showOnLeaderboard: true,
+        },
+      }),
+    );
+
+    if (!currentUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
 
     const currentWeekStart = getISOWeekStart(new Date());
     const isWeekly = period === "weekly";

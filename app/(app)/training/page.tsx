@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, Suspense, useEffect, useRef } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { TrainingSession } from '@/components/training/training-session'
@@ -37,6 +37,12 @@ import { LeaveTrainingModal } from '@/components/training/leave-training-modal'
 import { cn } from '@/lib/utils'
 import { resolveBoardTheme } from '@/lib/chess/board-themes'
 import { getTrainingThemeLabel } from '@/lib/chess/training-themes'
+import type { AppBootstrapResponse } from '@/lib/app-bootstrap'
+import {
+  APP_BOOTSTRAP_QUERY_KEY,
+  useAppBootstrap,
+  updateBootstrapCache,
+} from '@/hooks/use-app-bootstrap'
 
 interface PuzzleSetData {
   id: string
@@ -50,13 +56,6 @@ interface PuzzleSetData {
   currentCycleId: string | null
   completedCycles: number
   lastTrainedAt: string | null
-}
-
-interface UserPreferenceData {
-  user: {
-    autoStartNextPuzzle: boolean
-    boardTheme?: string | null
-  }
 }
 
 /**
@@ -100,42 +99,18 @@ function TrainingPageInner({
   const router = useRouter()
   const queryClient = useQueryClient()
 
-  // Fetch user's active puzzle sets
-  const { data: puzzleSets, isLoading: loadingSets } = useQuery<{
-    sets: PuzzleSetData[]
-  }>({
-    queryKey: ['puzzle-sets'],
-    queryFn: async () => {
-      const res = await fetch('/api/training/puzzle-sets')
-      if (!res.ok) {
-        throw new Error('Failed to fetch puzzle sets')
-      }
-      return res.json()
-    },
-  })
-
   const {
-    data: userData,
-    isLoading: isLoadingUserPreferences,
+    data: bootstrap,
+    isLoading: isLoadingBootstrap,
     error: userPreferencesError,
     refetch: refetchUserPreferences,
-  } = useQuery<UserPreferenceData>({
-    queryKey: ['user'],
-    queryFn: async () => {
-      const res = await fetch('/api/user')
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to fetch user')
-      }
-      return res.json()
-    },
-    staleTime: 60000,
-  })
+  } = useAppBootstrap()
 
   const [selectedSetId, setSelectedSetId] = useState<string | null>(urlSetId)
   const [activeCycleId, setActiveCycleId] = useState<string | null>(urlCycleId)
-  const autoStartNextPuzzle = userData?.user.autoStartNextPuzzle
-  const boardTheme = resolveBoardTheme(userData?.user.boardTheme)
+  const puzzleSets = bootstrap?.sets
+  const autoStartNextPuzzle = bootstrap?.user.autoStartNextPuzzle
+  const boardTheme = resolveBoardTheme(bootstrap?.user.boardTheme)
 
   // Delete puzzle set mutation
   const deleteMutation = useMutation({
@@ -149,7 +124,7 @@ function TrainingPageInner({
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['puzzle-sets'] })
+      queryClient.invalidateQueries({ queryKey: APP_BOOTSTRAP_QUERY_KEY })
       setSelectedSetId(null)
       toast.success('Puzzle set deleted')
     },
@@ -180,8 +155,7 @@ function TrainingPageInner({
       return res.json()
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['puzzle-sets'] })
-      queryClient.invalidateQueries({ queryKey: ['user'] })
+      queryClient.invalidateQueries({ queryKey: APP_BOOTSTRAP_QUERY_KEY })
       setSelectedSetId(data.puzzleSet.id)
       setActiveCycleId(data.cycle.id)
       router.replace(`/training?setId=${data.puzzleSet.id}&cycleId=${data.cycle.id}`)
@@ -195,10 +169,10 @@ function TrainingPageInner({
   const createCycleMutation = useCreateCycle()
 
   const updateAutoStartNextPuzzleMutation = useMutation<
-    UserPreferenceData,
+    { user: AppBootstrapResponse['user'] },
     Error,
     boolean,
-    { previousUserData?: UserPreferenceData }
+    { previousBootstrap?: AppBootstrapResponse }
   >({
     mutationFn: async (autoStartNextPuzzle) => {
       const res = await fetch('/api/user', {
@@ -213,35 +187,30 @@ function TrainingPageInner({
       return res.json()
     },
     onMutate: async (autoStartNextPuzzle) => {
-      await queryClient.cancelQueries({ queryKey: ['user'] })
+      await queryClient.cancelQueries({ queryKey: APP_BOOTSTRAP_QUERY_KEY })
 
-      const previousUserData = queryClient.getQueryData<UserPreferenceData>(['user'])
+      const previousBootstrap =
+        queryClient.getQueryData<AppBootstrapResponse>(APP_BOOTSTRAP_QUERY_KEY)
 
-      queryClient.setQueryData<UserPreferenceData>(['user'], oldData => {
-        if (!oldData?.user) {
-          return oldData
-        }
+      updateBootstrapCache(queryClient, (current) => ({
+        ...current,
+        user: {
+          ...current.user,
+          autoStartNextPuzzle,
+        },
+      }))
 
-        return {
-          ...oldData,
-          user: {
-            ...oldData.user,
-            autoStartNextPuzzle,
-          },
-        }
-      })
-
-      return { previousUserData }
+      return { previousBootstrap }
     },
     onError: (error, _value, context) => {
-      if (context?.previousUserData) {
-        queryClient.setQueryData(['user'], context.previousUserData)
+      if (context?.previousBootstrap) {
+        queryClient.setQueryData(APP_BOOTSTRAP_QUERY_KEY, context.previousBootstrap)
       }
 
       toast.error(error.message || 'Failed to update training pace')
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['user'] })
+      queryClient.invalidateQueries({ queryKey: APP_BOOTSTRAP_QUERY_KEY })
     },
   })
 
@@ -252,7 +221,7 @@ function TrainingPageInner({
     autoStartNextPuzzle: autoStartNextPuzzle ?? true,
   })
 
-  const hasNoSets = !loadingSets && (puzzleSets?.sets?.length ?? 0) === 0
+  const hasNoSets = !isLoadingBootstrap && (puzzleSets?.length ?? 0) === 0
   const quickStartTriggeredRef = useRef(false)
 
   useEffect(() => {
@@ -332,11 +301,11 @@ function TrainingPageInner({
   })
 
   // Loading state
-  if (loadingSets) {
+  if (isLoadingBootstrap) {
     return <TrainingPageSkeleton />
   }
 
-  if (activeCycleId && selectedSetId && !hasLoadedTrainingPreference && isLoadingUserPreferences) {
+  if (activeCycleId && selectedSetId && !hasLoadedTrainingPreference && isLoadingBootstrap) {
     return <TrainingPageSkeleton />
   }
 
@@ -417,7 +386,7 @@ function TrainingPageInner({
   }
 
   // No puzzle sets
-  if (!puzzleSets?.sets || puzzleSets.sets.length === 0) {
+  if (!puzzleSets || puzzleSets.length === 0) {
     if (quickstart && !quickStartMutation.isError) {
       return <QuickStartLoadingCard />
     }
@@ -436,8 +405,8 @@ function TrainingPageInner({
   }
 
   // Find the last trained set (first in sorted list with training activity)
-  const lastTrainedSet = puzzleSets.sets.find(s => s.lastTrainedAt !== null)
-  const otherSets = puzzleSets.sets.filter(s => s.id !== lastTrainedSet?.id)
+  const lastTrainedSet = puzzleSets.find(s => s.lastTrainedAt !== null)
+  const otherSets = puzzleSets.filter(s => s.id !== lastTrainedSet?.id)
 
   // Puzzle set selection / cycle start
   return (

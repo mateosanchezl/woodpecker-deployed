@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { Resend } from "resend";
-import { ensureUserExists } from "@/lib/ensure-user";
+import { withUserProvisionFallback } from "@/lib/ensure-user";
+import { prisma } from "@/lib/prisma";
 import {
   trainingBugReportSchema,
   type TrainingBugReportInput,
@@ -71,7 +72,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const user = await ensureUserExists(clerkId);
+    const user = await withUserProvisionFallback(clerkId, () =>
+      prisma.user.findUnique({
+        where: { clerkId },
+        select: {
+          id: true,
+          email: true,
+        },
+      }),
+    );
 
     const body = await request.json();
     const validation = trainingBugReportSchema.safeParse(body);

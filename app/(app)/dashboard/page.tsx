@@ -1,6 +1,5 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { StreakCard } from "@/components/dashboard/streak-card";
 import { XpCard } from "@/components/dashboard/xp-card";
@@ -27,70 +26,22 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { getTrainingThemeLabel } from "@/lib/chess/training-themes";
-
-interface UserData {
-  user: {
-    id: string;
-    email: string;
-    name: string | null;
-    estimatedRating: number;
-    preferredSetSize: number;
-    targetCycles: number;
-    hasCompletedOnboarding: boolean;
-    puzzleSetCount: number;
-    createdAt: string;
-  };
-}
-
-interface PuzzleSetsData {
-  sets: Array<{
-    id: string;
-    name: string;
-    size: number;
-    focusTheme: string | null;
-    targetCycles: number;
-    targetRating: number;
-    minRating: number;
-    maxRating: number;
-    isActive: boolean;
-    createdAt: string;
-    currentCycle: number | null;
-    currentCycleId: string | null;
-    completedCycles: number;
-  }>;
-}
+import { useAppBootstrap } from "@/hooks/use-app-bootstrap";
+import type { AppBootstrapPuzzleSet } from "@/lib/app-bootstrap";
 
 export default function DashboardPage() {
   const router = useRouter();
 
-  // Fetch user data
-  const { data: userData, isLoading: userLoading } = useQuery<UserData>({
-    queryKey: ["user"],
-    queryFn: async () => {
-      const res = await fetch("/api/user");
-      if (!res.ok) throw new Error("Failed to fetch user");
-      return res.json();
-    },
-  });
-
-  // Fetch puzzle sets
-  const { data: puzzleSetsData, isLoading: setsLoading } =
-    useQuery<PuzzleSetsData>({
-      queryKey: ["puzzle-sets"],
-      queryFn: async () => {
-        const res = await fetch("/api/training/puzzle-sets");
-        if (!res.ok) throw new Error("Failed to fetch puzzle sets");
-        return res.json();
-      },
-      enabled: !!userData,
-    });
+  const { data, isLoading } = useAppBootstrap();
 
   // Loading state
-  if (userLoading || !userData) {
+  if (isLoading || !data) {
     return <DashboardSkeleton />;
   }
 
-  const showQuickStart = userData.user.puzzleSetCount === 0;
+  const user = data.user;
+  const puzzleSets = data.sets;
+  const showQuickStart = puzzleSets.length === 0;
 
   return (
     <>
@@ -139,11 +90,11 @@ export default function DashboardPage() {
           <UpdateNotification />
 
           {/* Header */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
-                {userData.user.name
-                  ? `Welcome back, ${userData.user.name.split(" ")[0]}`
+                {user.name
+                  ? `Welcome back, ${user.name.split(" ")[0]}`
                   : "Welcome back"} 👋
               </h1>
               <p className="text-muted-foreground mt-2 text-lg">
@@ -174,21 +125,21 @@ export default function DashboardPage() {
           <div className="grid gap-4 md:grid-cols-3">
             <StatsCard
               title="Total Sets"
-              value={puzzleSetsData?.sets.length || 0}
+              value={puzzleSets.length}
               icon={Target}
               colorClass="text-blue-500"
               bgClass="bg-blue-500/10"
             />
             <StatsCard
               title="Active Training"
-              value={puzzleSetsData?.sets.filter((s) => s.isActive).length || 0}
+              value={puzzleSets.filter((s) => s.isActive).length}
               icon={TrendingUp}
               colorClass="text-emerald-500"
               bgClass="bg-emerald-500/10"
             />
             <StatsCard
               title="Your Rating"
-              value={userData.user.estimatedRating}
+              value={user.estimatedRating}
               icon={CheckCircle2}
               colorClass="text-amber-500"
               bgClass="bg-amber-500/10"
@@ -198,7 +149,7 @@ export default function DashboardPage() {
           {/* Puzzle Sets */}
           <div>
             <h2 className="text-lg font-semibold mb-4">Your Puzzle Sets</h2>
-            {setsLoading ? (
+            {isLoading ? (
               <div className="grid gap-4 md:grid-cols-2">
                 {[1, 2].map((i) => (
                   <Card key={i}>
@@ -215,7 +166,7 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
-                {puzzleSetsData?.sets.map((set) => (
+                {puzzleSets.map((set) => (
                   <PuzzleSetCard key={set.id} set={set} />
                 ))}
               </div>
@@ -254,7 +205,7 @@ function StatsCard({ title, value, icon: Icon, colorClass = "text-primary", bgCl
 }
 
 interface PuzzleSetCardProps {
-  set: PuzzleSetsData["sets"][0];
+  set: AppBootstrapPuzzleSet;
 }
 
 function PuzzleSetCard({ set }: PuzzleSetCardProps) {

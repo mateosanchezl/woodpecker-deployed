@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
+import { Prisma } from '@prisma/client'
+import { serializeAppUser } from '@/lib/app-bootstrap'
 import { prisma } from '@/lib/prisma'
-import { ensureUserExists } from '@/lib/ensure-user'
+import { ensureUserExists, withUserProvisionFallback } from '@/lib/ensure-user'
+import { withRouteMetrics } from '@/lib/metrics/request-metrics'
 import type { BoardThemeId } from '@/lib/chess/board-themes'
 import {
   completeOnboardingSchema,
@@ -14,60 +17,42 @@ import {
  * Creates the local user row on demand if webhook delivery lags behind sign-up.
  */
 export async function GET() {
-  try {
-    const { userId: clerkId } = await auth()
-    if (!clerkId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withRouteMetrics('user.get', async () => {
+    try {
+      const { userId: clerkId } = await auth()
+      if (!clerkId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
 
-    const appUser = await ensureUserExists(clerkId)
+      const user = await withUserProvisionFallback(clerkId, () =>
+        prisma.user.findUnique({
+          where: { clerkId },
+          include: {
+            _count: {
+              select: { puzzleSets: true },
+            },
+          },
+        })
+      )
 
-    const user = await prisma.user.findUnique({
-      where: { id: appUser.id },
-      include: {
-        _count: {
-          select: { puzzleSets: true },
-        },
-      },
-    })
+      if (!user) {
+        return NextResponse.json(
+          { error: 'User not found. Please try again in a moment.' },
+          { status: 404 }
+        )
+      }
 
-    if (!user) {
+      return NextResponse.json({
+        user: serializeAppUser(user, user._count.puzzleSets),
+      })
+    } catch (error) {
+      console.error('Error fetching user:', error)
       return NextResponse.json(
-        { error: 'User not found. Please try again in a moment.' },
-        { status: 404 }
+        { error: 'Internal server error' },
+        { status: 500 }
       )
     }
-
-    return NextResponse.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        estimatedRating: user.estimatedRating,
-        preferredSetSize: user.preferredSetSize,
-        targetCycles: user.targetCycles,
-        autoStartNextPuzzle: user.autoStartNextPuzzle,
-        boardTheme: user.boardTheme,
-        hasCompletedOnboarding: user.hasCompletedOnboarding,
-        showOnLeaderboard: user.showOnLeaderboard,
-        puzzleSetCount: user._count.puzzleSets,
-        createdAt: user.createdAt.toISOString(),
-        currentStreak: user.currentStreak,
-        longestStreak: user.longestStreak,
-        lastTrainedDate: user.lastTrainedDate?.toISOString() ?? null,
-        // XP & Levelling
-        totalXp: user.totalXp,
-        currentLevel: user.currentLevel,
-        weeklyXp: user.weeklyXp,
-      },
-    })
-  } catch (error) {
-    console.error('Error fetching user:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
+  })
 }
 
 /**
@@ -81,8 +66,6 @@ export async function PATCH(request: NextRequest) {
     if (!clerkId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    const appUser = await ensureUserExists(clerkId)
 
     const body = await request.json()
 
@@ -104,12 +87,9 @@ export async function PATCH(request: NextRequest) {
     if (isOnboarding) {
       const { estimatedRating } = onboardingValidation.data
 
-      const user = await prisma.user.update({
-        where: { id: appUser.id },
-        data: {
-          estimatedRating,
-          hasCompletedOnboarding: true,
-        },
+      const user = await updateUserByClerkId(clerkId, {
+        estimatedRating,
+        hasCompletedOnboarding: true,
       })
 
       return NextResponse.json({
@@ -168,10 +148,7 @@ export async function PATCH(request: NextRequest) {
       updateData.showOnLeaderboard = showOnLeaderboard
     }
 
-    const user = await prisma.user.update({
-      where: { id: appUser.id },
-      data: updateData,
-    })
+    const user = await updateUserByClerkId(clerkId, updateData)
 
     return NextResponse.json({
       user: {
@@ -191,5 +168,38 @@ export async function PATCH(request: NextRequest) {
       { error: 'Internal server error' },
       { status: 500 }
     )
+  }
+}
+
+async function updateUserByClerkId(
+  clerkId: string,
+  data: {
+    estimatedRating?: number
+    preferredSetSize?: number
+    targetCycles?: number
+    autoStartNextPuzzle?: boolean
+    boardTheme?: BoardThemeId
+    showOnLeaderboard?: boolean
+    hasCompletedOnboarding?: boolean
+  }
+) {
+  try {
+    return await prisma.user.update({
+      where: { clerkId },
+      data,
+    })
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2025'
+    ) {
+      await ensureUserExists(clerkId)
+      return prisma.user.update({
+        where: { clerkId },
+        data,
+      })
+    }
+
+    throw error
   }
 }

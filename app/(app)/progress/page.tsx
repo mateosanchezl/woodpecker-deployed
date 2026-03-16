@@ -1,8 +1,7 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SetSelector } from '@/components/progress/set-selector'
@@ -12,39 +11,24 @@ import { AccuracyChart } from '@/components/progress/accuracy-chart'
 import { ThemeChart } from '@/components/progress/theme-chart'
 import { ProblemPuzzlesTable } from '@/components/progress/problem-puzzles-table'
 import { useProgressData } from '@/hooks/use-progress-data'
+import { useAppBootstrap } from '@/hooks/use-app-bootstrap'
 import { Trophy } from 'lucide-react'
-
-interface PuzzleSetsData {
-  sets: Array<{
-    id: string
-    name: string
-    completedCycles: number
-    targetCycles: number
-  }>
-}
 
 export default function ProgressPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const selectedSetId = searchParams.get('setId')
 
-  // Fetch puzzle sets for selector
-  const { data: setsData, isLoading: setsLoading } = useQuery<PuzzleSetsData>({
-    queryKey: ['puzzle-sets'],
-    queryFn: async () => {
-      const res = await fetch('/api/training/puzzle-sets')
-      if (!res.ok) throw new Error('Failed to fetch puzzle sets')
-      return res.json()
-    },
-  })
+  const { data, isLoading: setsLoading } = useAppBootstrap()
+  const sets = useMemo(() => data?.sets ?? [], [data])
 
   // Auto-select first set if none selected
   useEffect(() => {
-    if (!selectedSetId && setsData?.sets.length) {
-      const firstSet = setsData.sets[0]
+    if (!selectedSetId && sets.length) {
+      const firstSet = sets[0]
       router.replace(`/progress?setId=${firstSet.id}`)
     }
-  }, [selectedSetId, setsData, router])
+  }, [selectedSetId, sets, router])
 
   // Fetch progress data for selected set
   const {
@@ -63,7 +47,7 @@ export default function ProgressPage() {
   }
 
   // No sets state
-  if (!setsData?.sets.length) {
+  if (!sets.length) {
     return (
       <div className="space-y-8">
         <div className="flex items-center justify-between">
@@ -90,7 +74,7 @@ export default function ProgressPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Progress</h1>
         <SetSelector
-          sets={setsData.sets}
+          sets={sets}
           selectedSetId={selectedSetId}
           onSetChange={handleSetChange}
         />

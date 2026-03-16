@@ -86,26 +86,7 @@ async function persistUser(input: ClerkIdentityInput) {
   });
 }
 
-export async function upsertUserFromClerkIdentity(input: ClerkIdentityInput) {
-  return persistUser(input);
-}
-
-/**
- * Ensures the authenticated Clerk user has a local database row.
- *
- * @param clerkId - The Clerk user ID
- * @returns The user from the database
- * @throws Error if user cannot be created (e.g., missing email)
- */
-export async function ensureUserExists(clerkId: string) {
-  let user = await prisma.user.findUnique({
-    where: { clerkId },
-  });
-
-  if (user) {
-    return user;
-  }
-
+async function provisionUserFromAuthenticatedSession(clerkId: string) {
   const clerkUser = await currentUser();
 
   if (!clerkUser) {
@@ -128,7 +109,7 @@ export async function ensureUserExists(clerkId: string) {
     ? `${clerkUser.firstName}${clerkUser.lastName ? ` ${clerkUser.lastName}` : ""}`
     : null;
 
-  user = await upsertUserFromClerkIdentity({
+  const user = await upsertUserFromClerkIdentity({
     clerkId,
     email: primaryEmail.emailAddress,
     name,
@@ -137,4 +118,40 @@ export async function ensureUserExists(clerkId: string) {
   console.log(`User provisioned from authenticated session: ${clerkId}`);
 
   return user;
+}
+
+export async function upsertUserFromClerkIdentity(input: ClerkIdentityInput) {
+  return persistUser(input);
+}
+
+export async function withUserProvisionFallback<T>(
+  clerkId: string,
+  query: () => Promise<T | null>,
+): Promise<T | null> {
+  const result = await query();
+  if (result !== null) {
+    return result;
+  }
+
+  await provisionUserFromAuthenticatedSession(clerkId);
+  return query();
+}
+
+/**
+ * Ensures the authenticated Clerk user has a local database row.
+ *
+ * @param clerkId - The Clerk user ID
+ * @returns The user from the database
+ * @throws Error if user cannot be created (e.g., missing email)
+ */
+export async function ensureUserExists(clerkId: string) {
+  const user = await prisma.user.findUnique({
+    where: { clerkId },
+  });
+
+  if (user) {
+    return user;
+  }
+
+  return provisionUserFromAuthenticatedSession(clerkId);
 }

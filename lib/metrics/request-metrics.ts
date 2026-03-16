@@ -76,13 +76,24 @@ export async function withRouteMetrics<T>(
   const start = Date.now();
 
   return requestMetricContext.run({ prismaOperations: 0 }, async () => {
+    let result: T | undefined;
+
     try {
-      return await operation();
+      result = await operation();
+      return result;
     } finally {
       const store = requestMetricContext.getStore();
       const durationMs = Number((Date.now() - start).toFixed(2));
       const prismaOperations = store?.prismaOperations ?? 0;
       const stats = pushSample(routeName, { durationMs, prismaOperations });
+
+      if (result instanceof Response) {
+        result.headers.set("x-route-name", routeName);
+        result.headers.set("x-prisma-ops", String(prismaOperations));
+        result.headers.set("x-route-duration-ms", String(durationMs));
+        result.headers.set("x-route-p50-ms", stats.p50.toFixed(2));
+        result.headers.set("x-route-p95-ms", stats.p95.toFixed(2));
+      }
 
       console.info(
         `[route-metrics] ${routeName} durationMs=${durationMs} prismaOps=${prismaOperations} p50=${stats.p50.toFixed(2)} p95=${stats.p95.toFixed(2)}`,

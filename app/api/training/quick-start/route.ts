@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
-import { ensureUserExists } from '@/lib/ensure-user'
+import { withUserProvisionFallback } from '@/lib/ensure-user'
 import { quickStartRequestSchema } from '@/lib/validations/training'
 import { selectRandomPuzzlesForSet } from '@/lib/training/puzzle-selection'
 
@@ -16,12 +16,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    let user = await prisma.user.findUnique({
-      where: { clerkId },
-    })
+    let user = await withUserProvisionFallback(clerkId, () =>
+      prisma.user.findUnique({
+        where: { clerkId },
+      })
+    )
 
     if (!user) {
-      user = await ensureUserExists(clerkId)
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
     let body: unknown = {}

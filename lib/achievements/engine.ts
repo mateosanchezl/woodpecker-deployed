@@ -12,7 +12,6 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
 import {
   ACHIEVEMENT_DEFINITIONS,
   type AchievementDefinition,
@@ -253,42 +252,6 @@ SELECT json_build_object(
 
   // ---- Query 3: Save newly unlocked ----------------------------------------
   const newlyUnlocked = await saveUnlocked(ctx.userId, toUnlock);
-
-  return { newlyUnlocked };
-}
-
-/**
- * Check context-only achievements with a single insert/upsert query.
- * This avoids the pre-read query in the hot attempt path.
- */
-export async function checkFastAchievements(
-  ctx: AchievementContext,
-): Promise<AchievementCheckResult> {
-  const candidateIds = Array.from(new Set(collectCategoryAAchievementIds(ctx)));
-  if (candidateIds.length === 0) {
-    return { newlyUnlocked: [] };
-  }
-
-  const now = new Date();
-  const values = Prisma.join(
-    candidateIds.map(
-      (achievementId) =>
-        Prisma.sql`(${ctx.userId}, ${achievementId}, ${now})`,
-    ),
-  );
-
-  const inserted = await prisma.$queryRaw<Array<{ achievementId: string }>>`
-    INSERT INTO "UserAchievement" ("userId", "achievementId", "unlockedAt")
-    VALUES ${values}
-    ON CONFLICT ("userId", "achievementId") DO NOTHING
-    RETURNING "achievementId";
-  `;
-
-  const newlyUnlocked = inserted
-    .map((row) => toUnlockedAchievement(row.achievementId, now))
-    .filter((achievement): achievement is UnlockedAchievement =>
-      achievement !== null,
-    );
 
   return { newlyUnlocked };
 }

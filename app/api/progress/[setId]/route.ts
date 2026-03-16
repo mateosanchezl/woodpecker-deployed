@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
-import { ensureUserExists } from '@/lib/ensure-user'
 import type { ProgressResponse, CycleStats, ThemePerformance, ProblemPuzzle } from '@/lib/validations/progress'
 
 interface RouteContext {
@@ -43,11 +42,12 @@ export async function GET(
 
     const { setId } = await context.params
 
-    const user = await ensureUserExists(userId)
-
     // Fetch puzzle set with all related data
-    const puzzleSet = await prisma.puzzleSet.findUnique({
-      where: { id: setId },
+    const puzzleSet = await prisma.puzzleSet.findFirst({
+      where: {
+        id: setId,
+        user: { clerkId: userId },
+      },
       include: {
         cycles: {
           orderBy: { cycleNumber: 'asc' },
@@ -75,11 +75,6 @@ export async function GET(
 
     if (!puzzleSet) {
       return NextResponse.json({ error: 'Puzzle set not found' }, { status: 404 })
-    }
-
-    // Verify ownership
-    if (puzzleSet.userId !== user.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
     // Calculate cycle stats

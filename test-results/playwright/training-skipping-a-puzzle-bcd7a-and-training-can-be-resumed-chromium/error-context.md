@@ -1,0 +1,210 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - link "Peck Logo Peck" [ref=e8] [cursor=pointer]:
+            - /url: /dashboard
+            - img "Peck Logo" [ref=e10]
+            - generic [ref=e11]: Peck
+          - generic [ref=e12]:
+            - img [ref=e13]
+            - generic [ref=e15]: "0"
+        - generic [ref=e17]:
+          - generic [ref=e18]: ♟️
+          - generic [ref=e19]:
+            - generic [ref=e20]:
+              - generic [ref=e21]: Pawn
+              - generic [ref=e22]: Level 1
+            - generic [ref=e23]:
+              - progressbar [ref=e24]
+              - generic [ref=e26]:
+                - generic [ref=e27]: 0 XP
+                - generic [ref=e28]: 282 XP
+      - generic [ref=e29]:
+        - generic [ref=e30]:
+          - generic [ref=e31]: Main
+          - list [ref=e33]:
+            - listitem [ref=e34]:
+              - link "Dashboard" [ref=e35] [cursor=pointer]:
+                - /url: /dashboard
+                - img [ref=e36]
+                - generic [ref=e41]: Dashboard
+            - listitem [ref=e42]:
+              - link "Training" [ref=e43] [cursor=pointer]:
+                - /url: /training
+                - img [ref=e44]
+                - generic [ref=e46]: Training
+            - listitem [ref=e47]:
+              - link "Review" [ref=e48] [cursor=pointer]:
+                - /url: /training/review
+                - img [ref=e49]
+                - generic [ref=e54]: Review
+            - listitem [ref=e55]:
+              - link "Progress" [ref=e56] [cursor=pointer]:
+                - /url: /progress
+                - img [ref=e57]
+                - generic [ref=e63]: Progress
+        - generic [ref=e64]:
+          - generic [ref=e65]: Community
+          - list [ref=e67]:
+            - listitem [ref=e68]:
+              - link "Achievements" [ref=e69] [cursor=pointer]:
+                - /url: /achievements
+                - img [ref=e70]
+                - generic [ref=e73]: Achievements
+            - listitem [ref=e74]:
+              - link "Changelog" [ref=e75] [cursor=pointer]:
+                - /url: /changelog
+                - img [ref=e76]
+                - generic [ref=e79]: Changelog
+            - listitem [ref=e80]:
+              - link "Leaderboard" [ref=e81] [cursor=pointer]:
+                - /url: /leaderboard
+                - img [ref=e82]
+                - generic [ref=e87]: Leaderboard
+        - generic [ref=e88]:
+          - generic [ref=e89]: Account
+          - list [ref=e91]:
+            - listitem [ref=e92]:
+              - link "Settings" [ref=e93] [cursor=pointer]:
+                - /url: /settings
+                - img [ref=e94]
+                - generic [ref=e97]: Settings
+      - generic [ref=e98]:
+        - list [ref=e99]:
+          - listitem [ref=e100]:
+            - button "Have Feedback?" [ref=e101]:
+              - img [ref=e102]
+              - generic [ref=e104]: Have Feedback?
+        - generic [ref=e105]:
+          - generic [ref=e106]: Built with
+          - generic [ref=e107]: ♥
+          - generic [ref=e108]: by Mateo
+      - button "Toggle Sidebar" [ref=e109]
+    - main [ref=e110]:
+      - generic [ref=e111]:
+        - button "Toggle Sidebar" [ref=e112]:
+          - img
+          - generic [ref=e113]: Toggle Sidebar
+        - generic [ref=e114]:
+          - navigation "breadcrumb"
+          - generic [ref=e115]:
+            - button "Toggle theme" [ref=e116]:
+              - img
+              - generic [ref=e117]: Toggle theme
+            - button "Open user menu" [ref=e119] [cursor=pointer]:
+              - img "Peck E2E's logo" [ref=e122]
+      - generic [ref=e126]:
+        - generic [ref=e128]:
+          - generic [ref=e130]:
+            - generic [ref=e131]:
+              - generic [ref=e134]: "1"
+              - generic [ref=e158]:
+                - generic [ref=e159]: "2"
+                - button [disabled] [ref=e161]:
+                  - img [ref=e163] [cursor=pointer]
+              - button [disabled] [ref=e173]:
+                - img [ref=e175] [cursor=pointer]
+              - generic [ref=e197]: "3"
+              - button [disabled] [ref=e202]:
+                - img [ref=e204] [cursor=pointer]
+              - generic [ref=e226]: "4"
+              - generic [ref=e251]: "5"
+              - button [disabled] [ref=e256]:
+                - img [ref=e258] [cursor=pointer]
+              - generic [ref=e279]:
+                - generic [ref=e280]: "6"
+                - button [disabled] [ref=e282]:
+                  - img [ref=e284] [cursor=pointer]
+              - button [disabled] [ref=e304]:
+                - img [ref=e306] [cursor=pointer]
+              - generic [ref=e313]: "7"
+              - generic [ref=e337]:
+                - generic:
+                  - generic [ref=e338]: h
+                  - generic [ref=e339]: "8"
+                - button [disabled] [ref=e341]:
+                  - img [ref=e343] [cursor=pointer]
+              - generic [ref=e356]: g
+              - generic [ref=e359]:
+                - generic [ref=e360]: f
+                - button [disabled] [ref=e362]:
+                  - img [ref=e364] [cursor=pointer]
+              - generic [ref=e381]:
+                - generic [ref=e382]: e
+                - button [disabled] [ref=e384]:
+                  - img [ref=e386] [cursor=pointer]
+              - generic [ref=e394]: d
+              - generic [ref=e398]: c
+              - generic [ref=e402]: b
+              - generic [ref=e406]: a
+              - img
+            - status [ref=e408]
+          - generic [ref=e410]:
+            - img [ref=e412]
+            - generic [ref=e415]: Opponent Moving
+        - generic [ref=e416]:
+          - generic [ref=e419]:
+            - generic [ref=e420]:
+              - generic [ref=e421]: 00:00.0
+              - generic [ref=e423]: Time
+              - button "Hide timer" [ref=e424]:
+                - img
+            - generic [ref=e425]:
+              - generic [ref=e426]:
+                - generic [ref=e427]: "1"
+                - generic [ref=e428]: Cycle
+              - generic [ref=e430]:
+                - generic [ref=e431]:
+                  - text: "1"
+                  - generic [ref=e432]: / 100
+                - generic [ref=e433]: 0% complete
+              - generic [ref=e435]:
+                - generic [ref=e436]: "988"
+                - generic [ref=e437]: Rating
+          - generic [ref=e439]:
+            - generic [ref=e440]:
+              - generic [ref=e441]:
+                - generic [ref=e442]: Auto-start next puzzle
+                - generic [ref=e443]: New
+              - paragraph [ref=e444]: Turn off to pause between puzzles and start the next one manually.
+            - switch "Auto-start next puzzle New" [checked] [ref=e445]
+          - button "Skip Puzzle" [ref=e446]:
+            - img
+            - text: Skip Puzzle
+          - link "View in Lichess" [ref=e447] [cursor=pointer]:
+            - /url: https://lichess.org/training/VvnlX
+            - img
+            - text: View in Lichess
+          - button "Report an issue" [ref=e448]:
+            - img [ref=e449]
+            - generic [ref=e451]: Report an issue
+          - generic [ref=e452]:
+            - generic [ref=e453]:
+              - generic [ref=e454]:
+                - generic [ref=e455]: Show puzzle themes
+                - paragraph [ref=e456]: Hide theme labels to avoid tactical hints.
+              - switch "Show puzzle themes" [checked] [ref=e457]
+            - generic [ref=e458]:
+              - generic [ref=e459]: Crushing
+              - generic [ref=e460]: Endgame
+              - generic [ref=e461]: Long
+              - generic [ref=e462]: Queen endgame
+      - generic [ref=e464]:
+        - generic [ref=e465]: Peck Chess
+        - generic [ref=e466]: •
+        - link "Follow Peck on X (@peckchess)" [ref=e467] [cursor=pointer]:
+          - /url: https://x.com/peckchess
+          - img [ref=e468]
+          - generic [ref=e470]: "@peckchess"
+  - region "Notifications alt+T":
+    - list:
+      - listitem [ref=e471]:
+        - img [ref=e473]
+        - generic [ref=e478]: Invalid request body
+  - alert [ref=e479]
+```

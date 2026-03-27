@@ -26,6 +26,18 @@ export function formatChangelogDate(date: string) {
 // Add new releases to the top of this list so index 0 stays the latest.
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    version: "2.8.0",
+    title: "Support Peck!",
+    description:
+      "A new Support page is now available if you'd like to help keep Peck running and improving.",
+    features: [
+      "You can now optionally support the development of Peck with a coffee",
+    ],
+    date: "2026-03-25",
+    learnMoreUrl: "/support",
+    actionLabel: "Open support",
+  },
+  {
     version: "2.7.2",
     title: "UI Improvements",
     description:

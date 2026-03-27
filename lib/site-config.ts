@@ -16,3 +16,10 @@ export const SOCIAL_LINKS = {
     handle: "@peckchess",
   },
 } as const;
+
+export const SUPPORT_LINKS = {
+  buyMeACoffee: {
+    label: "Buy Me a Coffee",
+    href: "https://buymeacoffee.com/mateos",
+  },
+} as const;

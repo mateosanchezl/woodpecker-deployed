@@ -172,10 +172,14 @@ export function TrainingSession({
   const lichessPuzzleUrl = `https://lichess.org/training/${encodeURIComponent(puzzleData.puzzle.id)}`
 
   return (
-    <div className="flex flex-col lg:flex-row items-start justify-center gap-8 w-full max-w-7xl mx-auto p-4">
+    <div
+      className="flex flex-col lg:flex-row items-start justify-center gap-8 w-full max-w-7xl mx-auto p-4"
+      data-testid="training-session"
+    >
       {/* Left Column: Board */}
       <div className="flex-1 w-full flex justify-center lg:justify-end">
         <PuzzleBoard
+          puzzleId={puzzleData.id}
           key={`${puzzleData.id}:${puzzleRenderKey}`}
           fen={puzzleData.puzzle.fen}
           moves={puzzleData.puzzle.moves}
@@ -223,6 +227,7 @@ export function TrainingSession({
               checked={autoStartNextPuzzle}
               onCheckedChange={onAutoStartNextPuzzleChange}
               disabled={isUpdatingAutoStartNextPuzzle}
+              data-testid="training-auto-start-toggle"
             />
           </div>
         </div>
@@ -233,6 +238,7 @@ export function TrainingSession({
             onClick={() => setExternalSkipRequest((current) => current + 1)}
             disabled={isTransitioning || isSubmittingAttempt}
             className="w-full text-muted-foreground hover:text-foreground"
+            data-testid="training-skip-button"
           >
             <SkipForward className="mr-2 h-4 w-4" />
             Skip Puzzle

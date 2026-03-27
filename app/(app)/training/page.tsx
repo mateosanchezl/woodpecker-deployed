@@ -489,7 +489,10 @@ function ContinueTrainingCard({
   const hasActiveCycle = set.currentCycleId !== null
 
   return (
-    <Card className="border-primary/50 shadow-md shadow-primary/5 bg-linear-to-br from-card to-primary/5 overflow-hidden transition-all hover:shadow-lg hover:border-primary/80 duration-300 relative group">
+    <Card
+      className="border-primary/50 shadow-md shadow-primary/5 bg-linear-to-br from-card to-primary/5 overflow-hidden transition-all hover:shadow-lg hover:border-primary/80 duration-300 relative group"
+      data-testid="continue-training-card"
+    >
       <div className="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-primary/0 via-primary/50 to-primary/0" />
       <CardHeader className="pb-3 relative z-10">
         <div className="flex items-start justify-between gap-4">
@@ -554,6 +557,7 @@ function ContinueTrainingCard({
             size="lg"
             className="w-full gap-2 rounded-xl h-12 text-base transition-transform active:scale-[0.98] shadow-md shadow-primary/20"
             onClick={() => onContinue(set.currentCycleId!)}
+            data-testid="continue-training-button"
           >
             <Play className="h-5 w-5 fill-current" />
             Continue Training
@@ -730,7 +734,10 @@ function QuickStartCard({
 }) {
   return (
     <div className="py-12">
-      <Card className="max-w-2xl mx-auto border-primary/20 shadow-lg shadow-primary/5 bg-linear-to-b from-card to-primary/5 overflow-hidden relative">
+      <Card
+        className="max-w-2xl mx-auto border-primary/20 shadow-lg shadow-primary/5 bg-linear-to-b from-card to-primary/5 overflow-hidden relative"
+        data-testid="training-quick-start-card"
+      >
         <div className="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-primary/0 via-primary to-primary/0 opacity-50" />
         <CardHeader className="text-center space-y-3 pb-6 pt-10">
           <div className="mx-auto bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mb-2 animate-in fade-in zoom-in duration-500">
@@ -743,7 +750,13 @@ function QuickStartCard({
         </CardHeader>
         <CardContent className="space-y-6 pb-10">
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button onClick={onQuickStart} disabled={isStarting} size="lg" className="gap-2 w-full sm:w-auto rounded-xl text-base px-8 h-12 transition-transform hover:scale-105 active:scale-95 shadow-md shadow-primary/20">
+            <Button
+              onClick={onQuickStart}
+              disabled={isStarting}
+              size="lg"
+              className="gap-2 w-full sm:w-auto rounded-xl text-base px-8 h-12 transition-transform hover:scale-105 active:scale-95 shadow-md shadow-primary/20"
+              data-testid="training-quick-start-button"
+            >
               {isStarting ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />

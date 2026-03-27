@@ -30,7 +30,13 @@ export function PuzzleStatus({
   )
 
   return (
-    <Card className="w-full max-w-2xl">
+    <Card
+      className="w-full max-w-2xl"
+      data-testid="training-progress"
+      data-current-position={progress.currentPosition}
+      data-total-puzzles={progress.totalPuzzles}
+      data-cycle-number={progress.cycleNumber}
+    >
       <CardContent className="py-4">
         <div className="flex items-center justify-between gap-4 flex-col">
           {/* Timer with toggle */}

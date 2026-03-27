@@ -282,6 +282,12 @@ export const PAGE_METADATA = {
       "Customize your Woodpecker Method training experience. Adjust puzzle difficulty, set size preferences, and training parameters.",
     path: "/settings",
   },
+  support: {
+    title: "Support Peck | Help Keep Training Free",
+    description:
+      "Support Peck with a coffee and help keep Woodpecker Method chess training free, polished, and improving for more players.",
+    path: "/support",
+  },
   signIn: {
     title: "Sign In",
     description:

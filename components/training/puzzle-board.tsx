@@ -28,6 +28,7 @@ import {
 } from 'lucide-react'
 
 interface PuzzleBoardProps {
+  puzzleId: string
   fen: string
   moves: string
   onComplete: (isCorrect: boolean, timeSpent: number, movesPlayed: string[]) => void
@@ -60,6 +61,7 @@ function addInsetShadow(existingShadow: string | undefined, shadow: string): str
  * Handles the complete puzzle solving flow with animations, feedback, and failed-attempt review.
  */
 interface PuzzleBoardSurfaceProps {
+  puzzleId: string
   chessboardOptions: ChessboardOptions
   status: PuzzleStatus
   mode: PuzzleBoardMode
@@ -70,6 +72,7 @@ interface PuzzleBoardSurfaceProps {
 }
 
 const PuzzleBoardSurface = memo(function PuzzleBoardSurface({
+  puzzleId,
   chessboardOptions,
   status,
   mode,
@@ -81,7 +84,11 @@ const PuzzleBoardSurface = memo(function PuzzleBoardSurface({
   const boardContainerRef = useRef<HTMLDivElement>(null)
 
   return (
-    <div className="relative w-full max-w-[700px] aspect-square shadow-2xl rounded-xl overflow-hidden">
+    <div
+      className="relative w-full max-w-[700px] aspect-square shadow-2xl rounded-xl overflow-hidden"
+      data-testid="training-board"
+      data-puzzle-id={puzzleId}
+    >
       <div ref={boardContainerRef} className="absolute inset-0">
         <Chessboard options={chessboardOptions} />
 
@@ -106,6 +113,7 @@ const PuzzleBoardSurface = memo(function PuzzleBoardSurface({
 PuzzleBoardSurface.displayName = 'PuzzleBoardSurface'
 
 export const PuzzleBoard = memo(function PuzzleBoard({
+  puzzleId,
   fen,
   moves,
   onComplete,
@@ -487,6 +495,7 @@ export const PuzzleBoard = memo(function PuzzleBoard({
       tabIndex={0}
     >
       <PuzzleBoardSurface
+        puzzleId={puzzleId}
         chessboardOptions={chessboardOptions}
         status={status}
         mode={mode}
@@ -537,6 +546,7 @@ export const PuzzleBoard = memo(function PuzzleBoard({
               onClick={handleAdvance}
               disabled={!canAdvanceToNext || isSubmittingAttempt}
               className="flex-1"
+              data-testid="training-next-puzzle-button"
             >
               {isSubmittingAttempt ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -555,6 +565,7 @@ export const PuzzleBoard = memo(function PuzzleBoard({
             onClick={handleAdvance}
             disabled={!canAdvanceToNext || isSubmittingAttempt}
             className="w-full sm:w-auto sm:min-w-56"
+            data-testid="training-next-puzzle-button"
           >
             {isSubmittingAttempt ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

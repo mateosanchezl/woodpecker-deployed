@@ -5,6 +5,7 @@ import Image from "next/image";
 import {
   Award,
   BookOpen,
+  Coffee,
   LayoutDashboard,
   MessageSquare,
   RefreshCcw,
@@ -56,7 +57,10 @@ const navCategories = [
   },
   {
     label: "Account",
-    items: [{ title: "Settings", url: "/settings", icon: Settings }],
+    items: [
+      { title: "Support", url: "/support", icon: Coffee },
+      { title: "Settings", url: "/settings", icon: Settings },
+    ],
   },
 ];
 

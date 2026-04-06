@@ -1,10 +1,20 @@
+'use client'
+
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { SupporterBadge } from '@/components/supporters/supporter-badge'
+import { useAppBootstrap } from '@/hooks/use-app-bootstrap'
 import { SUPPORT_LINKS } from '@/lib/site-config'
 import { Coffee, ExternalLink, Heart } from 'lucide-react'
 
 export default function SupportPage() {
+  const { data: user } = useAppBootstrap({
+    select: (bootstrap) => bootstrap.user,
+  })
+
+  const isSupporter = user?.isSupporter ?? false
+
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 py-6 md:py-10">
       <div className="space-y-2 px-1">
@@ -39,36 +49,82 @@ export default function SupportPage() {
               I started building it because I couldn&apos;t find a tool for the Woodpecker Method 
               that actually felt good to use.
             </p>
-            <p>
-              Peck is entirely a one-person project. If the app has helped your tactics or 
-              made your training a bit more enjoyable, you can support its development with a coffee.
-            </p>
-            <p>
-              Your support goes directly toward covering server costs, keeping the core experience free, 
-              and giving me the room to thoughtfully polish the app and add new features.
-            </p>
+            {isSupporter ? (
+              <>
+                <p>
+                  You&apos;re already helping keep Peck running, polished, and improving. Your supporter badge is now part of your account and shows up across the app.
+                </p>
+                <p>
+                  That support goes directly toward server costs and gives me more room to keep refining the experience thoughtfully.
+                </p>
+              </>
+            ) : (
+              <>
+                <p>
+                  Peck is entirely a one-person project. If the app has helped your tactics or 
+                  made your training a bit more enjoyable, you can support its development with a coffee.
+                </p>
+                <p>
+                  Your support goes directly toward covering server costs, keeping the core experience free, 
+                  and giving me the room to thoughtfully polish the app and add new features.
+                </p>
+              </>
+            )}
           </div>
 
           <div className="flex flex-col items-start gap-4 py-2 sm:flex-row sm:items-center sm:gap-6">
-            <Button
-              asChild
-              size="lg"
-              className="gap-2 rounded-2xl text-base shadow-md shadow-primary/20 transition-transform hover:scale-105 active:scale-95"
-            >
-              <a
-                href={SUPPORT_LINKS.buyMeACoffee.href}
-                target="_blank"
-                rel="noreferrer noopener"
-              >
-                <Coffee className="size-5" />
-                {SUPPORT_LINKS.buyMeACoffee.label}
-                <ExternalLink className="size-4 opacity-70" />
-              </a>
-            </Button>
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <Heart className="size-4 text-rose-500" />
-              <span>Optional, but deeply appreciated.</span>
-            </div>
+            {isSupporter ? (
+              <>
+                <div className="flex flex-wrap items-center gap-3">
+                  <SupporterBadge
+                    grantedAt={user?.supporterBadgeGrantedAt}
+                    className="px-3 py-1.5 text-sm"
+                  />
+                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                    <Heart className="size-4 text-rose-500" />
+                    <span>Thanks for backing Peck.</span>
+                  </div>
+                </div>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="lg"
+                  className="gap-2 rounded-2xl text-base"
+                >
+                  <a
+                    href={SUPPORT_LINKS.buyMeACoffee.href}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    <Coffee className="size-5" />
+                    Visit Buy Me a Coffee
+                    <ExternalLink className="size-4 opacity-70" />
+                  </a>
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  asChild
+                  size="lg"
+                  className="gap-2 rounded-2xl text-base shadow-md shadow-primary/20 transition-transform hover:scale-105 active:scale-95"
+                >
+                  <a
+                    href={SUPPORT_LINKS.buyMeACoffee.href}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    <Coffee className="size-5" />
+                    {SUPPORT_LINKS.buyMeACoffee.label}
+                    <ExternalLink className="size-4 opacity-70" />
+                  </a>
+                </Button>
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Heart className="size-4 text-rose-500" />
+                  <span>Optional, but deeply appreciated.</span>
+                </div>
+              </>
+            )}
           </div>
 
           <hr className="border-border/50" />

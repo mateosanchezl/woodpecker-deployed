@@ -26,6 +26,20 @@ export function formatChangelogDate(date: string) {
 // Add new releases to the top of this list so index 0 stays the latest.
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    version: "2.9.0",
+    title: "Supporter Badges",
+    description:
+      "Buy Me a Coffee supporters now get a supporter badge on their Peck account as a small thank-you for helping keep the app running and improving.",
+    features: [
+      "Supporters can now be marked directly on their Peck account",
+      "A new supporter badge appears in the app shell, dashboard, and leaderboard",
+      "The Support page now shows a dedicated thank-you state for supporters",
+    ],
+    date: "2026-04-06",
+    learnMoreUrl: "/support",
+    actionLabel: "Open support",
+  },
+  {
     version: "2.8.0",
     title: "Support Peck!",
     description:

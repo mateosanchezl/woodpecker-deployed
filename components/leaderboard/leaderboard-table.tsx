@@ -9,6 +9,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { RankBadge } from './rank-badge'
+import { SupporterBadge } from '@/components/supporters/supporter-badge'
 import { cn } from '@/lib/utils'
 import { getLevelTitle } from '@/lib/xp'
 import type { LeaderboardEntry } from '@/lib/validations/leaderboard'
@@ -59,6 +60,9 @@ export function LeaderboardTable({ entries }: LeaderboardTableProps) {
                   >
                     {entry.name || 'Anonymous'}
                   </span>
+                  {entry.isSupporter ? (
+                    <SupporterBadge showLabel={false} />
+                  ) : null}
                   {entry.isCurrentUser && (
                     <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                       You

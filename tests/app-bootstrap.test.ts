@@ -77,6 +77,7 @@ test("serializeAppUser normalizes dates and keeps puzzle-set count explicit", ()
       totalXp: 1234,
       currentLevel: 6,
       weeklyXp: 210,
+      supporterBadgeGrantedAt: new Date("2026-04-03T12:00:00Z"),
     },
     3,
   );
@@ -100,5 +101,7 @@ test("serializeAppUser normalizes dates and keeps puzzle-set count explicit", ()
     totalXp: 1234,
     currentLevel: 6,
     weeklyXp: 210,
+    isSupporter: true,
+    supporterBadgeGrantedAt: "2026-04-03T12:00:00.000Z",
   });
 });

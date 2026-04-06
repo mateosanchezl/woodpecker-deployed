@@ -1,13 +1,21 @@
 "use client"
 
 import { useXp } from "@/hooks/use-xp"
+import { useAppBootstrap } from "@/hooks/use-app-bootstrap"
 import { Progress } from "@/components/ui/progress"
+import { SupporterBadge } from "@/components/supporters/supporter-badge"
 import { Loader2 } from "lucide-react"
 
 export function UserLevelDisplay() {
     const { data: xpData, isLoading } = useXp()
+    const { data: supporter, isLoading: isSupporterLoading } = useAppBootstrap({
+        select: (data) => ({
+            isSupporter: data.user.isSupporter,
+            supporterBadgeGrantedAt: data.user.supporterBadgeGrantedAt,
+        }),
+    })
 
-    if (isLoading) {
+    if (isLoading || isSupporterLoading) {
         return (
             <div className="flex items-center justify-center p-2">
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -41,6 +49,12 @@ export function UserLevelDisplay() {
                             <span>{xpData.levelProgress.xpNeededForNextLevel} XP</span>
                         </div>
                     </div>
+                    {supporter?.isSupporter ? (
+                        <SupporterBadge
+                            grantedAt={supporter.supporterBadgeGrantedAt}
+                            className="self-start"
+                        />
+                    ) : null}
                 </div>
             </div>
         </div>

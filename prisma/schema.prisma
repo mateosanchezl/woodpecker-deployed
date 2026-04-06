@@ -39,6 +39,7 @@ model User {
   currentLevel       Int       @default(1)
   weeklyXp           Int       @default(0)
   weeklyXpStartDate  DateTime? // Start of current weekly XP period (Monday UTC)
+  supporterBadgeGrantedAt DateTime?
 
   // Metadata
   createdAt        DateTime    @default(now())

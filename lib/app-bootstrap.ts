@@ -1,3 +1,5 @@
+import { serializeSupporterBadgeState } from "@/lib/supporters";
+
 export interface AppBootstrapUser {
   id: string;
   email: string;
@@ -17,6 +19,8 @@ export interface AppBootstrapUser {
   totalXp: number;
   currentLevel: number;
   weeklyXp: number;
+  isSupporter: boolean;
+  supporterBadgeGrantedAt: string | null;
 }
 
 export interface AppBootstrapPuzzleSet {
@@ -81,6 +85,7 @@ interface AppUserSource {
   totalXp: number;
   currentLevel: number;
   weeklyXp: number;
+  supporterBadgeGrantedAt: Date | null;
   _count?: {
     puzzleSets: number;
   };
@@ -128,6 +133,8 @@ export function serializeAppUser(
   user: AppUserSource,
   puzzleSetCount: number,
 ): AppBootstrapUser {
+  const supporterState = serializeSupporterBadgeState(user);
+
   return {
     id: user.id,
     email: user.email,
@@ -147,5 +154,6 @@ export function serializeAppUser(
     totalXp: user.totalXp,
     currentLevel: user.currentLevel,
     weeklyXp: user.weeklyXp,
+    ...supporterState,
   };
 }

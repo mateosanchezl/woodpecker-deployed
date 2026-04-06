@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import { SupporterBadge } from "@/components/supporters/supporter-badge";
 import {
   Play,
   Plus,
@@ -92,10 +93,16 @@ export default function DashboardPage() {
           {/* Header */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
+              <h1 className="text-3xl font-bold tracking-tight text-foreground flex flex-wrap items-center gap-2">
                 {user.name
                   ? `Welcome back, ${user.name.split(" ")[0]}`
                   : "Welcome back"} 👋
+                {user.isSupporter ? (
+                  <SupporterBadge
+                    grantedAt={user.supporterBadgeGrantedAt}
+                    className="translate-y-px"
+                  />
+                ) : null}
               </h1>
               <p className="text-muted-foreground mt-2 text-lg">
                 Ready to crush some puzzles today?

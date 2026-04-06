@@ -1,3 +1,9 @@
+import type { LeaderboardEntry, LeaderboardPeriod } from "@/lib/validations/leaderboard";
+import {
+  serializeSupporterBadgeState,
+  type SupporterFieldsSource,
+} from "@/lib/supporters";
+
 /**
  * Get the start of the ISO week (Monday 00:00:00 UTC) for a given date.
  */
@@ -42,4 +48,46 @@ export function formatISOWeek(date: Date): string {
     ) + 1
 
   return `${year}-W${String(weekNumber).padStart(2, '0')}`
+}
+
+interface LeaderboardUserSource extends SupporterFieldsSource {
+  id: string;
+  name: string | null;
+  estimatedRating: number;
+  totalCorrectAttempts: number;
+  weeklyCorrectAttempts: number;
+  totalXp: number;
+  currentLevel: number;
+  weeklyXp: number;
+}
+
+interface SerializeLeaderboardEntryInput {
+  user: LeaderboardUserSource;
+  rank: number;
+  period: LeaderboardPeriod;
+  currentUserId: string;
+}
+
+export function serializeLeaderboardEntry({
+  user,
+  rank,
+  period,
+  currentUserId,
+}: SerializeLeaderboardEntryInput): LeaderboardEntry {
+  const supporterState = serializeSupporterBadgeState(user);
+  const isWeekly = period === "weekly";
+
+  return {
+    rank,
+    userId: user.id,
+    name: user.name,
+    xp: isWeekly ? user.weeklyXp : user.totalXp,
+    level: user.currentLevel,
+    puzzlesSolved: isWeekly
+      ? user.weeklyCorrectAttempts
+      : user.totalCorrectAttempts,
+    estimatedRating: user.estimatedRating,
+    isCurrentUser: user.id === currentUserId,
+    isSupporter: supporterState.isSupporter,
+  };
 }

@@ -2,6 +2,7 @@
 
 import { Card, CardContent } from '@/components/ui/card'
 import { RankBadge } from './rank-badge'
+import { SupporterBadge } from '@/components/supporters/supporter-badge'
 import { User } from 'lucide-react'
 import type { LeaderboardResponse } from '@/lib/validations/leaderboard'
 
@@ -30,7 +31,10 @@ export function CurrentUserRank({
               <User className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <p className="text-base font-semibold">Your Ranking</p>
+              <div className="flex items-center gap-2">
+                <p className="text-base font-semibold">Your Ranking</p>
+                {entry.isSupporter ? <SupporterBadge showLabel={false} /> : null}
+              </div>
               <p className="text-sm text-muted-foreground mt-0.5">
                 {rank ? `#${rank}` : 'Unranked'} with {entry.puzzlesSolved}{' '}
                 puzzles solved

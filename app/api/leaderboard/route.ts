@@ -3,10 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withUserProvisionFallback } from "@/lib/ensure-user";
 import { leaderboardQuerySchema } from "@/lib/validations/leaderboard";
-import { getISOWeekStart } from "@/lib/leaderboard";
+import { getISOWeekStart, serializeLeaderboardEntry } from "@/lib/leaderboard";
 import { checkRisingStarAchievement } from "@/lib/achievements";
 import type {
-  LeaderboardEntry,
   LeaderboardResponse,
 } from "@/lib/validations/leaderboard";
 
@@ -50,6 +49,7 @@ export async function GET(request: NextRequest) {
           weeklyXpStartDate: true,
           weeklyCorrectStartDate: true,
           showOnLeaderboard: true,
+          supporterBadgeGrantedAt: true,
         },
       }),
     );
@@ -88,6 +88,7 @@ export async function GET(request: NextRequest) {
         totalXp: true,
         currentLevel: true,
         weeklyXp: true,
+        supporterBadgeGrantedAt: true,
       },
       orderBy: isWeekly ? { weeklyXp: "desc" } : { totalXp: "desc" },
       take: limit,
@@ -95,18 +96,12 @@ export async function GET(request: NextRequest) {
     });
 
     // Transform to entries with rank
-    const entries: LeaderboardEntry[] = users.map(
-      (user: (typeof users)[number], index: number) => ({
+    const entries = users.map((user: (typeof users)[number], index: number) =>
+      serializeLeaderboardEntry({
+        user,
         rank: offset + index + 1,
-        userId: user.id,
-        name: user.name,
-        xp: isWeekly ? user.weeklyXp : user.totalXp,
-        level: user.currentLevel,
-        puzzlesSolved: isWeekly
-          ? user.weeklyCorrectAttempts
-          : user.totalCorrectAttempts,
-        estimatedRating: user.estimatedRating,
-        isCurrentUser: user.id === currentUser.id,
+        period,
+        currentUserId: currentUser.id,
       }),
     );
 
@@ -144,16 +139,18 @@ export async function GET(request: NextRequest) {
 
       currentUserData = {
         rank: currentUser.showOnLeaderboard ? rank : null,
-        entry: {
+        entry: serializeLeaderboardEntry({
+          user: {
+            ...currentUser,
+            totalXp: currentUserXp,
+            weeklyXp: currentUserXp,
+            totalCorrectAttempts: currentUserPuzzles,
+            weeklyCorrectAttempts: currentUserPuzzles,
+          },
           rank,
-          userId: currentUser.id,
-          name: currentUser.name,
-          xp: currentUserXp,
-          level: currentUser.currentLevel,
-          puzzlesSolved: currentUserPuzzles,
-          estimatedRating: currentUser.estimatedRating,
-          isCurrentUser: true,
-        },
+          period,
+          currentUserId: currentUser.id,
+        }),
       };
     } else {
       currentUserData = {

@@ -15,6 +15,7 @@ export const leaderboardEntrySchema = z.object({
   puzzlesSolved: z.number(),
   estimatedRating: z.number(),
   isCurrentUser: z.boolean(),
+  isSupporter: z.boolean(),
 })
 
 export const leaderboardResponseSchema = z.object({

@@ -26,6 +26,34 @@ export function formatChangelogDate(date: string) {
 // Add new releases to the top of this list so index 0 stays the latest.
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    version: "2.9.2",
+    title: "Mate-in-1 Validation Fix",
+    description:
+      "Mate-in-1 puzzles now accept alternate legal checkmates instead of forcing only the single canonical Lichess line.",
+    features: [
+      "Alternate mating moves now count as correct on mate-in-1 puzzles, even when Peck's stored line uses a different final move",
+      "Training and review both use the same relaxed mate-in-1 validation, so retries behave consistently",
+      "If a mate puzzle still rejects a valid winning line, please report it so we can inspect that specific puzzle and tighten the validator further",
+    ],
+    date: "2026-04-20",
+    learnMoreUrl: "/training",
+    actionLabel: "Open training",
+  },
+  {
+    version: "2.9.1",
+    title: "Mate Puzzle Solution Notice",
+    description:
+      "Some Lichess mate puzzles allow multiple winning continuations, but Peck still validates the single canonical line bundled with the puzzle. A new in-session heads-up now explains that behavior when it appears.",
+    features: [
+      "Mate puzzles now show a known-issue notice explaining why an alternative mating line can still be marked incorrect here",
+      "The existing View in Lichess action remains the fastest way to confirm alternate mate continuations on the original puzzle page",
+      "This is a current puzzle-validation limitation, not a problem with your account, rating, or saved training set",
+    ],
+    date: "2026-04-20",
+    learnMoreUrl: "/training",
+    actionLabel: "Open training",
+  },
+  {
     version: "2.9.0",
     title: "Supporter Badges",
     description:

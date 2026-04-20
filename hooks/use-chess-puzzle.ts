@@ -18,12 +18,13 @@ import {
   toUciMove,
   getOrientationFromFen,
   parseSolutionMoves,
-  isCorrectMove,
+  isAcceptedPuzzleMove,
 } from '@/lib/chess/puzzle-engine'
 
 interface UseChessPuzzleOptions {
   fen: string
   solutionMoves: string // Space-separated UCI moves
+  allowAnyFinalCheckmate?: boolean
   onCorrectMove?: () => void
   onIncorrectMove?: () => void
   onPuzzleComplete?: (isCorrect: boolean, movesPlayed: string[]) => void
@@ -63,7 +64,15 @@ interface UseChessPuzzleReturn {
  * Handles the complete puzzle flow including opponent moves and feedback.
  */
 export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleReturn {
-  const { fen, solutionMoves, onCorrectMove, onIncorrectMove, onPuzzleComplete, onReady } = options
+  const {
+    fen,
+    solutionMoves,
+    allowAnyFinalCheckmate = false,
+    onCorrectMove,
+    onIncorrectMove,
+    onPuzzleComplete,
+    onReady,
+  } = options
 
   const solutionMovesArray = parseSolutionMoves(solutionMoves)
   const orientation = getOrientationFromFen(fen)
@@ -307,7 +316,15 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
     cancelPendingAsyncWork()
     const runToken = runTokenRef.current
 
-    const isCorrect = isCorrectMove(from, to, promotion, expectedMoveUci)
+    const isCorrect = isAcceptedPuzzleMove({
+      fen: chessRef.current.fen(),
+      from,
+      to,
+      promotion,
+      expectedUci: expectedMoveUci,
+      allowAnyFinalCheckmate,
+      isFinalExpectedMove: currentMoveIndex === solutionMovesArray.length - 1,
+    })
 
     if (!isCorrect) {
       setStatus('incorrect')
@@ -371,6 +388,7 @@ export function useChessPuzzle(options: UseChessPuzzleOptions): UseChessPuzzleRe
     status,
     currentMoveIndex,
     solutionMovesArray,
+    allowAnyFinalCheckmate,
     getLegalCandidatesForMove,
     cancelPendingAsyncWork,
     waitFor,

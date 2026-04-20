@@ -31,6 +31,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { ChevronRight, Clock3, Eye, Pause, Play, RotateCcw, SkipForward } from "lucide-react";
 import { formatTime } from "@/hooks/use-puzzle-timer";
+import { hasMateInOneTheme } from "@/lib/chess/training-themes";
 
 interface ReviewPuzzleBoardProps {
   fen: string;
@@ -149,6 +150,7 @@ export function ReviewPuzzleBoard({
   const timer = usePuzzleTimer();
   const solutionArray = parseSolutionMoves(moves);
   const orientation = getOrientationFromFen(fen);
+  const allowAnyFinalCheckmate = hasMateInOneTheme(themes);
 
   const {
     position,
@@ -164,6 +166,7 @@ export function ReviewPuzzleBoard({
   } = useChessPuzzle({
     fen,
     solutionMoves: moves,
+    allowAnyFinalCheckmate,
     onCorrectMove: () => {},
     onIncorrectMove: () => {
       timer.controls.pause();

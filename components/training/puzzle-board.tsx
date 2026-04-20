@@ -31,6 +31,7 @@ interface PuzzleBoardProps {
   puzzleId: string
   fen: string
   moves: string
+  allowAnyFinalCheckmate?: boolean
   onComplete: (isCorrect: boolean, timeSpent: number, movesPlayed: string[]) => void
   onSkip: (timeSpent: number) => void
   externalSkipRequest?: number
@@ -116,6 +117,7 @@ export const PuzzleBoard = memo(function PuzzleBoard({
   puzzleId,
   fen,
   moves,
+  allowAnyFinalCheckmate = false,
   onComplete,
   onSkip,
   externalSkipRequest = 0,
@@ -163,6 +165,7 @@ export const PuzzleBoard = memo(function PuzzleBoard({
   } = useChessPuzzle({
     fen,
     solutionMoves: moves,
+    allowAnyFinalCheckmate,
     onIncorrectMove: () => {
       timerControls.pause()
     },

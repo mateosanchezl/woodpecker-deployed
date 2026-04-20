@@ -151,6 +151,63 @@ export function isCorrectMove(
 }
 
 /**
+ * Check whether a legal move immediately ends the game by checkmate.
+ */
+export function doesMoveDeliverCheckmate(
+  fen: string,
+  from: Square,
+  to: Square,
+  promotion?: string
+): boolean {
+  try {
+    const chess = new Chess(fen)
+    const result = chess.move({
+      from,
+      to,
+      promotion: promotion as 'q' | 'r' | 'b' | 'n' | undefined,
+    })
+
+    return result !== null && chess.isCheckmate()
+  } catch {
+    return false
+  }
+}
+
+interface AcceptedPuzzleMoveOptions {
+  fen: string
+  from: Square
+  to: Square
+  promotion?: string
+  expectedUci: string
+  allowAnyFinalCheckmate?: boolean
+  isFinalExpectedMove?: boolean
+}
+
+/**
+ * Validate a player's move against the canonical solution, with an optional
+ * mate-in-1 escape hatch for alternate checkmating moves on the final ply.
+ */
+export function isAcceptedPuzzleMove({
+  fen,
+  from,
+  to,
+  promotion,
+  expectedUci,
+  allowAnyFinalCheckmate = false,
+  isFinalExpectedMove = false,
+}: AcceptedPuzzleMoveOptions): boolean {
+  if (isCorrectMove(from, to, promotion, expectedUci)) {
+    return true
+  }
+
+  if (!allowAnyFinalCheckmate || !isFinalExpectedMove) {
+    return false
+  }
+
+  return doesMoveDeliverCheckmate(fen, from, to, promotion)
+}
+
+/**
  * Check if a move is legal in the given position.
  */
 export function isLegalMove(

@@ -40,6 +40,13 @@ export const TRAINING_THEME_OPTIONS: ReadonlyArray<{
   { value: 'trappedPiece', label: 'Trapped Pieces', description: 'Win pieces with restricted mobility' },
 ]
 
+const MATE_THEME_KEYS = new Set<string>([
+  'mate',
+  'mateIn1',
+  'mateIn2',
+  'mateIn3',
+])
+
 const TRAINING_THEME_LABELS = new Map(
   TRAINING_THEME_OPTIONS.map((theme) => [theme.value, theme.label] as const)
 )
@@ -50,4 +57,12 @@ export function getTrainingThemeLabel(theme: string | null | undefined): string 
   }
 
   return TRAINING_THEME_LABELS.get(theme as TrainingTheme) ?? theme
+}
+
+export function hasMateTheme(themes: readonly string[]): boolean {
+  return themes.some((theme) => MATE_THEME_KEYS.has(theme))
+}
+
+export function hasMateInOneTheme(themes: readonly string[]): boolean {
+  return themes.includes('mateIn1')
 }

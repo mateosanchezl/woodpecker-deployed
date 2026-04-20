@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
@@ -376,12 +375,7 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-1">
-            <Label className="flex items-center gap-2 text-sm font-medium">
-              <span>Board theme</span>
-              <Badge variant="secondary" className="uppercase tracking-wide">
-                New
-              </Badge>
-            </Label>
+            <Label className="text-sm font-medium">Board theme</Label>
             <p className="text-sm text-muted-foreground">
               This changes the training board only. Puzzle tactical themes stay separate.
             </p>

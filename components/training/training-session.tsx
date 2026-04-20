@@ -9,7 +9,6 @@ import {
 } from './training-bug-report'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
@@ -19,6 +18,7 @@ import type { TrainingProgress, PuzzleInSetData } from '@/lib/chess/types'
 import { usePuzzleTimer } from '@/hooks/use-puzzle-timer'
 import { useXp } from '@/hooks/use-xp'
 import { XpBar } from '@/components/xp/xp-bar'
+import { hasMateInOneTheme } from '@/lib/chess/training-themes'
 
 interface TrainingSessionProps {
   // Current puzzle data
@@ -170,6 +170,7 @@ export function TrainingSession({
   }
 
   const lichessPuzzleUrl = `https://lichess.org/training/${encodeURIComponent(puzzleData.puzzle.id)}`
+  const allowsAlternateMateInOneSolutions = hasMateInOneTheme(puzzleData.puzzle.themes)
 
   return (
     <div
@@ -183,6 +184,7 @@ export function TrainingSession({
           key={`${puzzleData.id}:${puzzleRenderKey}`}
           fen={puzzleData.puzzle.fen}
           moves={puzzleData.puzzle.moves}
+          allowAnyFinalCheckmate={allowsAlternateMateInOneSolutions}
           onComplete={handleComplete}
           onSkip={handleSkip}
           externalSkipRequest={externalSkipRequest}
@@ -211,12 +213,9 @@ export function TrainingSession({
             <div className="space-y-0.5">
               <Label
                 htmlFor="training-pace-toggle"
-                className="flex items-center gap-2 text-sm font-medium"
+                className="text-sm font-medium"
               >
-                <span>Auto-start next puzzle</span>
-                <Badge variant="secondary" className="uppercase tracking-wide">
-                  New
-                </Badge>
+                Auto-start next puzzle
               </Label>
               <p className="text-xs text-muted-foreground">
                 Turn off to pause between puzzles and start the next one manually.

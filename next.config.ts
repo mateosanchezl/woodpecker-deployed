@@ -1,6 +1,17 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
+interface WebpackCompiler {
+  options: {
+    mode?: string;
+  };
+  hooks: {
+    beforeCompile: {
+      tapPromise: (name: string, callback: () => Promise<void>) => void;
+    };
+  };
+}
+
 const nextConfig: NextConfig = {
   /* config options here */
   webpack: (config) => {
@@ -14,7 +25,7 @@ const nextConfig: NextConfig = {
 // ---------------------------------------------------------------------------
 class VeliteWebpackPlugin {
   static started = false;
-  apply(/** @type {import('webpack').Compiler} */ compiler: any) {
+  apply(compiler: WebpackCompiler) {
     compiler.hooks.beforeCompile.tapPromise("VeliteWebpackPlugin", async () => {
       if (VeliteWebpackPlugin.started) return;
       VeliteWebpackPlugin.started = true;

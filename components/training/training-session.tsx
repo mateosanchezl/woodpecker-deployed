@@ -19,6 +19,12 @@ import { usePuzzleTimer } from '@/hooks/use-puzzle-timer'
 import { useXp } from '@/hooks/use-xp'
 import { XpBar } from '@/components/xp/xp-bar'
 import { hasMateInOneTheme } from '@/lib/chess/training-themes'
+import {
+  isPlainShortcutEvent,
+  shouldIgnoreTrainingShortcut,
+  TRAINING_SHORTCUTS,
+} from '@/lib/training/keyboard-shortcuts'
+import { ShortcutHints } from './shortcut-hints'
 
 interface TrainingSessionProps {
   // Current puzzle data
@@ -91,21 +97,38 @@ export function TrainingSession({
   const [externalSkipRequest, setExternalSkipRequest] = useState(0)
   const [isPuzzleFlowPaused, setIsPuzzleFlowPaused] = useState(false)
   const [showPuzzleThemes, setShowPuzzleThemes] = useState(true)
+  const [isTimerVisible, setIsTimerVisible] = useState(true)
   const resetTimerRef = useRef(timer.controls.reset)
 
   useEffect(() => {
     resetTimerRef.current = timer.controls.reset
   }, [timer.controls])
 
-  // Handle keyboard shortcuts at session level
+  const toggleTimerVisibility = useCallback(() => {
+    setIsTimerVisible((current) => !current)
+  }, [])
+
+  // Timer visibility lives beside the timer so the keyboard shortcut and
+  // icon button always call the same toggle.
   useEffect(() => {
-    const handleKeyDown = () => {
-      // Global shortcuts could be added here
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.repeat ||
+        !isPlainShortcutEvent(event) ||
+        shouldIgnoreTrainingShortcut(event)
+      ) {
+        return
+      }
+
+      if (event.key.toLowerCase() === 't') {
+        event.preventDefault()
+        toggleTimerVisibility()
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  }, [toggleTimerVisibility])
 
   useEffect(() => {
     if (puzzleData?.id) {
@@ -206,6 +229,8 @@ export function TrainingSession({
           progress={progress}
           puzzleRating={puzzleData.puzzle.rating}
           isPaused={isPuzzleFlowPaused}
+          isTimerVisible={isTimerVisible}
+          onToggleTimerVisibility={toggleTimerVisibility}
         />
 
         <div className="rounded-lg border bg-card p-3 space-y-3">
@@ -238,9 +263,11 @@ export function TrainingSession({
             disabled={isTransitioning || isSubmittingAttempt}
             className="w-full text-muted-foreground hover:text-foreground"
             data-testid="training-skip-button"
+            aria-keyshortcuts={TRAINING_SHORTCUTS.skip.ariaKeyShortcuts}
           >
             <SkipForward className="mr-2 h-4 w-4" />
-            Skip Puzzle
+            <span>Skip Puzzle</span>
+            <ShortcutHints keys={TRAINING_SHORTCUTS.skip.hints} />
           </Button>
         )}
 

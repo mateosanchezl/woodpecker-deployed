@@ -12,7 +12,7 @@ export default function PrivacyPage() {
       <section className="mb-8">
         <h2 className="text-2xl font-semibold mt-8 mb-4 pb-2 border-b">Introduction</h2>
         <p className="text-muted-foreground leading-relaxed">
-          Peck ("we" or "us") operates in compliance with UK GDPR and the Data Protection Act 2018. This policy explains how we handle your personal data.
+          Peck (&quot;we&quot; or &quot;us&quot;) operates in compliance with UK GDPR and the Data Protection Act 2018. This policy explains how we handle your personal data.
         </p>
       </section>
 
@@ -88,7 +88,7 @@ export default function PrivacyPage() {
           <li>Object to processing</li>
         </ul>
         <p className="text-muted-foreground leading-relaxed mt-4">
-          To exercise these rights, email <a href="mailto:dwyc.co@gmail.com" className="text-primary hover:underline">dwyc.co@gmail.com</a>. We'll respond within 30 days.
+          To exercise these rights, email <a href="mailto:dwyc.co@gmail.com" className="text-primary hover:underline">dwyc.co@gmail.com</a>. We&apos;ll respond within 30 days.
         </p>
       </section>
 
@@ -102,7 +102,7 @@ export default function PrivacyPage() {
       <section className="mb-8">
         <h2 className="text-2xl font-semibold mt-8 mb-4 pb-2 border-b">Complaints</h2>
         <p className="text-muted-foreground leading-relaxed">
-          You can lodge a complaint with the <a href="https://ico.org.uk" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Information Commissioner's Office (ICO)</a> at ico.org.uk or call 0303 123 1113.
+          You can lodge a complaint with the <a href="https://ico.org.uk" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Information Commissioner&apos;s Office (ICO)</a> at ico.org.uk or call 0303 123 1113.
         </p>
       </section>
 

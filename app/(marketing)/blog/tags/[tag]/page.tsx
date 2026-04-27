@@ -6,7 +6,6 @@ import { getAllTags, getPostsByTag } from "@/lib/blog";
 import type { Post } from "#site/content";
 import { BlogPostCard } from "@/components/mdx/blog-post-card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { ArrowLeft, Tag } from "lucide-react";
 
 interface TagPageProps {

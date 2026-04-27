@@ -7,7 +7,6 @@ import {
     TrendingUp,
     Target,
     Zap,
-    Clock,
     Flame,
     Sparkles,
 } from "lucide-react";

@@ -26,6 +26,7 @@ import {
 } from "@/lib/chess/board-themes";
 import { PromotionDialog } from "@/components/training/promotion-dialog";
 import { PuzzleFeedback } from "@/components/training/puzzle-feedback";
+import { ChessboardStage } from "@/components/chess/chessboard-stage";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -86,23 +87,25 @@ const ReviewBoardSurface = memo(function ReviewBoardSurface({
   const boardContainerRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div className="relative mx-auto w-full max-w-[700px] aspect-square overflow-hidden rounded-xl shadow-2xl">
-      <div ref={boardContainerRef} className="absolute inset-0">
-        <Chessboard options={chessboardOptions} />
-        {!isWalkthrough && <PuzzleFeedback status={status} />}
-        {!isWalkthrough && (
-          <PromotionDialog
-            isOpen={promotionState.isOpen}
-            color={promotionState.color}
-            anchorSquare={promotionState.to}
-            boardOrientation={orientation}
-            boardContainerRef={boardContainerRef}
-            onSelect={onSelectPromotion}
-            onCancel={onCancelPromotion}
-          />
-        )}
-      </div>
-    </div>
+    <ChessboardStage
+      board={
+        <div ref={boardContainerRef} className="absolute inset-0">
+          <Chessboard options={chessboardOptions} />
+          {!isWalkthrough && <PuzzleFeedback status={status} />}
+          {!isWalkthrough && (
+            <PromotionDialog
+              isOpen={promotionState.isOpen}
+              color={promotionState.color}
+              anchorSquare={promotionState.to}
+              boardOrientation={orientation}
+              boardContainerRef={boardContainerRef}
+              onSelect={onSelectPromotion}
+              onCancel={onCancelPromotion}
+            />
+          )}
+        </div>
+      }
+    />
   );
 });
 

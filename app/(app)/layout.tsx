@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { XIcon } from "@/components/icons/x-icon";
 import { AppSidebar } from "@/components/app-sidebar";
+import { AppHeader } from "@/components/app-header";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import {
-  Breadcrumb,
-} from "@/components/ui/breadcrumb";
 import { UserButton } from "@clerk/nextjs";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SOCIAL_LINKS } from "@/lib/site-config";
@@ -31,10 +30,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
-          <div className="flex flex-1 items-center justify-between">
-            <Breadcrumb>
-            </Breadcrumb>
-            <div className="flex items-center gap-4">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <Suspense fallback={<div className="min-w-0 flex-1" />}>
+              <AppHeader />
+            </Suspense>
+            <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-4">
               <ThemeToggle />
               <UserButton />
             </div>

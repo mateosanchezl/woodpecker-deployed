@@ -22,11 +22,17 @@ export function LevelUpModal({ isOpen, onClose, newLevel }: LevelUpModalProps) {
   const { title, icon } = getLevelTitle(newLevel)
 
   useEffect(() => {
+    const showTimer = setTimeout(() => setShowConfetti(isOpen), 0)
+
     if (isOpen) {
-      setShowConfetti(true)
-      const timer = setTimeout(() => setShowConfetti(false), 3000)
-      return () => clearTimeout(timer)
+      const hideTimer = setTimeout(() => setShowConfetti(false), 3000)
+      return () => {
+        clearTimeout(showTimer)
+        clearTimeout(hideTimer)
+      }
     }
+
+    return () => clearTimeout(showTimer)
   }, [isOpen])
 
   return (

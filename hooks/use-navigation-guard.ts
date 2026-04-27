@@ -18,6 +18,12 @@ interface UseNavigationGuardReturn {
   cancelLeave: () => void
 }
 
+export function getLocationPathWithSearch(
+  location: Pick<Location, 'pathname' | 'search' | 'hash'>
+): string {
+  return `${location.pathname}${location.search}${location.hash}`
+}
+
 /**
  * Hook to guard against accidental navigation away from a page.
  *
@@ -113,13 +119,14 @@ export function useNavigationGuard({
   useEffect(() => {
     if (!enabled) return
 
-    // Store the current path when guard is enabled
-    const currentPath = window.location.pathname
+    // Store the full path when guard is enabled. Query params are part of the
+    // active training session URL, so dropping them would reset the page.
+    const currentPath = getLocationPathWithSearch(window.location)
 
     const handlePopState = () => {
       // If trying to navigate away via back button, show modal
       // and push the current state back
-      if (window.location.pathname !== currentPath) {
+      if (getLocationPathWithSearch(window.location) !== currentPath) {
         window.history.pushState(null, '', currentPath)
         pendingNavigationRef.current = 'back'
         setShowModal(true)

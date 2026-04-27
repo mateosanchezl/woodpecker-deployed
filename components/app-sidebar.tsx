@@ -64,6 +64,22 @@ const navCategories = [
   },
 ];
 
+function isSidebarItemActive(pathname: string, itemUrl: string): boolean {
+  if (itemUrl === "/training/review") {
+    return pathname === itemUrl || pathname.startsWith(`${itemUrl}/`);
+  }
+
+  if (itemUrl === "/training") {
+    return (
+      pathname === itemUrl ||
+      (pathname.startsWith("/training/") &&
+        !pathname.startsWith("/training/review"))
+    );
+  }
+
+  return pathname === itemUrl;
+}
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const [isReviewModalOpen, setIsReviewModalOpen] = React.useState(false);
@@ -99,25 +115,29 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarGroupLabel>
             <SidebarGroupContent className="px-1">
               <SidebarMenu className="flex flex-col gap-0.5">
-                {category.items.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={pathname === item.url}
-                      className="group rounded-xl transition-all duration-200"
-                    >
-                      <Link href={item.url} className="flex items-center gap-3">
-                        <item.icon className={cn(
-                          "transition-all duration-200",
-                          pathname === item.url 
-                            ? "text-primary scale-110" 
-                            : "opacity-70 group-hover:scale-110 group-hover:text-foreground group-hover:opacity-100"
-                        )} />
-                        <span className="font-medium">{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                {category.items.map((item) => {
+                  const isActive = isSidebarItemActive(pathname, item.url);
+
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive}
+                        className="group rounded-xl transition-all duration-200"
+                      >
+                        <Link href={item.url} className="flex items-center gap-3">
+                          <item.icon className={cn(
+                            "transition-all duration-200",
+                            isActive
+                              ? "text-primary scale-110"
+                              : "opacity-70 group-hover:scale-110 group-hover:text-foreground group-hover:opacity-100"
+                          )} />
+                          <span className="font-medium">{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

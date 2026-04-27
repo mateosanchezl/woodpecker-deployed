@@ -11,7 +11,11 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles, X } from "lucide-react";
-import { LATEST_CHANGELOG_ENTRY, formatChangelogDate } from "@/lib/changelog";
+import {
+  LATEST_CHANGELOG_ENTRY,
+  formatChangelogDate,
+  getUnreadChangelogEntries,
+} from "@/lib/changelog";
 import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "woodpecker-dismissed-update";
@@ -28,38 +32,35 @@ function useHasMounted() {
 export function UpdateNotification() {
   const router = useRouter();
   const hasMounted = useHasMounted();
-  const [isDismissed, setIsDismissed] = useState(() => {
-    // Initialize from localStorage (will be checked again on mount for SSR)
+  const [unreadEntries, setUnreadEntries] = useState(() => {
     if (typeof window !== "undefined") {
       const dismissedVersion = localStorage.getItem(STORAGE_KEY);
-      return dismissedVersion === LATEST_CHANGELOG_ENTRY.version;
+      return getUnreadChangelogEntries(dismissedVersion);
     }
-    return true; // Default to hidden during SSR
+    return [];
   });
   const [isVisible, setIsVisible] = useState(false);
+  const latestUnreadEntry = unreadEntries[0] ?? LATEST_CHANGELOG_ENTRY;
+  const hasMultipleUnreadEntries = unreadEntries.length > 1;
 
   useEffect(() => {
-    // Check if this update was already dismissed
-    const dismissedVersion = localStorage.getItem(STORAGE_KEY);
-    const shouldShow = dismissedVersion !== LATEST_CHANGELOG_ENTRY.version;
-
-    if (shouldShow) {
+    if (unreadEntries.length > 0) {
       // Small delay for smooth entrance animation
       const timer = setTimeout(() => setIsVisible(true), 100);
       return () => clearTimeout(timer);
     }
-  }, []);
+  }, [unreadEntries.length]);
 
   const handleDismiss = () => {
     setIsVisible(false);
     // Wait for animation to complete before hiding
     setTimeout(() => {
-      setIsDismissed(true);
+      setUnreadEntries([]);
       localStorage.setItem(STORAGE_KEY, LATEST_CHANGELOG_ENTRY.version);
     }, 300);
   };
 
-  if (!hasMounted || isDismissed) {
+  if (!hasMounted || unreadEntries.length === 0) {
     return null;
   }
 
@@ -80,10 +81,14 @@ export function UpdateNotification() {
             </div>
             <div>
               <CardTitle className="text-lg text-blue-900 dark:text-blue-100">
-                {LATEST_CHANGELOG_ENTRY.title}
+                {hasMultipleUnreadEntries
+                  ? `${unreadEntries.length} updates launched`
+                  : latestUnreadEntry.title}
               </CardTitle>
               <CardDescription className="text-blue-700/70 dark:text-blue-300/70">
-                {formatChangelogDate(LATEST_CHANGELOG_ENTRY.date)}
+                {hasMultipleUnreadEntries
+                  ? `Latest: ${formatChangelogDate(latestUnreadEntry.date)}`
+                  : formatChangelogDate(latestUnreadEntry.date)}
               </CardDescription>
             </div>
           </div>
@@ -100,34 +105,58 @@ export function UpdateNotification() {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <p className="text-sm text-blue-800 dark:text-blue-200">
-          {LATEST_CHANGELOG_ENTRY.description}
-        </p>
-
-        {LATEST_CHANGELOG_ENTRY.features.length > 0 && (
+        {hasMultipleUnreadEntries ? (
           <ul className="space-y-2">
-            {LATEST_CHANGELOG_ENTRY.features.map((feature, index) => (
+            {unreadEntries.map((entry) => (
               <li
-                key={index}
+                key={entry.version}
                 className="flex items-start gap-2 text-sm text-blue-700 dark:text-blue-300"
               >
                 <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" />
-                {feature}
+                <div className="min-w-0 space-y-0.5">
+                  <p className="font-medium text-blue-900 dark:text-blue-100">
+                    {entry.title}
+                  </p>
+                  <p className="text-blue-800/80 dark:text-blue-200/80">
+                    {entry.description}
+                  </p>
+                </div>
               </li>
             ))}
           </ul>
+        ) : (
+          <>
+            <p className="text-sm text-blue-800 dark:text-blue-200">
+              {latestUnreadEntry.description}
+            </p>
+
+            {latestUnreadEntry.features.length > 0 && (
+              <ul className="space-y-2">
+                {latestUnreadEntry.features.map((feature, index) => (
+                  <li
+                    key={index}
+                    className="flex items-start gap-2 text-sm text-blue-700 dark:text-blue-300"
+                  >
+                    <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
         )}
 
         <div className="flex flex-col gap-2 sm:flex-row">
-          {LATEST_CHANGELOG_ENTRY.learnMoreUrl &&
-            LATEST_CHANGELOG_ENTRY.actionLabel && (
+          {!hasMultipleUnreadEntries &&
+            latestUnreadEntry.learnMoreUrl &&
+            latestUnreadEntry.actionLabel && (
               <Button
                 variant="outline"
                 size="sm"
                 className="gap-2 border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/50"
-                onClick={() => router.push(LATEST_CHANGELOG_ENTRY.learnMoreUrl!)}
+                onClick={() => router.push(latestUnreadEntry.learnMoreUrl!)}
               >
-                {LATEST_CHANGELOG_ENTRY.actionLabel}
+                {latestUnreadEntry.actionLabel}
                 <ArrowRight className="h-3 w-3" />
               </Button>
             )}
@@ -138,7 +167,7 @@ export function UpdateNotification() {
             className="gap-2 justify-start px-0 text-blue-700 hover:bg-transparent hover:text-blue-900 dark:text-blue-300 dark:hover:bg-transparent dark:hover:text-blue-100"
             onClick={() => router.push("/changelog")}
           >
-            View all updates
+            {hasMultipleUnreadEntries ? "See what's new" : "View all updates"}
             <ArrowRight className="h-3 w-3" />
           </Button>
         </div>

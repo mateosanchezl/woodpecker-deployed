@@ -1,4 +1,6 @@
+/* eslint-disable react-hooks/static-components */
 import * as runtime from "react/jsx-runtime";
+import { useMemo } from "react";
 import { Callout } from "@/components/mdx/callout";
 import { ChessDiagram } from "@/components/mdx/chess-diagram";
 
@@ -8,7 +10,7 @@ const sharedComponents = {
 };
 
 // Required by @next/mdx and Velite MDX body rendering
-const useMDXComponent = (code: string) => {
+const getMDXComponent = (code: string) => {
   const fn = new Function(code);
   return fn({ ...runtime }).default;
 };
@@ -19,10 +21,15 @@ interface MDXProps {
 }
 
 export function MDXContent({ code, components }: MDXProps) {
-  const Component = useMDXComponent(code);
+  const Component = useMemo(() => getMDXComponent(code), [code]);
+  const mdxComponents = useMemo(
+    () => ({ ...sharedComponents, ...components }),
+    [components],
+  );
+
   return (
     <div className="prose prose-slate dark:prose-invert max-w-none prose-headings:scroll-mt-20 prose-headings:font-semibold prose-a:text-primary prose-a:underline-offset-4 hover:prose-a:text-primary/80 prose-img:rounded-xl prose-pre:border prose-pre:border-border">
-      <Component components={{ ...sharedComponents, ...components }} />
+      <Component components={mdxComponents} />
     </div>
   );
 }

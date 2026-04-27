@@ -16,7 +16,10 @@ interface ChessDiagramProps {
 export function ChessDiagram({ fen, caption, width = 400 }: ChessDiagramProps) {
   return (
     <figure className="my-8 flex flex-col items-center not-prose">
-      <div className="rounded-lg overflow-hidden shadow-md border border-border">
+      <div
+        className="rounded-lg overflow-hidden shadow-md border border-border"
+        style={{ width }}
+      >
         <Chessboard
           options={{
             position: fen,

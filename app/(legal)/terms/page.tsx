@@ -31,7 +31,7 @@ export default function TermsPage() {
       <section className="mb-8">
         <h2 className="text-2xl font-semibold mt-8 mb-4 pb-2 border-b">Your Account</h2>
         <p className="text-muted-foreground leading-relaxed">
-          You're responsible for maintaining account security and all activities under your account. Provide accurate information and keep your email current.
+          You&apos;re responsible for maintaining account security and all activities under your account. Provide accurate information and keep your email current.
         </p>
       </section>
 
@@ -47,14 +47,14 @@ export default function TermsPage() {
       <section className="mb-8">
         <h2 className="text-2xl font-semibold mt-8 mb-4 pb-2 border-b">Service Availability</h2>
         <p className="text-muted-foreground leading-relaxed">
-          We don't guarantee uninterrupted service. We may modify features, perform maintenance, or make improvements at any time.
+          We don&apos;t guarantee uninterrupted service. We may modify features, perform maintenance, or make improvements at any time.
         </p>
       </section>
 
       <section className="mb-8">
         <h2 className="text-2xl font-semibold mt-8 mb-4 pb-2 border-b">Limitation of Liability</h2>
         <p className="text-muted-foreground leading-relaxed">
-          Peck is provided "as is" without warranties. We're not liable for indirect damages, data loss, or service interruptions.
+          Peck is provided &quot;as is&quot; without warranties. We&apos;re not liable for indirect damages, data loss, or service interruptions.
         </p>
       </section>
 

@@ -23,8 +23,52 @@ export function formatChangelogDate(date: string) {
   );
 }
 
+export function getUnreadChangelogEntries(
+  dismissedVersion: string | null | undefined,
+): ChangelogEntry[] {
+  const latestEntry = CHANGELOG_ENTRIES[0];
+
+  if (!latestEntry) {
+    return [];
+  }
+
+  if (!dismissedVersion) {
+    return [latestEntry];
+  }
+
+  const dismissedIndex = CHANGELOG_ENTRIES.findIndex(
+    (entry) => entry.version === dismissedVersion,
+  );
+
+  if (dismissedIndex === 0) {
+    return [];
+  }
+
+  if (dismissedIndex === -1) {
+    return [latestEntry];
+  }
+
+  return CHANGELOG_ENTRIES.slice(0, dismissedIndex);
+}
+
 // Add new releases to the top of this list so index 0 stays the latest.
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+  {
+    version: "2.9.4",
+    title: "Training Shortcuts and Quick Resume",
+    description:
+      "Training now has keyboard-first controls, and the app header can take you straight back to an unfinished cycle from anywhere in the app.",
+    features: [
+      "Use S to skip, T to show or hide the timer, Enter to advance, and Space to continue through the current training context",
+      "Missed-line review keeps ArrowLeft and ArrowRight stepping, with visible key hints on the review and next-puzzle controls",
+      "The app header now shows the current page context and a compact Continue action when an unfinished training cycle exists",
+      "The Continue action reuses the existing app bootstrap data, so it does not add another database or API request",
+      "Nested training pages now keep the correct sidebar item active while you move between training, new set creation, and review",
+    ],
+    date: "2026-04-27",
+    learnMoreUrl: "/training",
+    actionLabel: "Continue training",
+  },
   {
     version: "2.9.3",
     title: "Flexible Rating Range",

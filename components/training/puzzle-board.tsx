@@ -13,8 +13,16 @@ import { parseUciMove, parseSolutionMoves } from '@/lib/chess/puzzle-engine'
 import { getBoardThemeSquareStyles, type BoardThemeId } from '@/lib/chess/board-themes'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { ChessboardStage } from '@/components/chess/chessboard-stage'
 import { PromotionDialog } from './promotion-dialog'
 import { PuzzleFeedback } from './puzzle-feedback'
+import { ShortcutHints } from './shortcut-hints'
+import {
+  isPlainShortcutEvent,
+  isSpaceKey,
+  shouldIgnoreTrainingShortcut,
+  TRAINING_SHORTCUTS,
+} from '@/lib/training/keyboard-shortcuts'
 import {
   AlertCircle,
   CheckCircle2,
@@ -85,29 +93,29 @@ const PuzzleBoardSurface = memo(function PuzzleBoardSurface({
   const boardContainerRef = useRef<HTMLDivElement>(null)
 
   return (
-    <div
-      className="relative w-full max-w-[700px] aspect-square shadow-2xl rounded-xl overflow-hidden"
-      data-testid="training-board"
-      data-puzzle-id={puzzleId}
-    >
-      <div ref={boardContainerRef} className="absolute inset-0">
-        <Chessboard options={chessboardOptions} />
+    <ChessboardStage
+      boardTestId="training-board"
+      boardPuzzleId={puzzleId}
+      board={
+        <div ref={boardContainerRef} className="absolute inset-0">
+          <Chessboard options={chessboardOptions} />
 
-        {mode === 'solving' && <PuzzleFeedback status={status} />}
+          {mode === 'solving' && <PuzzleFeedback status={status} />}
 
-        {mode === 'solving' && (
-          <PromotionDialog
-            isOpen={promotionState.isOpen}
-            color={promotionState.color}
-            anchorSquare={promotionState.to}
-            boardOrientation={orientation}
-            boardContainerRef={boardContainerRef}
-            onSelect={onSelectPromotion}
-            onCancel={onCancelPromotion}
-          />
-        )}
-      </div>
-    </div>
+          {mode === 'solving' && (
+            <PromotionDialog
+              isOpen={promotionState.isOpen}
+              color={promotionState.color}
+              anchorSquare={promotionState.to}
+              boardOrientation={orientation}
+              boardContainerRef={boardContainerRef}
+              onSelect={onSelectPromotion}
+              onCancel={onCancelPromotion}
+            />
+          )}
+        </div>
+      }
+    />
   )
 })
 
@@ -320,35 +328,6 @@ export const PuzzleBoard = memo(function PuzzleBoard({
     setWalkthroughToMoveIndex(walkthroughMoveIndex - 1)
   }, [walkthroughMoveIndex, reviewStartMoveIndex, setWalkthroughToMoveIndex])
 
-  useEffect(() => {
-    if (mode !== 'failedReview') {
-      return
-    }
-
-    const handleReviewKeyDown = (event: KeyboardEvent) => {
-      if (
-        event.target instanceof HTMLElement &&
-        (event.target.isContentEditable ||
-          ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName))
-      ) {
-        return
-      }
-
-      if (event.key === 'ArrowRight') {
-        event.preventDefault()
-        stepForward()
-      }
-
-      if (event.key === 'ArrowLeft') {
-        event.preventDefault()
-        stepBackward()
-      }
-    }
-
-    window.addEventListener('keydown', handleReviewKeyDown)
-    return () => window.removeEventListener('keydown', handleReviewKeyDown)
-  }, [mode, stepForward, stepBackward])
-
   const handleAdvance = useCallback(() => {
     if (!canAdvanceToNext || isSubmittingAttempt) {
       return
@@ -357,37 +336,6 @@ export const PuzzleBoard = memo(function PuzzleBoard({
     onAdvanceToNextPuzzle?.()
   }, [canAdvanceToNext, isSubmittingAttempt, onAdvanceToNextPuzzle])
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key !== 'Escape') {
-        return
-      }
-
-      if (promotionState.isOpen) {
-        cancelPromotion()
-        return
-      }
-
-      if (selectedSquare) {
-        clearSelection()
-        return
-      }
-
-      if (mode === 'solving' && isPlayerTurn) {
-        handleSkip()
-      }
-    },
-    [
-      promotionState.isOpen,
-      cancelPromotion,
-      selectedSquare,
-      clearSelection,
-      mode,
-      isPlayerTurn,
-      handleSkip,
-    ]
-  )
-
   const displayPosition = mode === 'failedReview' ? walkthroughPosition : position
   const displayLastMove = mode === 'failedReview' ? walkthroughLastMove : lastMove
 
@@ -395,6 +343,110 @@ export const PuzzleBoard = memo(function PuzzleBoard({
   const reviewStepsCompleted = Math.max(0, walkthroughMoveIndex - reviewStartMoveIndex)
   const isReviewComplete = reviewStepsCompleted >= reviewStepsTotal
   const canStepBackward = walkthroughMoveIndex > reviewStartMoveIndex
+
+  useEffect(() => {
+    const handleTrainingKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && promotionState.isOpen) {
+        event.preventDefault()
+        cancelPromotion()
+        return
+      }
+
+      if (!isPlainShortcutEvent(event) || shouldIgnoreTrainingShortcut(event)) {
+        return
+      }
+
+      if (
+        event.repeat &&
+        event.key !== 'ArrowLeft' &&
+        event.key !== 'ArrowRight'
+      ) {
+        return
+      }
+
+      if (event.key === 'Escape') {
+        if (selectedSquare) {
+          event.preventDefault()
+          clearSelection()
+          return
+        }
+
+        if (mode === 'solving' && isPlayerTurn) {
+          event.preventDefault()
+          handleSkip()
+        }
+
+        return
+      }
+
+      if (event.key.toLowerCase() === 's') {
+        if (mode === 'solving') {
+          event.preventDefault()
+          handleSkip()
+        }
+
+        return
+      }
+
+      if (event.key === 'ArrowRight') {
+        if (mode === 'failedReview') {
+          event.preventDefault()
+          stepForward()
+        }
+
+        return
+      }
+
+      if (event.key === 'ArrowLeft') {
+        if (mode === 'failedReview') {
+          event.preventDefault()
+          stepBackward()
+        }
+
+        return
+      }
+
+      if (isSpaceKey(event.key)) {
+        if (mode === 'failedReview') {
+          event.preventDefault()
+          if (isReviewComplete) {
+            handleAdvance()
+          } else {
+            stepForward()
+          }
+          return
+        }
+
+        if (canAdvanceToNext) {
+          event.preventDefault()
+          handleAdvance()
+        }
+
+        return
+      }
+
+      if (event.key === 'Enter' && canAdvanceToNext) {
+        event.preventDefault()
+        handleAdvance()
+      }
+    }
+
+    window.addEventListener('keydown', handleTrainingKeyDown)
+    return () => window.removeEventListener('keydown', handleTrainingKeyDown)
+  }, [
+    canAdvanceToNext,
+    cancelPromotion,
+    clearSelection,
+    handleAdvance,
+    handleSkip,
+    isPlayerTurn,
+    isReviewComplete,
+    mode,
+    promotionState.isOpen,
+    selectedSquare,
+    stepBackward,
+    stepForward,
+  ])
 
   const customSquareStyles = useMemo(() => {
     const styles: Record<string, React.CSSProperties> = {}
@@ -494,7 +546,6 @@ export const PuzzleBoard = memo(function PuzzleBoard({
   return (
     <div
       className="relative flex flex-col items-center gap-4 w-full"
-      onKeyDown={handleKeyDown}
       tabIndex={0}
     >
       <PuzzleBoardSurface
@@ -532,31 +583,49 @@ export const PuzzleBoard = memo(function PuzzleBoard({
               onClick={stepBackward}
               disabled={!canStepBackward}
               className="flex-1"
+              aria-keyshortcuts={TRAINING_SHORTCUTS.previousMove.ariaKeyShortcuts}
             >
               <ChevronLeft className="mr-2 h-4 w-4" />
-              Previous Move
+              <span>Previous Move</span>
+              <ShortcutHints keys={TRAINING_SHORTCUTS.previousMove.hints} />
             </Button>
             <Button
               variant="outline"
               onClick={stepForward}
               disabled={isReviewComplete}
               className="flex-1"
+              aria-keyshortcuts={TRAINING_SHORTCUTS.nextMove.ariaKeyShortcuts}
             >
               <ChevronRight className="mr-2 h-4 w-4" />
-              {isReviewComplete ? 'Solution complete' : 'Next Move'}
+              {isReviewComplete ? (
+                'Solution complete'
+              ) : (
+                <>
+                  <span>Next Move</span>
+                  <ShortcutHints keys={TRAINING_SHORTCUTS.nextMove.hints} />
+                </>
+              )}
             </Button>
             <Button
               onClick={handleAdvance}
               disabled={!canAdvanceToNext || isSubmittingAttempt}
               className="flex-1"
               data-testid="training-next-puzzle-button"
+              aria-keyshortcuts={TRAINING_SHORTCUTS.nextPuzzle.ariaKeyShortcuts}
             >
               {isSubmittingAttempt ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <SkipForward className="mr-2 h-4 w-4" />
               )}
-              {isSubmittingAttempt ? 'Saving result...' : 'Next Puzzle'}
+              {isSubmittingAttempt ? (
+                'Saving result...'
+              ) : (
+                <>
+                  <span>Next Puzzle</span>
+                  <ShortcutHints keys={TRAINING_SHORTCUTS.nextPuzzle.hints} />
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -569,13 +638,21 @@ export const PuzzleBoard = memo(function PuzzleBoard({
             disabled={!canAdvanceToNext || isSubmittingAttempt}
             className="w-full sm:w-auto sm:min-w-56"
             data-testid="training-next-puzzle-button"
+            aria-keyshortcuts={TRAINING_SHORTCUTS.nextPuzzle.ariaKeyShortcuts}
           >
             {isSubmittingAttempt ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <SkipForward className="mr-2 h-4 w-4" />
             )}
-            {isSubmittingAttempt ? 'Saving result...' : 'Next Puzzle'}
+            {isSubmittingAttempt ? (
+              'Saving result...'
+            ) : (
+              <>
+                <span>Next Puzzle</span>
+                <ShortcutHints keys={TRAINING_SHORTCUTS.nextPuzzle.hints} />
+              </>
+            )}
           </Button>
         </div>
       )}

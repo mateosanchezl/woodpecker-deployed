@@ -6,12 +6,15 @@ import { Button } from '@/components/ui/button'
 import { Eye, EyeOff } from 'lucide-react'
 import { formatTime } from '@/hooks/use-puzzle-timer'
 import type { TrainingProgress } from '@/lib/chess/types'
+import { TRAINING_SHORTCUTS } from '@/lib/training/keyboard-shortcuts'
 
 interface PuzzleStatusProps {
   timeMs: number
   progress: TrainingProgress
   puzzleRating?: number
   isPaused?: boolean
+  isTimerVisible?: boolean
+  onToggleTimerVisibility?: () => void
 }
 
 /**
@@ -22,8 +25,14 @@ export function PuzzleStatus({
   progress,
   puzzleRating,
   isPaused = false,
+  isTimerVisible,
+  onToggleTimerVisibility,
 }: PuzzleStatusProps) {
-  const [isTimerVisible, setIsTimerVisible] = useState(true)
+  const [internalTimerVisible, setInternalTimerVisible] = useState(true)
+  const timerVisible = isTimerVisible ?? internalTimerVisible
+  const toggleTimerVisibility =
+    onToggleTimerVisibility ??
+    (() => setInternalTimerVisible((current) => !current))
 
   const percentComplete = Math.round(
     (progress.completedInCycle / progress.totalPuzzles) * 100
@@ -41,7 +50,7 @@ export function PuzzleStatus({
         <div className="flex items-center justify-between gap-4 flex-col">
           {/* Timer with toggle */}
           <div className="text-center relative w-full">
-            {isTimerVisible ? (
+            {timerVisible ? (
               <>
                 <div className="font-mono text-3xl tabular-nums font-medium">
                   {formatTime(timeMs)}
@@ -62,11 +71,13 @@ export function PuzzleStatus({
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setIsTimerVisible(!isTimerVisible)}
+              onClick={toggleTimerVisibility}
               className="absolute top-0 right-0 h-8 w-8"
-              title={isTimerVisible ? "Hide timer" : "Show timer"}
+              title={timerVisible ? "Hide timer (T)" : "Show timer (T)"}
+              aria-label={timerVisible ? "Hide timer" : "Show timer"}
+              aria-keyshortcuts={TRAINING_SHORTCUTS.timerToggle.ariaKeyShortcuts}
             >
-              {isTimerVisible ? (
+              {timerVisible ? (
                 <Eye className="h-4 w-4" />
               ) : (
                 <EyeOff className="h-4 w-4" />

@@ -27,8 +27,6 @@ export function StreakCard() {
   const currentTier = getCurrentMilestoneTier(streak.currentStreak)
   const nextMilestone = getNextMilestone(streak.currentStreak)
 
-  // Determine card styling based on streak state
-  const isActive = streak.currentStreak > 0
   const hasStreak = streak.currentStreak >= 3 // Show enhanced styling at 3+ days
 
   return (

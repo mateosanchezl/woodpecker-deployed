@@ -6,6 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
+import { Switch } from '@/components/ui/switch'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Select,
@@ -14,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Loader2, ArrowRight } from 'lucide-react'
+import { Loader2, ArrowRight, HelpCircle } from 'lucide-react'
 import {
   TRAINING_THEME_OPTIONS,
   getTrainingThemeLabel,
@@ -47,14 +53,27 @@ export function CreatePuzzleSetForm({
 }: CreatePuzzleSetFormProps) {
   const anyThemeValue = 'any-theme'
   const [name, setName] = useState('My Training Set')
+  const [useRecommendedRatingLimit, setUseRecommendedRatingLimit] = useState(true)
   const [targetRating, setTargetRating] = useState(Math.max(800, userRating - 200))
   const [ratingRange, setRatingRange] = useState(200)
   const [size, setSize] = useState(150)
   const [targetCycles, setTargetCycles] = useState(5)
   const [focusTheme, setFocusTheme] = useState<TrainingTheme | null>(null)
 
+  const recommendedMaxRating = useMemo(
+    () => Math.max(800, Math.min(2400, userRating + 100)),
+    [userRating]
+  )
+  const targetRatingMax = useRecommendedRatingLimit ? recommendedMaxRating : 2600
   const minRating = useMemo(() => Math.max(800, targetRating - ratingRange / 2), [targetRating, ratingRange])
   const maxRating = useMemo(() => Math.min(2600, targetRating + ratingRange / 2), [targetRating, ratingRange])
+
+  const handleRecommendedRatingLimitChange = useCallback((checked: boolean) => {
+    setUseRecommendedRatingLimit(checked)
+    if (checked) {
+      setTargetRating((current) => Math.min(current, recommendedMaxRating))
+    }
+  }, [recommendedMaxRating])
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault()
@@ -126,29 +145,63 @@ export function CreatePuzzleSetForm({
 
           {/* Target Rating */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label>Target puzzle rating</Label>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <Label>Target puzzle rating</Label>
+                <div className="mt-1.5 flex h-6 items-center gap-2">
+                  <Switch
+                    id="recommended-rating-limit"
+                    checked={useRecommendedRatingLimit}
+                    onCheckedChange={handleRecommendedRatingLimitChange}
+                  />
+                  <Label
+                    htmlFor="recommended-rating-limit"
+                    className="text-xs font-normal text-muted-foreground"
+                  >
+                    Recommended range
+                  </Label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-5 rounded-full p-0 text-muted-foreground shadow-none hover:text-foreground"
+                        aria-label="Recommended range details"
+                      >
+                        <HelpCircle className="size-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[240px]">
+                      Uses your entered rating to set a recommended target
+                      range. Turn it off to choose any rating from 800-2600.
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </div>
               <span className="text-sm font-medium tabular-nums">{targetRating}</span>
             </div>
             <Slider
               value={[targetRating]}
               onValueChange={([value]) => setTargetRating(value)}
               min={800}
-              max={Math.min(2400, userRating + 100)}
+              max={targetRatingMax}
               step={25}
             />
             <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Easier</span>
+              <span>800</span>
               <span className="font-medium">{getDifficultyLabel()}</span>
-              <span>Harder</span>
+              <span>{targetRatingMax}</span>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Your rating: {userRating}. Puzzles should be slightly below your level for effective pattern building.
+            <p className="h-4 text-xs leading-4 text-muted-foreground">
+              {useRecommendedRatingLimit
+                ? `Recommended for your ${userRating} rating.`
+                : '\u00A0'}
             </p>
           </div>
 
           {/* Rating Range */}
-          <div className="space-y-4">
+          <div className="!mt-5 space-y-4">
             <div className="flex items-center justify-between">
               <Label>Rating range</Label>
               <span className="text-sm text-muted-foreground">

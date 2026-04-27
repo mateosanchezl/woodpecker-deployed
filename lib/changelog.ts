@@ -26,6 +26,20 @@ export function formatChangelogDate(date: string) {
 // Add new releases to the top of this list so index 0 stays the latest.
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    version: "2.9.3",
+    title: "Flexible Rating Range",
+    description:
+      "Puzzle set creation now gives you a recommended rating range by default, with the option to unlock the full 800-2600 target rating range when you want more control.",
+    features: [
+      "A new Recommended range toggle keeps setup guided for most players",
+      "Turn the toggle off to choose any target puzzle rating from 800 to 2600",
+      "The rating controls now include clearer guidance without shifting the setup card while you adjust them",
+    ],
+    date: "2026-04-27",
+    learnMoreUrl: "/training/new",
+    actionLabel: "Create a puzzle set",
+  },
+  {
     version: "2.9.2",
     title: "Mate-in-1 Validation Fix",
     description:

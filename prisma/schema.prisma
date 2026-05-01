@@ -49,6 +49,7 @@ model User {
   puzzleSets       PuzzleSet[]
   achievements     UserAchievement[]
   appReview        AppReview?
+  reviewQueueItems ReviewQueueItem[]
 
   @@index([clerkId])
   @@index([showOnLeaderboard, totalCorrectAttempts(sort: Desc)])
@@ -154,10 +155,25 @@ model PuzzleInSet {
 
   // Relations
   attempts        Attempt[]
+  reviewQueueItem ReviewQueueItem?
 
   @@unique([puzzleSetId, puzzleId])
   @@unique([puzzleSetId, position])
   @@index([puzzleSetId])
+}
+
+model ReviewQueueItem {
+  puzzleInSetId String      @id
+  puzzleInSet   PuzzleInSet @relation(fields: [puzzleInSetId], references: [id], onDelete: Cascade)
+
+  userId         String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  queuedAt       DateTime    @default(now())
+  lastReviewedAt DateTime?
+  reviewCount    Int         @default(0)
+
+  @@index([userId, lastReviewedAt, queuedAt, puzzleInSetId])
 }
 
 model Cycle {

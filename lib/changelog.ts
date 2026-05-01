@@ -54,6 +54,21 @@ export function getUnreadChangelogEntries(
 // Add new releases to the top of this list so index 0 stays the latest.
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    version: "2.10.0",
+    title: "A Better Review Experience",
+    description:
+      "Review has a cleaner layout, a larger board, and smoother controls for working through missed puzzles.",
+    features: [
+      "A cleaner review queue makes missed puzzles easier to scan",
+      "The board is larger and stays stable while you move through review",
+      "Review controls are now centered, roomier, and easier to use",
+      "Solved review puzzles leave the queue automatically",
+    ],
+    date: "2026-05-01",
+    learnMoreUrl: "/training/review",
+    actionLabel: "Open review",
+  },
+  {
     version: "2.9.4",
     title: "Training Shortcuts and Quick Resume",
     description:

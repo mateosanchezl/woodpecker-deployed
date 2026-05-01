@@ -41,3 +41,17 @@ test("training and review boards both use the shared ChessboardStage wrapper", (
   assert.match(reviewSource, /ChessboardStage/);
   assert.match(trainingSource, /ChessboardStage/);
 });
+
+test("review board keeps a fixed square and fixed-height controls", () => {
+  const reviewSource = readFileSync(
+    new URL("../components/review/review-puzzle-board.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(reviewSource, /boardTestId="review-board"/);
+  assert.match(reviewSource, /REVIEW_BOARD_SQUARE_CLASS[\s\S]*max-w-\[760px\]/);
+  assert.match(reviewSource, /REVIEW_BOARD_SQUARE_CLASS[\s\S]*shadow-none/);
+  assert.match(reviewSource, /REVIEW_BOARD_CONTROLS_CLASS[\s\S]*h-\[190px\]/);
+  assert.match(reviewSource, /REVIEW_BOARD_CONTROLS_CLASS[\s\S]*sm:h-\[156px\]/);
+  assert.match(reviewSource, /REVIEW_BOARD_CONTROLS_CLASS[\s\S]*lg:h-\[148px\]/);
+});

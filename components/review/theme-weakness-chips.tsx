@@ -1,6 +1,6 @@
 "use client";
 
-import type { ThemeWeakness } from "@/app/api/training/review/route";
+import type { ThemeFacet } from "@/app/api/training/review/route";
 import { cn } from "@/lib/utils";
 
 function formatTheme(theme: string): string {
@@ -11,7 +11,7 @@ function formatTheme(theme: string): string {
 }
 
 interface ThemeWeaknessChipsProps {
-  weaknesses: ThemeWeakness[];
+  facets: ThemeFacet[];
   selectedTheme: string | null;
   onSelectTheme: (theme: string | null) => void;
 }
@@ -21,48 +21,61 @@ interface ThemeWeaknessChipsProps {
  * Clicking a chip filters the review puzzle list to that theme.
  */
 export function ThemeWeaknessChips({
-  weaknesses,
+  facets,
   selectedTheme,
   onSelectTheme,
 }: ThemeWeaknessChipsProps) {
-  if (weaknesses.length === 0) return null;
+  if (facets.length === 0) return null;
 
-  const topWeaknesses = weaknesses.slice(0, 8);
+  const topFacets = facets.slice(0, 12);
 
   return (
-    <div className="space-y-2">
-      <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-        Filter by theme
-      </p>
+    <div className="space-y-2.5">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+          Themes
+        </p>
+        {selectedTheme && (
+          <button
+            onClick={() => onSelectTheme(null)}
+            className="text-xs font-medium text-primary hover:text-primary/80"
+          >
+            Clear
+          </button>
+        )}
+      </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1.5">
         <button
           onClick={() => onSelectTheme(null)}
           className={cn(
-            "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+            "rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
             selectedTheme === null
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border bg-background text-muted-foreground hover:border-primary/30 hover:text-foreground",
+              ? "border-primary bg-primary text-primary-foreground shadow-sm"
+              : "border-border bg-background text-muted-foreground hover:border-primary/30 hover:bg-accent/40 hover:text-foreground",
           )}
         >
           All
         </button>
 
-        {topWeaknesses.map((weakness) => {
-          const isSelected = selectedTheme === weakness.theme;
+        {topFacets.map((facet) => {
+          const isSelected = selectedTheme === facet.theme;
 
           return (
             <button
-              key={weakness.theme}
-              onClick={() => onSelectTheme(isSelected ? null : weakness.theme)}
+              key={facet.theme}
+              onClick={() => onSelectTheme(isSelected ? null : facet.theme)}
               className={cn(
-                "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                "rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
                 isSelected
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background text-muted-foreground hover:border-primary/30 hover:text-foreground",
+                  ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                  : "border-border bg-background text-muted-foreground hover:border-primary/30 hover:bg-accent/40 hover:text-foreground",
               )}
             >
-              {formatTheme(weakness.theme)} {weakness.accuracy}%
+              <span>{formatTheme(facet.theme)}</span>
+              <span className={cn("ml-1 opacity-70", isSelected && "opacity-90")}>
+                {facet.pendingCount}
+              </span>
             </button>
           );
         })}

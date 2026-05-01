@@ -510,6 +510,31 @@ export async function recordAttemptHotPath(params: {
         AND pis.id = ms.expected_puzzle_in_set_id
       RETURNING pis.id
     ),
+    removed_review_queue_item AS (
+      DELETE FROM "ReviewQueueItem" rqi
+      USING mutation_state ms
+      WHERE ms.final_status = 'ok'
+        AND ${isCorrect}
+        AND rqi."puzzleInSetId" = ms.expected_puzzle_in_set_id
+        AND rqi."userId" = ms.user_id
+      RETURNING rqi."puzzleInSetId"
+    ),
+    queued_review_item AS (
+      INSERT INTO "ReviewQueueItem" (
+        "puzzleInSetId",
+        "userId",
+        "queuedAt"
+      )
+      SELECT
+        ms.expected_puzzle_in_set_id,
+        ms.user_id,
+        CAST(${now} AS timestamp)
+      FROM mutation_state ms
+      WHERE ms.final_status = 'ok'
+        AND NOT ${isCorrect}
+      ON CONFLICT ("puzzleInSetId") DO NOTHING
+      RETURNING "puzzleInSetId"
+    ),
     updated_cycle AS (
       UPDATE "Cycle" c
       SET

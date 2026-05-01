@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   applyReviewResultToQueueResponse,
+  DEFAULT_REVIEW_QUEUE_LIMIT,
+  MAX_REVIEW_QUEUE_LIMIT,
+  normalizeReviewQueueLimit,
   shouldSeedReviewQueueItem,
   sortReviewQueueItems,
   type ReviewQueueOrderingFields,
@@ -56,6 +59,20 @@ test("applyReviewResultToQueueResponse removes correctly solved items immediatel
   assert.equal(next.filteredPendingPuzzles, 1);
 });
 
+test("applyReviewResultToQueueResponse keeps pending counts at zero floors", () => {
+  const response = {
+    puzzles: [item("a")],
+    totalPendingPuzzles: 0,
+    filteredPendingPuzzles: 0,
+  };
+
+  const next = applyReviewResultToQueueResponse(response, "a", true);
+
+  assert.deepEqual(next.puzzles, []);
+  assert.equal(next.totalPendingPuzzles, 0);
+  assert.equal(next.filteredPendingPuzzles, 0);
+});
+
 test("applyReviewResultToQueueResponse updates review state and reorders pending items for resume", () => {
   const response = {
     puzzles: [
@@ -84,6 +101,26 @@ test("applyReviewResultToQueueResponse updates review state and reorders pending
   );
   assert.equal(next.puzzles[2]?.reviewCount, 1);
   assert.equal(next.puzzles[2]?.lastReviewedAt, "2026-04-02T11:00:00.000Z");
+});
+
+test("applyReviewResultToQueueResponse leaves unrelated filtered queues unchanged", () => {
+  const response = {
+    puzzles: [item("visible")],
+    totalPendingPuzzles: 4,
+    filteredPendingPuzzles: 1,
+  };
+
+  const next = applyReviewResultToQueueResponse(response, "hidden", true);
+
+  assert.equal(next, response);
+});
+
+test("normalizeReviewQueueLimit defaults to 30 and caps at 50", () => {
+  assert.equal(normalizeReviewQueueLimit(null), DEFAULT_REVIEW_QUEUE_LIMIT);
+  assert.equal(normalizeReviewQueueLimit("0"), DEFAULT_REVIEW_QUEUE_LIMIT);
+  assert.equal(normalizeReviewQueueLimit("not-a-number"), DEFAULT_REVIEW_QUEUE_LIMIT);
+  assert.equal(normalizeReviewQueueLimit("12"), 12);
+  assert.equal(normalizeReviewQueueLimit("500"), MAX_REVIEW_QUEUE_LIMIT);
 });
 
 test("shouldSeedReviewQueueItem only backfills unresolved latest failures", () => {

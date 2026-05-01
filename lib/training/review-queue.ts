@@ -11,6 +11,20 @@ export interface ReviewQueueResponseShape<TItem extends ReviewQueueOrderingField
   filteredPendingPuzzles: number;
 }
 
+export const DEFAULT_REVIEW_QUEUE_LIMIT = 30;
+export const MAX_REVIEW_QUEUE_LIMIT = 50;
+
+export function normalizeReviewQueueLimit(value: string | null): number {
+  if (!value) return DEFAULT_REVIEW_QUEUE_LIMIT;
+
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return DEFAULT_REVIEW_QUEUE_LIMIT;
+  }
+
+  return Math.min(parsed, MAX_REVIEW_QUEUE_LIMIT);
+}
+
 function toTimestamp(value: string | Date | null): number {
   if (!value) return Number.NEGATIVE_INFINITY;
   return new Date(value).getTime();
@@ -52,12 +66,15 @@ export function sortReviewQueueItems<TItem extends ReviewQueueOrderingFields>(
   return [...items].sort(compareReviewQueueItems);
 }
 
-export function applyReviewResultToQueueResponse<TItem extends ReviewQueueOrderingFields>(
-  response: ReviewQueueResponseShape<TItem>,
+export function applyReviewResultToQueueResponse<
+  TItem extends ReviewQueueOrderingFields,
+  TResponse extends ReviewQueueResponseShape<TItem>,
+>(
+  response: TResponse,
   puzzleInSetId: string,
   isCorrect: boolean,
   reviewedAt: string | Date = new Date(),
-): ReviewQueueResponseShape<TItem> {
+): TResponse {
   const existingIndex = response.puzzles.findIndex(
     (puzzle) => puzzle.puzzleInSetId === puzzleInSetId,
   );
@@ -74,7 +91,7 @@ export function applyReviewResultToQueueResponse<TItem extends ReviewQueueOrderi
       ),
       totalPendingPuzzles: Math.max(0, response.totalPendingPuzzles - 1),
       filteredPendingPuzzles: Math.max(0, response.filteredPendingPuzzles - 1),
-    };
+    } as TResponse;
   }
 
   return {
@@ -90,7 +107,7 @@ export function applyReviewResultToQueueResponse<TItem extends ReviewQueueOrderi
           : puzzle,
       ),
     ),
-  };
+  } as TResponse;
 }
 
 export function shouldSeedReviewQueueItem(params: {

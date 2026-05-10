@@ -173,6 +173,23 @@ export function doesMoveDeliverCheckmate(
   }
 }
 
+/**
+ * Check whether a UCI move immediately ends the game by checkmate.
+ */
+export function doesUciMoveDeliverCheckmate(fen: string, moveUci: string): boolean {
+  try {
+    const parsed = parseUciMove(moveUci)
+    return doesMoveDeliverCheckmate(
+      fen,
+      parsed.from,
+      parsed.to,
+      parsed.promotion
+    )
+  } catch {
+    return false
+  }
+}
+
 interface AcceptedPuzzleMoveOptions {
   fen: string
   from: Square
@@ -185,7 +202,7 @@ interface AcceptedPuzzleMoveOptions {
 
 /**
  * Validate a player's move against the canonical solution, with an optional
- * mate-in-1 escape hatch for alternate checkmating moves on the final ply.
+ * final-ply escape hatch for alternate checkmating moves.
  */
 export function isAcceptedPuzzleMove({
   fen,
@@ -204,7 +221,10 @@ export function isAcceptedPuzzleMove({
     return false
   }
 
-  return doesMoveDeliverCheckmate(fen, from, to, promotion)
+  return (
+    doesUciMoveDeliverCheckmate(fen, expectedUci) &&
+    doesMoveDeliverCheckmate(fen, from, to, promotion)
+  )
 }
 
 /**

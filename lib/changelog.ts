@@ -54,6 +54,20 @@ export function getUnreadChangelogEntries(
 // Add new releases to the top of this list so index 0 stays the latest.
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    version: "2.10.1",
+    title: "More Flexible Mate Puzzles + New Themes",
+    description:
+      "Mate puzzles now accept more alternate final checkmates, and board appearance settings include four new palettes.",
+    features: [
+      "Alternate final checkmates now count as correct when the stored final move is also checkmate",
+      "Mate-in-2, mate-in-3, and general mate puzzles are no longer limited to the mate-in-1 alternate-move rule",
+      "Board appearance now includes Rosewood, Lagoon, Plum, and Carbon themes",
+    ],
+    date: "2026-05-10",
+    learnMoreUrl: "/settings",
+    actionLabel: "Choose a board theme",
+  },
+  {
     version: "2.10.0",
     title: "A Better Review Experience",
     description:

@@ -48,7 +48,6 @@ import {
   RotateCcw,
   SkipForward,
 } from "lucide-react";
-import { hasMateInOneTheme } from "@/lib/chess/training-themes";
 import {
   isPlainShortcutEvent,
   isSpaceKey,
@@ -150,7 +149,6 @@ type ReviewMode = "solving" | "failedReview" | "complete";
 export function ReviewPuzzleBoard({
   fen,
   moves,
-  themes,
   boardTheme,
   canGoToNextPuzzle = false,
   isSavingResult = false,
@@ -176,7 +174,6 @@ export function ReviewPuzzleBoard({
   const timer = usePuzzleTimer();
   const solutionArray = useMemo(() => parseSolutionMoves(moves), [moves]);
   const orientation = getOrientationFromFen(fen);
-  const allowAnyFinalCheckmate = hasMateInOneTheme(themes);
 
   const {
     position,
@@ -193,7 +190,7 @@ export function ReviewPuzzleBoard({
   } = useChessPuzzle({
     fen,
     solutionMoves: moves,
-    allowAnyFinalCheckmate,
+    allowAnyFinalCheckmate: true,
     onCorrectMove: () => {},
     onIncorrectMove: () => {
       timer.controls.pause();

@@ -18,7 +18,6 @@ import type { TrainingProgress, PuzzleInSetData } from '@/lib/chess/types'
 import { usePuzzleTimer } from '@/hooks/use-puzzle-timer'
 import { useXp } from '@/hooks/use-xp'
 import { XpBar } from '@/components/xp/xp-bar'
-import { hasMateInOneTheme } from '@/lib/chess/training-themes'
 import {
   isPlainShortcutEvent,
   shouldIgnoreTrainingShortcut,
@@ -193,7 +192,6 @@ export function TrainingSession({
   }
 
   const lichessPuzzleUrl = `https://lichess.org/training/${encodeURIComponent(puzzleData.puzzle.id)}`
-  const allowsAlternateMateInOneSolutions = hasMateInOneTheme(puzzleData.puzzle.themes)
 
   return (
     <div
@@ -207,7 +205,7 @@ export function TrainingSession({
           key={`${puzzleData.id}:${puzzleRenderKey}`}
           fen={puzzleData.puzzle.fen}
           moves={puzzleData.puzzle.moves}
-          allowAnyFinalCheckmate={allowsAlternateMateInOneSolutions}
+          allowAnyFinalCheckmate={true}
           onComplete={handleComplete}
           onSkip={handleSkip}
           externalSkipRequest={externalSkipRequest}

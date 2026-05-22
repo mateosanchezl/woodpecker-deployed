@@ -8,6 +8,8 @@ export interface AppBootstrapUser {
   preferredSetSize: number;
   targetCycles: number;
   autoStartNextPuzzle: boolean;
+  puzzleCompletionSoundEnabled: boolean;
+  showPuzzleThemes: boolean;
   boardTheme: string;
   hasCompletedOnboarding: boolean;
   showOnLeaderboard: boolean;
@@ -75,6 +77,8 @@ interface AppUserSource {
   preferredSetSize: number;
   targetCycles: number;
   autoStartNextPuzzle: boolean;
+  puzzleCompletionSoundEnabled: boolean;
+  showPuzzleThemes: boolean;
   boardTheme: string;
   hasCompletedOnboarding: boolean;
   showOnLeaderboard: boolean;
@@ -143,6 +147,8 @@ export function serializeAppUser(
     preferredSetSize: user.preferredSetSize,
     targetCycles: user.targetCycles,
     autoStartNextPuzzle: user.autoStartNextPuzzle,
+    puzzleCompletionSoundEnabled: user.puzzleCompletionSoundEnabled,
+    showPuzzleThemes: user.showPuzzleThemes,
     boardTheme: user.boardTheme,
     hasCompletedOnboarding: user.hasCompletedOnboarding,
     showOnLeaderboard: user.showOnLeaderboard,

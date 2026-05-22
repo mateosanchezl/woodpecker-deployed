@@ -3,15 +3,17 @@
 import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { Eye, EyeOff } from 'lucide-react'
 import { formatTime } from '@/hooks/use-puzzle-timer'
-import type { TrainingProgress } from '@/lib/chess/types'
+import type { BoardOrientation, TrainingProgress } from '@/lib/chess/types'
 import { TRAINING_SHORTCUTS } from '@/lib/training/keyboard-shortcuts'
 
 interface PuzzleStatusProps {
   timeMs: number
   progress: TrainingProgress
   puzzleRating?: number
+  sideToMoveColor?: BoardOrientation
   isPaused?: boolean
   isTimerVisible?: boolean
   onToggleTimerVisibility?: () => void
@@ -24,6 +26,7 @@ export function PuzzleStatus({
   timeMs,
   progress,
   puzzleRating,
+  sideToMoveColor,
   isPaused = false,
   isTimerVisible,
   onToggleTimerVisibility,
@@ -37,6 +40,12 @@ export function PuzzleStatus({
   const percentComplete = Math.round(
     (progress.completedInCycle / progress.totalPuzzles) * 100
   )
+  const sideToMoveLabel =
+    sideToMoveColor === 'white'
+      ? 'White to move'
+      : sideToMoveColor === 'black'
+        ? 'Black to move'
+        : null
 
   return (
     <Card
@@ -63,6 +72,21 @@ export function PuzzleStatus({
                     </span>
                   )}
                 </div>
+                {sideToMoveLabel && (
+                  <div className="mt-2 flex justify-center">
+                    <span className="inline-flex items-center gap-2 rounded-full border bg-muted/50 px-3 py-1 text-xs font-medium text-foreground">
+                      <span
+                        className={cn(
+                          'size-2 rounded-full ring-1 ring-border',
+                          sideToMoveColor === 'white'
+                            ? 'bg-white'
+                            : 'bg-zinc-900'
+                        )}
+                      />
+                      {sideToMoveLabel}
+                    </span>
+                  </div>
+                )}
               </>
             ) : (
               <div className="text-3xl font-medium text-muted-foreground">—</div>

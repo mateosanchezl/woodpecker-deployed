@@ -309,6 +309,8 @@ export const updateUserSettingsSchema = z.object({
     .max(10, 'Cannot exceed 10 cycles')
     .optional(),
   autoStartNextPuzzle: z.boolean().optional(),
+  puzzleCompletionSoundEnabled: z.boolean().optional(),
+  showPuzzleThemes: z.boolean().optional(),
   boardTheme: z.enum(BOARD_THEME_IDS).optional(),
   showOnLeaderboard: z.boolean().optional(),
 })

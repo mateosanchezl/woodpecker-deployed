@@ -38,6 +38,36 @@ test("new board themes are accepted by settings validation", () => {
   }
 });
 
+test("training settings validation accepts the completion sound preference", () => {
+  assert.equal(
+    updateUserSettingsSchema.safeParse({
+      puzzleCompletionSoundEnabled: true,
+    }).success,
+    true,
+  );
+  assert.equal(
+    updateUserSettingsSchema.safeParse({
+      puzzleCompletionSoundEnabled: false,
+    }).success,
+    true,
+  );
+});
+
+test("training settings validation accepts the puzzle theme visibility preference", () => {
+  assert.equal(
+    updateUserSettingsSchema.safeParse({
+      showPuzzleThemes: true,
+    }).success,
+    true,
+  );
+  assert.equal(
+    updateUserSettingsSchema.safeParse({
+      showPuzzleThemes: false,
+    }).success,
+    true,
+  );
+});
+
 test("unknown board theme ids fall back to the default theme", () => {
   assert.equal(resolveBoardTheme("not-a-theme"), "peck");
   assert.equal(getBoardTheme("not-a-theme").id, "peck");

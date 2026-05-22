@@ -17,6 +17,8 @@ model User {
   preferredSetSize Int         @default(150)
   targetCycles     Int         @default(5)
   autoStartNextPuzzle Boolean  @default(true)
+  puzzleCompletionSoundEnabled Boolean @default(true)
+  showPuzzleThemes Boolean @default(true)
   boardTheme       String      @default("peck")
 
   // Onboarding

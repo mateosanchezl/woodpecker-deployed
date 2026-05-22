@@ -96,6 +96,8 @@ export async function PATCH(request: NextRequest) {
         user: {
           id: user.id,
           estimatedRating: user.estimatedRating,
+          puzzleCompletionSoundEnabled: user.puzzleCompletionSoundEnabled,
+          showPuzzleThemes: user.showPuzzleThemes,
           boardTheme: user.boardTheme,
           hasCompletedOnboarding: user.hasCompletedOnboarding,
           showOnLeaderboard: user.showOnLeaderboard,
@@ -116,6 +118,8 @@ export async function PATCH(request: NextRequest) {
       preferredSetSize,
       targetCycles,
       autoStartNextPuzzle,
+      puzzleCompletionSoundEnabled,
+      showPuzzleThemes,
       boardTheme,
       showOnLeaderboard,
     } = settingsValidation.data
@@ -126,6 +130,8 @@ export async function PATCH(request: NextRequest) {
       preferredSetSize?: number
       targetCycles?: number
       autoStartNextPuzzle?: boolean
+      puzzleCompletionSoundEnabled?: boolean
+      showPuzzleThemes?: boolean
       boardTheme?: BoardThemeId
       showOnLeaderboard?: boolean
     } = {}
@@ -140,6 +146,12 @@ export async function PATCH(request: NextRequest) {
     }
     if (autoStartNextPuzzle !== undefined) {
       updateData.autoStartNextPuzzle = autoStartNextPuzzle
+    }
+    if (puzzleCompletionSoundEnabled !== undefined) {
+      updateData.puzzleCompletionSoundEnabled = puzzleCompletionSoundEnabled
+    }
+    if (showPuzzleThemes !== undefined) {
+      updateData.showPuzzleThemes = showPuzzleThemes
     }
     if (boardTheme !== undefined) {
       updateData.boardTheme = boardTheme
@@ -157,6 +169,8 @@ export async function PATCH(request: NextRequest) {
         preferredSetSize: user.preferredSetSize,
         targetCycles: user.targetCycles,
         autoStartNextPuzzle: user.autoStartNextPuzzle,
+        puzzleCompletionSoundEnabled: user.puzzleCompletionSoundEnabled,
+        showPuzzleThemes: user.showPuzzleThemes,
         boardTheme: user.boardTheme,
         hasCompletedOnboarding: user.hasCompletedOnboarding,
         showOnLeaderboard: user.showOnLeaderboard,
@@ -178,6 +192,8 @@ async function updateUserByClerkId(
     preferredSetSize?: number
     targetCycles?: number
     autoStartNextPuzzle?: boolean
+    puzzleCompletionSoundEnabled?: boolean
+    showPuzzleThemes?: boolean
     boardTheme?: BoardThemeId
     showOnLeaderboard?: boolean
     hasCompletedOnboarding?: boolean

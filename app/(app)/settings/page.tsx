@@ -22,6 +22,8 @@ interface UpdateSettingsInput {
   preferredSetSize?: number
   targetCycles?: number
   autoStartNextPuzzle?: boolean
+  puzzleCompletionSoundEnabled?: boolean
+  showPuzzleThemes?: boolean
   boardTheme?: BoardThemeId
   showOnLeaderboard?: boolean
 }
@@ -31,6 +33,8 @@ interface SettingsDraft {
   preferredSetSize: number
   targetCycles: number
   autoStartNextPuzzle: boolean
+  puzzleCompletionSoundEnabled: boolean
+  showPuzzleThemes: boolean
   boardTheme: BoardThemeId
   showOnLeaderboard: boolean
 }
@@ -42,6 +46,8 @@ interface UpdateSettingsResponse {
     preferredSetSize: number
     targetCycles: number
     autoStartNextPuzzle: boolean
+    puzzleCompletionSoundEnabled: boolean
+    showPuzzleThemes: boolean
     boardTheme?: string | null
     showOnLeaderboard: boolean
     hasCompletedOnboarding: boolean
@@ -53,6 +59,8 @@ const DEFAULT_SETTINGS: SettingsDraft = {
   preferredSetSize: 150,
   targetCycles: 5,
   autoStartNextPuzzle: true,
+  puzzleCompletionSoundEnabled: true,
+  showPuzzleThemes: true,
   boardTheme: 'peck',
   showOnLeaderboard: true,
 }
@@ -63,6 +71,8 @@ function createSettingsDraft(
     preferredSetSize?: number
     targetCycles?: number
     autoStartNextPuzzle?: boolean
+    puzzleCompletionSoundEnabled?: boolean
+    showPuzzleThemes?: boolean
     boardTheme?: string | null
     showOnLeaderboard?: boolean
   }
@@ -73,6 +83,11 @@ function createSettingsDraft(
     targetCycles: user?.targetCycles ?? DEFAULT_SETTINGS.targetCycles,
     autoStartNextPuzzle:
       user?.autoStartNextPuzzle ?? DEFAULT_SETTINGS.autoStartNextPuzzle,
+    puzzleCompletionSoundEnabled:
+      user?.puzzleCompletionSoundEnabled ??
+      DEFAULT_SETTINGS.puzzleCompletionSoundEnabled,
+    showPuzzleThemes:
+      user?.showPuzzleThemes ?? DEFAULT_SETTINGS.showPuzzleThemes,
     boardTheme: resolveBoardTheme(user?.boardTheme),
     showOnLeaderboard: user?.showOnLeaderboard ?? DEFAULT_SETTINGS.showOnLeaderboard,
   }
@@ -84,6 +99,8 @@ function settingsAreEqual(a: SettingsDraft, b: SettingsDraft) {
     a.preferredSetSize === b.preferredSetSize &&
     a.targetCycles === b.targetCycles &&
     a.autoStartNextPuzzle === b.autoStartNextPuzzle &&
+    a.puzzleCompletionSoundEnabled === b.puzzleCompletionSoundEnabled &&
+    a.showPuzzleThemes === b.showPuzzleThemes &&
     a.boardTheme === b.boardTheme &&
     a.showOnLeaderboard === b.showOnLeaderboard
   )
@@ -109,6 +126,16 @@ function getChangedSettings(
   ) {
     changes.autoStartNextPuzzle = draftSettings.autoStartNextPuzzle
   }
+  if (
+    savedSettings.puzzleCompletionSoundEnabled !==
+    draftSettings.puzzleCompletionSoundEnabled
+  ) {
+    changes.puzzleCompletionSoundEnabled =
+      draftSettings.puzzleCompletionSoundEnabled
+  }
+  if (savedSettings.showPuzzleThemes !== draftSettings.showPuzzleThemes) {
+    changes.showPuzzleThemes = draftSettings.showPuzzleThemes
+  }
   if (savedSettings.boardTheme !== draftSettings.boardTheme) {
     changes.boardTheme = draftSettings.boardTheme
   }
@@ -132,6 +159,8 @@ export default function SettingsPage() {
   const loadedPreferredSetSize = user?.preferredSetSize
   const loadedTargetCycles = user?.targetCycles
   const loadedAutoStartNextPuzzle = user?.autoStartNextPuzzle
+  const loadedPuzzleCompletionSoundEnabled = user?.puzzleCompletionSoundEnabled
+  const loadedShowPuzzleThemes = user?.showPuzzleThemes
   const loadedBoardTheme = user?.boardTheme
   const loadedShowOnLeaderboard = user?.showOnLeaderboard
 
@@ -180,6 +209,7 @@ export default function SettingsPage() {
       loadedPreferredSetSize === undefined ||
       loadedTargetCycles === undefined ||
       loadedAutoStartNextPuzzle === undefined ||
+      loadedPuzzleCompletionSoundEnabled === undefined ||
       loadedBoardTheme === undefined ||
       loadedShowOnLeaderboard === undefined
     ) {
@@ -191,6 +221,9 @@ export default function SettingsPage() {
       preferredSetSize: loadedPreferredSetSize,
       targetCycles: loadedTargetCycles,
       autoStartNextPuzzle: loadedAutoStartNextPuzzle,
+      puzzleCompletionSoundEnabled: loadedPuzzleCompletionSoundEnabled,
+      showPuzzleThemes:
+        loadedShowPuzzleThemes ?? DEFAULT_SETTINGS.showPuzzleThemes,
       boardTheme: resolveBoardTheme(loadedBoardTheme),
       showOnLeaderboard: loadedShowOnLeaderboard,
     }
@@ -214,6 +247,8 @@ export default function SettingsPage() {
     loadedPreferredSetSize,
     loadedTargetCycles,
     loadedAutoStartNextPuzzle,
+    loadedPuzzleCompletionSoundEnabled,
+    loadedShowPuzzleThemes,
     loadedBoardTheme,
     loadedShowOnLeaderboard,
   ])
@@ -340,23 +375,63 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between gap-6">
-            <div className="space-y-1">
-              <Label htmlFor="auto-start-next-puzzle" className="text-sm font-medium">
-                Auto-start next puzzle
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                Turn off to pause after each puzzle and continue with a manual click.
-              </p>
+          <div className="space-y-6">
+            <div className="flex items-center justify-between gap-6">
+              <div className="space-y-1">
+                <Label htmlFor="completion-sound-enabled" className="text-sm font-medium">
+                  Play completion sound
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Play a short chime when you solve a puzzle correctly.
+                </p>
+              </div>
+              <Switch
+                id="completion-sound-enabled"
+                checked={currentSettings.puzzleCompletionSoundEnabled}
+                onCheckedChange={(checked) =>
+                  updateDraft({ puzzleCompletionSoundEnabled: checked })
+                }
+                disabled={updateSettings.isPending}
+              />
             </div>
-            <Switch
-              id="auto-start-next-puzzle"
-              checked={currentSettings.autoStartNextPuzzle}
-              onCheckedChange={(checked) =>
-                updateDraft({ autoStartNextPuzzle: checked })
-              }
-              disabled={updateSettings.isPending}
-            />
+
+            <div className="flex items-center justify-between gap-6">
+              <div className="space-y-1">
+                <Label htmlFor="show-puzzle-themes" className="text-sm font-medium">
+                  Show puzzle themes
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Keep tactical theme labels visible during training.
+                </p>
+              </div>
+              <Switch
+                id="show-puzzle-themes"
+                checked={currentSettings.showPuzzleThemes}
+                onCheckedChange={(checked) =>
+                  updateDraft({ showPuzzleThemes: checked })
+                }
+                disabled={updateSettings.isPending}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-6">
+              <div className="space-y-1">
+                <Label htmlFor="auto-start-next-puzzle" className="text-sm font-medium">
+                  Auto-start next puzzle
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Turn off to pause after each puzzle and continue with a manual click.
+                </p>
+              </div>
+              <Switch
+                id="auto-start-next-puzzle"
+                checked={currentSettings.autoStartNextPuzzle}
+                onCheckedChange={(checked) =>
+                  updateDraft({ autoStartNextPuzzle: checked })
+                }
+                disabled={updateSettings.isPending}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>

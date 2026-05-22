@@ -54,6 +54,23 @@ export function getUnreadChangelogEntries(
 // Add new releases to the top of this list so index 0 stays the latest.
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    version: "2.10.2",
+    title: "Puzzle Completion Sounds",
+    description:
+      "Correct puzzles now give you a small coin-chime moment, and the in-session training settings are cleaner and easier to use.",
+    features: [
+      "Solved puzzles now play a short completion sound",
+      "The sound uses a dedicated audio file for more reliable playback",
+      "Training now groups sound, puzzle pace, and theme visibility into one cleaner in-session settings dropdown",
+      "The in-session training settings use a more polished switch layout instead of the older inline controls",
+      "Puzzle theme visibility now saves to your account instead of resetting each session",
+      "You can turn the sound off anytime from Settings or the training sidebar",
+    ],
+    date: "2026-05-22",
+    learnMoreUrl: "/settings",
+    actionLabel: "Adjust training settings",
+  },
+  {
     version: "2.10.1",
     title: "More Flexible Mate Puzzles + New Themes",
     description:

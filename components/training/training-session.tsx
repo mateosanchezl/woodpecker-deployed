@@ -10,14 +10,28 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { AlertCircle, RefreshCw, CheckCircle2, ExternalLink, SkipForward, Sparkles } from 'lucide-react'
+import {
+  AlertCircle,
+  RefreshCw,
+  CheckCircle2,
+  ExternalLink,
+  SkipForward,
+  SlidersHorizontal,
+  Sparkles,
+} from 'lucide-react'
 import type { BoardThemeId } from '@/lib/chess/board-themes'
 import type { TrainingProgress, PuzzleInSetData } from '@/lib/chess/types'
 import { usePuzzleTimer } from '@/hooks/use-puzzle-timer'
 import { useXp } from '@/hooks/use-xp'
 import { XpBar } from '@/components/xp/xp-bar'
+import { getOrientationFromFen } from '@/lib/chess/puzzle-engine'
 import {
   isPlainShortcutEvent,
   shouldIgnoreTrainingShortcut,
@@ -37,7 +51,11 @@ interface TrainingSessionProps {
   error: Error | null
   canAdvanceToNext?: boolean
   autoStartNextPuzzle: boolean
+  puzzleCompletionSoundEnabled: boolean
+  showPuzzleThemes: boolean
   isUpdatingAutoStartNextPuzzle?: boolean
+  isUpdatingPuzzleCompletionSoundEnabled?: boolean
+  isUpdatingShowPuzzleThemes?: boolean
   boardTheme: BoardThemeId
 
   // Callbacks
@@ -50,6 +68,8 @@ interface TrainingSessionProps {
   onSkip: (puzzleInSetId: string, timeSpent: number) => void
   onAdvanceToNextPuzzle?: () => void
   onAutoStartNextPuzzleChange: (checked: boolean) => void
+  onPuzzleCompletionSoundEnabledChange: (checked: boolean) => void
+  onShowPuzzleThemesChange: (checked: boolean) => void
   onRetry: () => void
 
   // Cycle completion
@@ -78,12 +98,18 @@ export function TrainingSession({
   error,
   canAdvanceToNext = false,
   autoStartNextPuzzle,
+  puzzleCompletionSoundEnabled,
+  showPuzzleThemes,
   isUpdatingAutoStartNextPuzzle = false,
+  isUpdatingPuzzleCompletionSoundEnabled = false,
+  isUpdatingShowPuzzleThemes = false,
   boardTheme,
   onPuzzleComplete,
   onSkip,
   onAdvanceToNextPuzzle,
   onAutoStartNextPuzzleChange,
+  onPuzzleCompletionSoundEnabledChange,
+  onShowPuzzleThemesChange,
   onRetry,
   isCycleComplete,
   cycleStats,
@@ -95,7 +121,6 @@ export function TrainingSession({
   const timer = usePuzzleTimer()
   const [externalSkipRequest, setExternalSkipRequest] = useState(0)
   const [isPuzzleFlowPaused, setIsPuzzleFlowPaused] = useState(false)
-  const [showPuzzleThemes, setShowPuzzleThemes] = useState(true)
   const [isTimerVisible, setIsTimerVisible] = useState(true)
   const resetTimerRef = useRef(timer.controls.reset)
 
@@ -215,6 +240,7 @@ export function TrainingSession({
           isSubmittingAttempt={isSubmittingAttempt}
           canAdvanceToNext={canAdvanceToNext}
           autoStartNextPuzzle={autoStartNextPuzzle}
+          puzzleCompletionSoundEnabled={puzzleCompletionSoundEnabled}
           boardTheme={boardTheme}
           timerControls={timer.controls}
         />
@@ -226,33 +252,72 @@ export function TrainingSession({
           timeMs={timer.timeMs}
           progress={progress}
           puzzleRating={puzzleData.puzzle.rating}
+          sideToMoveColor={getOrientationFromFen(puzzleData.puzzle.fen)}
           isPaused={isPuzzleFlowPaused}
           isTimerVisible={isTimerVisible}
           onToggleTimerVisibility={toggleTimerVisibility}
         />
 
-        <div className="rounded-lg border bg-card p-3 space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="space-y-0.5">
-              <Label
-                htmlFor="training-pace-toggle"
-                className="text-sm font-medium"
-              >
-                Auto-start next puzzle
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Turn off to pause between puzzles and start the next one manually.
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              className="w-full justify-between"
+              data-testid="training-settings-trigger"
+            >
+              <span className="inline-flex items-center gap-2 font-medium">
+                <SlidersHorizontal className="h-4 w-4" />
+                Training settings
+              </span>
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                New
+              </span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            className="w-84 max-w-[calc(100vw-2rem)] rounded-md p-0 overflow-hidden"
+          >
+            <div className="border-b bg-muted/35 px-4 py-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+                Training settings
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Adjust a few session comforts without leaving the board.
               </p>
             </div>
-            <Switch
-              id="training-pace-toggle"
-              checked={autoStartNextPuzzle}
-              onCheckedChange={onAutoStartNextPuzzleChange}
-              disabled={isUpdatingAutoStartNextPuzzle}
-              data-testid="training-auto-start-toggle"
-            />
-          </div>
-        </div>
+            <div className="space-y-2 p-3">
+              <TrainingSettingToggle
+                id="training-completion-sound-toggle"
+                title="Play completion sound"
+                description="Play a short chime when you solve a puzzle correctly."
+                checked={puzzleCompletionSoundEnabled}
+                onCheckedChange={onPuzzleCompletionSoundEnabledChange}
+                disabled={isUpdatingPuzzleCompletionSoundEnabled}
+                testId="training-completion-sound-toggle"
+              />
+              <TrainingSettingToggle
+                id="training-auto-start-toggle"
+                title="Auto-start next puzzle"
+                description="Pause between puzzles and start the next one manually."
+                checked={autoStartNextPuzzle}
+                onCheckedChange={onAutoStartNextPuzzleChange}
+                disabled={isUpdatingAutoStartNextPuzzle}
+                testId="training-auto-start-toggle"
+              />
+              <TrainingSettingToggle
+                id="puzzle-theme-visibility"
+                title="Show puzzle themes"
+                description="Hide theme labels to avoid tactical hints."
+                checked={showPuzzleThemes}
+                onCheckedChange={onShowPuzzleThemesChange}
+                disabled={isUpdatingShowPuzzleThemes}
+                testId="puzzle-theme-visibility"
+              />
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {!isPuzzleFlowPaused && (
           <Button
@@ -282,42 +347,68 @@ export function TrainingSession({
 
         <TrainingBugReport context={bugReportContext} />
 
-        {/* Puzzle metadata visibility */}
-        {puzzleData.puzzle.themes.length > 0 && (
+        {showPuzzleThemes && puzzleData.puzzle.themes.length > 0 && (
           <div className="rounded-lg border bg-card p-3 space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="space-y-0.5">
-                <Label
-                  htmlFor="puzzle-theme-visibility"
-                  className="text-sm font-medium"
-                >
-                  Show puzzle themes
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Hide theme labels to avoid tactical hints.
-                </p>
+            <div className="space-y-0.5">
+              <div className="text-sm font-medium text-foreground">
+                Puzzle themes
               </div>
-              <Switch
-                id="puzzle-theme-visibility"
-                checked={showPuzzleThemes}
-                onCheckedChange={setShowPuzzleThemes}
-              />
+              <p className="text-xs text-muted-foreground">
+                Tactical motifs for the current position.
+              </p>
             </div>
-
-            {showPuzzleThemes && (
-              <div className="flex flex-wrap gap-1.5 justify-center lg:justify-start">
-                {puzzleData.puzzle.themes.slice(0, 5).map(theme => (
-                  <span
-                    key={theme}
-                    className="text-xs px-2 py-0.5 bg-muted rounded-full text-muted-foreground"
-                  >
-                    {formatTheme(theme)}
-                  </span>
-                ))}
-              </div>
-            )}
+            <div className="flex flex-wrap gap-1.5 justify-center lg:justify-start">
+              {puzzleData.puzzle.themes.slice(0, 5).map(theme => (
+                <span
+                  key={theme}
+                  className="text-xs px-2 py-0.5 bg-muted rounded-full text-muted-foreground"
+                >
+                  {formatTheme(theme)}
+                </span>
+              ))}
+            </div>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+function TrainingSettingToggle({
+  id,
+  title,
+  description,
+  checked,
+  onCheckedChange,
+  disabled = false,
+  testId,
+}: {
+  id: string
+  title: string
+  description: string
+  checked: boolean
+  onCheckedChange: (checked: boolean) => void
+  disabled?: boolean
+  testId?: string
+}) {
+  return (
+    <div className="rounded-md border bg-background/70 px-3 py-3 shadow-xs">
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <Label htmlFor={id} className="text-sm font-medium">
+            {title}
+          </Label>
+          <p className="text-xs leading-5 text-muted-foreground">
+            {description}
+          </p>
+        </div>
+        <Switch
+          id={id}
+          checked={checked}
+          onCheckedChange={onCheckedChange}
+          disabled={disabled}
+          data-testid={testId}
+        />
       </div>
     </div>
   )

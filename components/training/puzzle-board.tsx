@@ -6,6 +6,7 @@ import { Chessboard } from 'react-chessboard'
 import type { ChessboardOptions } from 'react-chessboard'
 import { useChessPuzzle } from '@/hooks/use-chess-puzzle'
 import { useBoardInteractionController } from '@/hooks/use-board-interaction-controller'
+import { usePuzzleCompletionSound } from '@/hooks/use-puzzle-completion-sound'
 import type { PuzzleTimerControls } from '@/hooks/use-puzzle-timer'
 import type { Square, PuzzleStatus, PromotionState, BoardOrientation } from '@/lib/chess/types'
 import { ANIMATION_DURATION } from '@/lib/chess/types'
@@ -49,6 +50,7 @@ interface PuzzleBoardProps {
   isSubmittingAttempt?: boolean
   canAdvanceToNext?: boolean
   autoStartNextPuzzle?: boolean
+  puzzleCompletionSoundEnabled?: boolean
   boardTheme: BoardThemeId
   timerControls: PuzzleTimerControls
 }
@@ -135,6 +137,7 @@ export const PuzzleBoard = memo(function PuzzleBoard({
   isSubmittingAttempt = false,
   canAdvanceToNext = false,
   autoStartNextPuzzle = true,
+  puzzleCompletionSoundEnabled = true,
   boardTheme,
   timerControls,
 }: PuzzleBoardProps) {
@@ -156,6 +159,9 @@ export const PuzzleBoard = memo(function PuzzleBoard({
   const lastProcessedSkipRequestRef = useRef(externalSkipRequest)
 
   const solutionMoves = useMemo(() => parseSolutionMoves(moves), [moves])
+  const playCompletionSound = usePuzzleCompletionSound(
+    puzzleCompletionSoundEnabled
+  )
 
   // Chess puzzle hook
   const {
@@ -180,6 +186,10 @@ export const PuzzleBoard = memo(function PuzzleBoard({
     onPuzzleComplete: (isCorrect, finalMoves) => {
       const finalTime = timerControls.getTime()
       timerControls.pause()
+
+      if (isCorrect) {
+        void playCompletionSound()
+      }
 
       if (!isCorrect) {
         setPendingAdvanceOutcome(null)

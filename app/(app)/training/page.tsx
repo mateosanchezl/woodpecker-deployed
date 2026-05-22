@@ -58,6 +58,12 @@ interface PuzzleSetData {
   lastTrainedAt: string | null
 }
 
+interface TrainingPreferencesUpdate {
+  autoStartNextPuzzle?: boolean
+  puzzleCompletionSoundEnabled?: boolean
+  showPuzzleThemes?: boolean
+}
+
 /**
  * Training page - main entry point for puzzle training.
  * Shows puzzle sets and allows starting/continuing training cycles.
@@ -110,6 +116,9 @@ function TrainingPageInner({
   const [activeCycleId, setActiveCycleId] = useState<string | null>(urlCycleId)
   const puzzleSets = bootstrap?.sets
   const autoStartNextPuzzle = bootstrap?.user.autoStartNextPuzzle
+  const puzzleCompletionSoundEnabled =
+    bootstrap?.user.puzzleCompletionSoundEnabled
+  const showPuzzleThemes = bootstrap?.user.showPuzzleThemes
   const boardTheme = resolveBoardTheme(bootstrap?.user.boardTheme)
 
   // Delete puzzle set mutation
@@ -168,25 +177,25 @@ function TrainingPageInner({
   // Create cycle mutation
   const createCycleMutation = useCreateCycle()
 
-  const updateAutoStartNextPuzzleMutation = useMutation<
+  const updateTrainingPreferencesMutation = useMutation<
     { user: AppBootstrapResponse['user'] },
     Error,
-    boolean,
+    TrainingPreferencesUpdate,
     { previousBootstrap?: AppBootstrapResponse }
   >({
-    mutationFn: async (autoStartNextPuzzle) => {
+    mutationFn: async (updates) => {
       const res = await fetch('/api/user', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ autoStartNextPuzzle }),
+        body: JSON.stringify(updates),
       })
       if (!res.ok) {
         const error = await res.json()
-        throw new Error(error.error || 'Failed to update training pace')
+        throw new Error(error.error || 'Failed to update training preferences')
       }
       return res.json()
     },
-    onMutate: async (autoStartNextPuzzle) => {
+    onMutate: async (updates) => {
       await queryClient.cancelQueries({ queryKey: APP_BOOTSTRAP_QUERY_KEY })
 
       const previousBootstrap =
@@ -196,7 +205,7 @@ function TrainingPageInner({
         ...current,
         user: {
           ...current.user,
-          autoStartNextPuzzle,
+          ...updates,
         },
       }))
 
@@ -207,7 +216,7 @@ function TrainingPageInner({
         queryClient.setQueryData(APP_BOOTSTRAP_QUERY_KEY, context.previousBootstrap)
       }
 
-      toast.error(error.message || 'Failed to update training pace')
+      toast.error(error.message || 'Failed to update training preferences')
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: APP_BOOTSTRAP_QUERY_KEY })
@@ -269,9 +278,23 @@ function TrainingPageInner({
 
   const handleAutoStartNextPuzzleChange = useCallback(
     (autoStartNextPuzzle: boolean) => {
-      updateAutoStartNextPuzzleMutation.mutate(autoStartNextPuzzle)
+      updateTrainingPreferencesMutation.mutate({ autoStartNextPuzzle })
     },
-    [updateAutoStartNextPuzzleMutation]
+    [updateTrainingPreferencesMutation]
+  )
+
+  const handlePuzzleCompletionSoundEnabledChange = useCallback(
+    (puzzleCompletionSoundEnabled: boolean) => {
+      updateTrainingPreferencesMutation.mutate({ puzzleCompletionSoundEnabled })
+    },
+    [updateTrainingPreferencesMutation]
+  )
+
+  const handleShowPuzzleThemesChange = useCallback(
+    (showPuzzleThemes: boolean) => {
+      updateTrainingPreferencesMutation.mutate({ showPuzzleThemes })
+    },
+    [updateTrainingPreferencesMutation]
   )
 
   // Handle starting next cycle after completion
@@ -288,7 +311,9 @@ function TrainingPageInner({
     }
   }, [deleteMutation])
 
-  const hasLoadedTrainingPreference = typeof autoStartNextPuzzle === 'boolean'
+  const hasLoadedTrainingPreferences =
+    typeof autoStartNextPuzzle === 'boolean' &&
+    typeof puzzleCompletionSoundEnabled === 'boolean'
 
   // Navigation guard - active when training is in progress and cycle not complete
   const isTrainingActive = !!(
@@ -305,11 +330,16 @@ function TrainingPageInner({
     return <TrainingPageSkeleton />
   }
 
-  if (activeCycleId && selectedSetId && !hasLoadedTrainingPreference && isLoadingBootstrap) {
+  if (
+    activeCycleId &&
+    selectedSetId &&
+    !hasLoadedTrainingPreferences &&
+    isLoadingBootstrap
+  ) {
     return <TrainingPageSkeleton />
   }
 
-  if (activeCycleId && selectedSetId && !hasLoadedTrainingPreference) {
+  if (activeCycleId && selectedSetId && !hasLoadedTrainingPreferences) {
     return (
       <div className="py-4">
         <Card className="max-w-lg mx-auto">
@@ -321,7 +351,7 @@ function TrainingPageInner({
             <CardDescription>
               {userPreferencesError instanceof Error
                 ? userPreferencesError.message
-                : 'Training pace and board theme are stored in your user settings. Reload those preferences before starting the session so the board and puzzle flow load correctly.'}
+                : 'Training pace, completion sound, and board theme are stored in your user settings. Reload those preferences before starting the session so the board and puzzle flow load correctly.'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -354,12 +384,20 @@ function TrainingPageInner({
           error={trainingSession.error}
           canAdvanceToNext={trainingSession.hasPendingAdvance}
           autoStartNextPuzzle={autoStartNextPuzzle ?? true}
-          isUpdatingAutoStartNextPuzzle={updateAutoStartNextPuzzleMutation.isPending}
+          puzzleCompletionSoundEnabled={puzzleCompletionSoundEnabled ?? true}
+          showPuzzleThemes={showPuzzleThemes ?? true}
+          isUpdatingAutoStartNextPuzzle={updateTrainingPreferencesMutation.isPending}
+          isUpdatingPuzzleCompletionSoundEnabled={updateTrainingPreferencesMutation.isPending}
+          isUpdatingShowPuzzleThemes={updateTrainingPreferencesMutation.isPending}
           boardTheme={boardTheme}
           onPuzzleComplete={handlePuzzleComplete}
           onSkip={handleSkip}
           onAdvanceToNextPuzzle={trainingSession.advancePendingSession}
           onAutoStartNextPuzzleChange={handleAutoStartNextPuzzleChange}
+          onPuzzleCompletionSoundEnabledChange={
+            handlePuzzleCompletionSoundEnabledChange
+          }
+          onShowPuzzleThemesChange={handleShowPuzzleThemesChange}
           onRetry={trainingSession.refetch}
           isCycleComplete={trainingSession.isCycleComplete}
           cycleStats={trainingSession.cycleStats || undefined}
